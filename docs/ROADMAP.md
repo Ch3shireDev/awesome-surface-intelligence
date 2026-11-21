@@ -25,18 +25,18 @@ M8 Finisz dla jury        ███░░░░░░░  30%  🔨  test skali 
 | **M1** Silnik skanowania | `asi scan`: plan celów (CSV/JSON/TXT, CIDR, domeny, reguły zakresu), 2 fazy nmapa, adaptacyjne paczki, globalny limit pps, okno czasowe, pasek CLI + panel SSE, diff, skan potwierdzający, reimport Generic Findings (`created/closed/reactivated`) | silnik z `~/asi-poc` | ✅ |
 | **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1 ✅, SEC-2, SEC-3 ✅ | 🔨 |
 | **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 | ✅ |
-| **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-8 ✅ | ✅ |
-| **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4 ✅, SEC-5 ✅, DEV-7 |  ✅ |
+| **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-8 ✅, DEV-9 ✅ | ✅ |
+| **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja, IoT) | SEC-4 ✅, SEC-5 ✅, DEV-7 ✅, SEC-10 ⏳ | 🔨 |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6 ✅, DEV-3 🟡 | ✅ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 🟡, SEC-7 🟡, SEC-8 ✅ | 🔨 |
-| **M8** Finisz | publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | SEC-9, ALL-1, ALL-2 | ⬜ |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅ | ✅ |
+| **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | DEV-10 ✅, SEC-9, ALL-1, ALL-2 | 🔨 |
 
 ## Ścieżka krytyczna
 
 ```
 DEV-0 ✅ → DEV-1 ✅ → DEV-2 ✅ → DEV-4 ✅ ─────────────────────────────→ demo (2 przebiegi + GUI) ✅ działa
-                         ↘ SEC-4 ✅ → SEC-5 ✅ → sekcja w GUI ✅ → SEC-7 parsery httpx/nuclei ↗
-                         ↘ SEC-6 ✅ (szyfrowanie)                                    ↗
+                         ↘ SEC-4 ✅ → SEC-5 ✅ → sekcja w GUI ✅ → SEC-7 ✅ (parsery httpx/nuclei) ↗
+                         ↘ SEC-6 ✅ (szyfrowanie)                                                ↗
 M8: SEC-9 (czyste repo + uruchomienie od zera) → ALL-1 (prezentacja + nagranie) → oddanie
 ```
 
@@ -64,8 +64,8 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | min.: porównanie dwóch skanów | ✅ | GUI i CLI (DEV-9) |
 | min.: edycja danych istniejących skanów, wyników i konfiguracji | ✅ | wyniki: ocena analityka, tagi, notatki; konfiguracja: cele, harmonogramy (DEV-9) |
 | mile widziane: pora dnia, ocena ciekawości, grupowanie usług | ✅ | DEV-7: ocena 0–100 z powodami, grupy usług/technologii, wzorce pory dnia ([Ocena, grupy, pora dnia](/guide/insights)) |
-| mile widziane: eksport wybranych obserwacji do DD | 🟡 | eksport jest całościowy; natywne parsery httpx/nuclei → **SEC-7** |
-| formalne: repozytorium, dokumentacja, prezentacja ≤10 slajdów + demo | 🟡 | publiczne repo (**SEC-9**), prezentacja (**ALL-1**), uruchomienie od zera (**ALL-2**) |
+| mile widziane: eksport wybranych obserwacji do DD | 🟡 | natywne parsery httpx/nuclei i `asi-changes` gotowe (**SEC-7 ✅**); eksport jest całościowy (brak selektywnego wyboru z GUI) |
+| formalne: repozytorium, dokumentacja, prezentacja ≤10 slajdów + demo | 🟡 | publiczne repo (**SEC-9**), prezentacja (**ALL-1**, w toku na fh2), uruchomienie od zera (**ALL-2**) |
 
 ## Co zostało do wzięcia (kolejność wg wagi w ocenie)
 
@@ -75,10 +75,10 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | ✅ agent blackarch | minimum PDF, test jury „edycja znalezisk” |
 | **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ✅ agent blackarch | 30% („w dużej infrastrukturze”) |
 | **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ✅ agent blackarch | 10–15% + „mile widziane” |
+| **SEC-7** | M7 | natywne parsery httpx/nuclei do DD (`asi-httpx`, `asi-nuclei`) + `asi-changes` | ✅ agent fatusia-2 | 20% (integracja DD) |
 | **SEC-10** | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | wolne (SEC) | pkt 6 PDF |
-| **SEC-7** | M7 | natywne parsery httpx/nuclei do DD | wolne (SEC) | 20% (integracja DD) |
-| **SEC-9** | M8 | publiczne repo bez sekretów i realnych IP; `git clone && make env && make up && make demo` | wolne | formalny wymóg |
-| **ALL-1** | M8 | prezentacja ≤10 slajdów + nagranie demo | wszyscy | formalny wymóg |
+| **SEC-9** | M8 | publiczne repo bez sekretów i realnych IP; `git clone && make env && make up && make demo` | 🔨 agent fatusia-2 (README/quickstart) | formalny wymóg |
+| **ALL-1** | M8 | prezentacja ≤10 slajdów + nagranie demo | 🔨 agent fatusia-2 (`docs/presentation/asi.tex`) | formalny wymóg |
 | **ALL-2** | M8 | `status.md` 100%, quickstart przetestowany przez drugą osobę | wszyscy | 20% |
 | **DEV-3** | M6 | tokeny API w GUI | wolne | mała |
 | **SEC-2** | M2 | materiały organizatorów (lab, porty, limity, format JSON/CSV) | człowiek na miejscu | ryzyko testu jury |
