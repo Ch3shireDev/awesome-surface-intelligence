@@ -1,0 +1,33 @@
+# Szyfrowanie danych w spoczynku dla asi-db (SEC-6). Nakladka na docker-compose.yml.
+#
+# Wlaczana domyslnie przez COMPOSE_FILE w .env (patrz .env.example):
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.crypto.yml
+# Wtedy kazde `docker compose ...` i `make ...` uzywa obu plikow.
+#
+# Co zmienia:
+#   * asi-db na Percona Distribution for PostgreSQL 18 z pg_tde (TDE: pliki tabel,
+#     indeksow i WAL zaszyfrowane AES-256, docker/asi-db/),
+#   * osobne wolumeny: asi_db_tde_data (PGDATA) i asi_db_keys (keyring pg_tde),
+#   * jednorazowa konfiguracja TDE przy inicjalizacji pustej bazy:
+#     docker/asi-db/initdb/10-pg_tde.sql.
+# Pola wrazliwe sa dodatkowo szyfrowane w aplikacji (AES-256-GCM,
+# ASI_ENCRYPTION_KEYS). Opis i weryfikacja: docs/guide/encryption.md, make crypto-check.
+#
+# Uwaga: to NOWY wolumen danych - przebiegi z dotychczasowego asi_db_data (zwykly
+# postgres:18) nie sa przenoszone. Stary wolumen zostaje nietkniety.
+
+services:
+  asi-db:
+    build: ./docker/asi-db
+    image: asi-db-tde:local
+    command: ["postgres", "-c", "shared_preload_libraries=pg_tde"]
+    environment:
+      PGDATA: /data/db
+    volumes: !override
+      - asi_db_tde_data:/data/db
+      - asi_db_keys:/var/lib/asi-keys
+      - ./docker/asi-db/initdb:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  asi_db_tde_data:
+  asi_db_keys:

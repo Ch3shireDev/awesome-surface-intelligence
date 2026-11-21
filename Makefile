@@ -17,7 +17,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
         build test asi asi-scan asi-serve docs sync \
-        lab-up lab-down lab-ps demo
+        lab-up lab-down lab-ps demo env-keys crypto-check
 
 help:
 	@echo "Cele:"
@@ -34,6 +34,8 @@ help:
 	@echo "  make scan-service     - wykrywanie wersji/uslug (-sV -sC) na top-portach"
 	@echo "  make scan-udp         - top porty UDP (bardzo wolne)"
 	@echo "  make import-defectdojo FILE=scans/results/xxx.xml  - import XML do DefectDojo"
+	@echo "  make env-keys         - dopisz klucze szyfrowania (SEC-6) do istniejacego .env"
+	@echo "  make crypto-check     - dowod szyfrowania at rest asi-db (TDE + pola AES-GCM)"
 	@echo "  make import-latest    - import najnowszego scans/results/*.xml"
 	@echo "  make poc              - jeden przebieg PoC: discover + fast + import obu do DD"
 	@echo "  make clean            - usun lokalne wyniki skanow"
@@ -62,8 +64,16 @@ env:
 	    -e "s|^DD_ADMIN_PASSWORD=.*|DD_ADMIN_PASSWORD=$$(openssl rand -hex 12)|" \
 	    -e "s|CHANGE_ME_ASI_DB|$$ASI_DBP|g" \
 	    -e "s|CHANGE_ME_ASI_ADMIN|$$(openssl rand -hex 12)|" \
+	    -e "s|^ASI_ENCRYPTION_KEYS=.*|ASI_ENCRYPTION_KEYS=k1:$$(openssl rand -base64 32)|" \
 	    .env.example > .env && chmod 600 .env && \
 	echo "Utworzono .env (hasla adminow: grep -E 'DD_ADMIN_PASSWORD|ASI_ADMIN_PASSWORD' .env)"
+
+# Dopisuje do ISTNIEJACEGO .env klucze szyfrowania (SEC-6), jesli ich brak.
+# Nie rusza istniejacych wartosci. Po tym: make up (nowa baza z TDE).
+env-keys:
+	@grep -q '^COMPOSE_FILE=' .env || { printf '\n# szyfrowanie at rest (SEC-6)\nCOMPOSE_FILE=docker-compose.yml:docker-compose.crypto.yml\n' >> .env; echo "dopisano COMPOSE_FILE (TDE dla asi-db)"; }
+	@if grep -q '^ASI_ENCRYPTION_KEYS=.\+' .env; then echo "ASI_ENCRYPTION_KEYS juz ustawione"; \
+	else sed -i '/^ASI_ENCRYPTION_KEYS=$$/d' .env; echo "ASI_ENCRYPTION_KEYS=k1:$$(openssl rand -base64 32)" >> .env; echo "dopisano ASI_ENCRYPTION_KEYS (klucz k1)"; fi
 
 up:
 	docker compose up -d --build
@@ -159,6 +169,11 @@ asi:
 
 asi-scan:
 	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -ui 127.0.0.1:8094 -upload live
+
+# Dowod szyfrowania w spoczynku (docs/guide/encryption.md): TDE wlaczone, tabele
+# tde_heap, szyfrowany WAL, brak jawnego tekstu w plikach bazy, pola _enc z AES-GCM.
+crypto-check:
+	docker compose exec -T asi-db sh < docker/asi-db/crypto-check.sh
 
 asi-serve:
 	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8095

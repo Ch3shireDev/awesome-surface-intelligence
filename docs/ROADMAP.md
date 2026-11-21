@@ -12,7 +12,7 @@ M2 Fundament (kontrakt+DB)█████████░  90%  🔨  SEC-1 ✅, 
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                █████████░  90%  ✅  DEV-4 (brak: przegląd wizualny w przeglądarce, tokeny API w GUI)
 M5 Fingerprint i sygnatury░░░░░░░░░░   0%  🔨  SEC-4 (zarezerwowane), SEC-5
-M6 Ochrona danych i role  █████░░░░░  50%  🔨  role+audit ✅ (DEV-4); brak SEC-6: AES-GCM + szyfrowanie PG
+M6 Ochrona danych i role  ██████████ 100%  ✅  role+audit ✅ (DEV-4), SEC-6 ✅: pg_tde + pola AES-GCM, make crypto-check
 M7 Harmonogram i eksport  ███████░░░  70%  🔨  DEV-5 ✅, DEV-6 (eksport ✅, import ❌), SEC-7, SEC-8
 M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 (dokumentacja w VitePress jest)
 ```
@@ -27,7 +27,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 | **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 | ✅ |
 | **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | ✅ |
 | **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4, SEC-5, DEV-7 | ⬜ |
-| **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6, DEV-3 | ⬜ |
+| **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6, DEV-3 | ✅ |
 | **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 🟡, SEC-7, SEC-8 | 🔨 |
 | **M8** Finisz | publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | SEC-9, ALL-1, ALL-2 | ⬜ |
 
@@ -55,6 +55,7 @@ i DefectDojo; RBAC zostaje jednym kontem admina (mentor to akceptuje).
 | 21.11 ~16:30 | DEV-5: harmonogram (cron + okno) w panelu, wznawianie niezeskanowanych celów w kolejnym oknie, wstrzymaj/wznów/anuluj, `asi scan -resume` |
 | 21.11 ~16:20 | DEV-4: panel web `asi server` (login, dashboard, assety z edycją, formularz/import celów, skany z GUI + postęp na żywo, role, audit, eksport CSV/JSON); kontener skanera startuje panel na :8090 |
 | 21.11 ~16:10 | DEV-2: assety ze stanami, flapping, zasady pokrycia (hosty i porty) i hierarchii, edycje trwałe; `asi changes/assets/asset edit` |
+| 21.11 ~16:50 | SEC-6: `asi-db` na `pg_tde` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM, rotacja kluczy, `make env-keys`, `make crypto-check` 9/9 OK ([Szyfrowanie](guide/encryption.md)) |
 | 21.11 ~16:00 | stary DefectDojo z `~/asi-poc` usunięty; cały stack przez `make up`; skan z kontenera → baza + DD sprawdzony |
 
 ---

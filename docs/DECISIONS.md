@@ -144,6 +144,20 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - RBAC lokalny z 4 rolami od razu (koszt byl niski przy pisaniu API); hasla PBKDF2 ze stdlib,
       sesje jako tokeny w `api_tokens` (tylko hash), CSRF przez naglowek `X-ASI`.
 
+14. **Szyfrowanie at rest asi-db: `pg_tde` (Percona) + pola AES-256-GCM w aplikacji** (21.11, SEC-6).
+    - Zwykly PostgreSQL nie ma TDE; `pgcrypto` przepuszcza klucz przez SQL. Szyfrowany wolumen (LUKS)
+      wymaga roota i konfiguracji hosta poza repo - odrzucone (zasada "wszystko w repo/compose").
+    - `asi-db` z obrazu `percona/percona-distribution-postgresql:18.7.1-1` (`docker/asi-db`), nakladka
+      `docker-compose.crypto.yml` wlaczana `COMPOSE_FILE` w `.env` - osobny plik, zeby nie kolidowac ze
+      zmianami w `docker-compose.yml` (SEC-3). Do scalenia z glownym plikiem, gdy compose sie ustabilizuje.
+    - TDE: AES-256, WAL szyfrowany, `default_table_access_method=tde_heap` + `enforce_encryption` w bazie
+      `asi` - migracje bez zmian. Keyring plikowy w osobnym wolumenie (hackathon); produkcyjnie OpenBao/Vault/KMIP.
+    - Pola `_enc`: `internal/crypto` (stdlib), keyring `id:base64` z rotacja; bledny klucz = blad startu,
+      brak klucza = jawny zapis z ostrzezeniem.
+    - Nowy wolumen `asi_db_tde_data`: dane ze starego `asi_db_data` nie sa migrowane (byly tylko testowe).
+    - Zweryfikowane na arm64 (fatusia-2): `make crypto-check` 9/9 OK; proba kontrolna na zwyklym postgres:18
+      znajduje jawny tekst w pliku tabeli, na `pg_tde` nie. Opis: `docs/guide/encryption.md`.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

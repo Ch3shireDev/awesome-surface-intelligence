@@ -24,7 +24,7 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, audit log |
 | 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI: tagi, notatka, nadpisania na assecie (trwałe), edycja celów; audit log |
 | 15 | czytelny interfejs + dashboard | ✅ | dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, wykres zmian w czasie; postęp skanu na żywo |
-| 16 | szyfrowanie at-rest | ❌ | ❓ decyzja (niżej) |
+| 16 | szyfrowanie at-rest | ✅ | 2 warstwy: TDE `pg_tde` w `asi-db` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM w aplikacji (`ASI_ENCRYPTION_KEYS`, rotacja); dowód `make crypto-check`; [Szyfrowanie](/guide/encryption) |
 | — | harmonogram, okna czasowe | ✅ | cron + okno w GUI, wznawianie niezeskanowanych celów w kolejnym oknie, wstrzymaj/wznów/anuluj ([Harmonogram](/guide/schedule)) |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, `-parallel`, timeouty |
 | — | eksport JSON/CSV | ✅ | assety CSV/JSON z GUI/API; `services.json`, `findings_defectdojo.json` |

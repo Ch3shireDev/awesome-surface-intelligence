@@ -79,8 +79,10 @@ Przeczytaj PRZED wieksza zmiana:
 | `internal/nmapxml` | parser XML nmapa |
 | `internal/findings` | model uslug, ocena "ciekawosci", diff, Generic Findings dla DD |
 | `internal/progress`, `internal/cli`, `internal/web` | stan na zywo, pasek CLI, panel web (SSE) |
+| `internal/crypto` | AES-256-GCM dla kolumn `_enc` (`ASI_ENCRYPTION_KEYS`, rotacja), `docs/guide/encryption.md` |
 | `internal/dojo` | klient DefectDojo API v2 (login, import, reimport) |
 | `docker-compose.yml` | DefectDojo 3.5.202 + `nmap-scanner` (nmap + `asi`) |
+| `docker/asi-db/`, `docker-compose.crypto.yml` | asi-db z TDE (`pg_tde`), init SQL, `make crypto-check` |
 | `docker/nmap/` | obraz skanera i skrypty PoC (`import-defectdojo.sh`, `nmap-hosts-to-generic.sh`) |
 | `Makefile` | `make help`: stack, PoC, `asi`, `build`, `test`, `docs`, `sync` |
 | `targets/example.csv` | szablon celow (kopiuj do `targets/targets.csv`) |

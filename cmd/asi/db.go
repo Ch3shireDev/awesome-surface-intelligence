@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"asi/internal/crypto"
 	"asi/internal/findings"
 	"asi/internal/nmapxml"
 	"asi/internal/obs"
@@ -38,8 +39,22 @@ func openStore(ctx context.Context, url string) (*store.Store, error) {
 	return st, nil
 }
 
-// sealer is replaced by internal/crypto (SEC-6) once ASI_ENCRYPTION_KEYS is set.
-var sealer = func() store.Sealer { return store.Plain{} }
+// sealer returns the AES-256-GCM keyring from ASI_ENCRYPTION_KEYS (internal/crypto, SEC-6).
+// Without the variable sensitive columns are stored in plain text (logged loudly);
+// an invalid keyring stops the program instead of silently writing plain text.
+var sealer = func() store.Sealer {
+	spec := os.Getenv(crypto.EnvVar)
+	if strings.TrimSpace(spec) == "" {
+		log.Printf("db: WARNING %s not set - sensitive columns are NOT encrypted (run: make env-keys)", crypto.EnvVar)
+		return store.Plain{}
+	}
+	k, err := crypto.ParseKeys(spec)
+	if err != nil {
+		log.Fatalf("db: %v", err)
+	}
+	log.Printf("db: sensitive columns encrypted with AES-256-GCM (active key %q)", k.ActiveID())
+	return k
+}
 
 // dbRecorder writes a scan run into the database. All writes use a background
 // context so a closing scan window does not lose already finished work.

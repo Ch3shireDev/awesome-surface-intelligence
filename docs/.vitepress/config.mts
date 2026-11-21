@@ -32,6 +32,7 @@ export default defineConfig({
         { text: 'Porównanie przebiegów', link: '/guide/diff' },
         { text: 'Historia i stany assetów', link: '/guide/history' },
         { text: 'Bezpieczeństwo skanowania', link: '/guide/safety' },
+        { text: 'Szyfrowanie danych w spoczynku', link: '/guide/encryption' },
         { text: 'Lab testowy i demo', link: '/guide/lab' },
       ]},
       { text: 'Referencja', items: [

@@ -45,7 +45,8 @@ Gdy `ASI_DATABASE_URL` jest ustawione, `asi scan` zapisuje przebieg do bazy auto
 
 Kolumny z sufiksem `_enc` przechodzą przez `store.Sealer` (dane obserwacji, surowe wyjścia, notatki).
 Pola potrzebne do wyszukiwania (IP, port, protokół, nazwa usługi, stan) są w jawnych kolumnach.
-Szyfrowanie AES-256-GCM dochodzi w SEC-6 bez zmiany schematu.
+Od SEC-6 `Sealer` to AES-256-GCM (`internal/crypto`, klucze `ASI_ENCRYPTION_KEYS`), a pliki całej bazy
+szyfruje `pg_tde`. Szczegóły i weryfikacja: [Szyfrowanie danych w spoczynku](/guide/encryption).
 
 ## Testy
 
