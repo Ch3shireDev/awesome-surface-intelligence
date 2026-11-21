@@ -119,6 +119,17 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 		p.State, p.Hosts, p.HostsDone, p.Partial = "running", len(ips), 0, 0
 	})
 	t0 := time.Now()
+	// LAB-T2: addresses of the scanner host go first, in one chunk of their own, so that only
+	// that nmap gets --exclude-ports for our stack (nmap has no per-host port exclusions).
+	nSelf := 0
+	if cfg.Guard != nil && cfg.Adapter.Tool() == "nmap" {
+		self, rest := cfg.Guard.SplitSelf(ips)
+		if nSelf = len(self); nSelf > 0 {
+			ips = append(self, rest...)
+			tr.Logf("%s: %d target(s) are the scanner host (%s) - own stack ports %s left out",
+				cfg.Name, nSelf, strings.Join(self, " "), cfg.Guard.SelfPorts)
+		}
+	}
 	var (
 		mu      sync.Mutex
 		next    int
@@ -126,32 +137,36 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 		wg      sync.WaitGroup
 		seq     int
 	)
-	take := func() (int, []string) {
+	take := func() (int, []string, bool) {
 		mu.Lock()
 		defer mu.Unlock()
 		if next >= len(ips) || ctx.Err() != nil {
-			return 0, nil
+			return 0, nil, false
 		}
-		n := cfg.Sizer.Next(len(ips)-next, cfg.Parallel)
+		self := next < nSelf
+		n := nSelf
+		if !self {
+			n = cfg.Sizer.Next(len(ips)-next, cfg.Parallel)
+		}
 		batch := ips[next : next+n]
 		next += n
 		id := seq
 		seq++
-		return id, batch
+		return id, batch, self
 	}
 	for w := 0; w < max(1, cfg.Parallel); w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for {
-				id, batch := take()
+				id, batch, self := take()
 				if batch == nil {
 					return
 				}
 				if cfg.OnStart != nil {
 					cfg.OnStart(id, batch)
 				}
-				r := runChunk(ctx, cfg, id, batch, tr)
+				r := runChunk(ctx, cfg, id, batch, self, tr)
 				cfg.Sizer.Observe(len(batch), r.Duration)
 				mu.Lock()
 				results = append(results, r)
@@ -200,7 +215,7 @@ func Unscanned(all []string, rs []ChunkResult) []string {
 	return out
 }
 
-func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *progress.Tracker) ChunkResult {
+func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, self bool, tr *progress.Tracker) ChunkResult {
 	name := fmt.Sprintf("chunk_%04d", id)
 	r := ChunkResult{ID: id, Hosts: hosts, Started: time.Now()}
 	ch := &progress.Chunk{ID: id, Phase: cfg.Name, Hosts: len(hosts), State: "running", Started: time.Now(),
@@ -235,7 +250,11 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 	os.WriteFile(c.TargetsFile, []byte(strings.Join(hosts, "\n")+"\n"), 0o644)
 	cmd, spec := cfg.Adapter.Command(cctx, c, cfg.Stage)
 	if cfg.Guard != nil && cfg.Adapter.Tool() == "nmap" {
-		args, err := cfg.Guard.Enforce(cmd.Args[1:], safety.Opts{Final: true, TargetsFile: c.TargetsFile, MaxProcRate: cfg.Stage.RatePPS})
+		o := safety.Opts{Final: true, TargetsFile: c.TargetsFile, MaxProcRate: cfg.Stage.RatePPS}
+		if self {
+			o.ExcludePorts = cfg.Guard.SelfPorts
+		}
+		args, err := cfg.Guard.Enforce(cmd.Args[1:], o)
 		if err != nil {
 			return blockedChunk(cfg, r, ch, "policy: "+err.Error(), tr)
 		}
@@ -404,9 +423,15 @@ func Confirm(ctx context.Context, ports map[string][]int, args []string, paralle
 		go func(ip string, ps []int) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			list := make([]string, len(ps))
-			for i, p := range ps {
-				list[i] = strconv.Itoa(p)
+			var list []string
+			for _, p := range ps {
+				if guard != nil && guard.IsSelf(ip) && guard.SelfPorts.Contains(p) {
+					continue // LAB-T2: own stack port on the scanner host
+				}
+				list = append(list, strconv.Itoa(p))
+			}
+			if len(list) == 0 {
+				return
 			}
 			base := filepath.Join(outDir, strings.ReplaceAll(ip, ":", "_"))
 			x, tf := base+".xml", base+".targets"
@@ -417,8 +442,12 @@ func Confirm(ctx context.Context, ports map[string][]int, args []string, paralle
 					logf("POLICY confirm: %s blocked - %s", ip, why)
 					return
 				}
+				o := safety.Opts{Final: true, TargetsFile: tf, MaxProcRate: procRate}
+				if guard.IsSelf(ip) {
+					o.ExcludePorts = guard.SelfPorts
+				}
 				var err error
-				if a, err = guard.Enforce(a, safety.Opts{Final: true, TargetsFile: tf, MaxProcRate: procRate}); err != nil {
+				if a, err = guard.Enforce(a, o); err != nil {
 					logf("POLICY confirm %s: %v", ip, err)
 					return
 				}

@@ -54,9 +54,11 @@ Przed testem `modern` / `vulnerable` przenieść nasze porty w `.env` (np. `DD_P
 
 ### 3. Skanujemy sami siebie
 
-Cel to `127.0.0.1` (albo IP VM), na którym działa też ASI i DefectDojo. Ich porty (`8080`, `8090`, `8091`,
-`8094`, `5433`) pojawią się w wynikach jako szum. Wykluczenia (`ASI_EXCLUDE`) działają per adres, nie per
-port. Na teraz: lista portów skanu bez naszych portów. Docelowo zadanie LAB-T2.
+Cel to `127.0.0.1` (albo IP VM), na którym działa też ASI i DefectDojo. **Załatwione przez LAB-T2:** na hoście
+skanera porty naszego stacku (z `.env`: `DD_PORT`, `ASI_WEB_ADDR`, `ASI_LIVE_ADDR`, `ASI_DB_PORT` + 8094, 8095)
+są pomijane automatycznie, a reszta portów jest skanowana normalnie. Ręczna lista portów bez naszych nie jest
+już potrzebna. Po przeniesieniu portów w `.env` (pkt 2) wykluczenie idzie za nimi, więc WordPress na 8080
+i DVWA na 8090 są skanowane. Szczegóły: [Bezpieczeństwo](safety.md#skaner-nie-skanuje-samego-siebie-lab-t2).
 
 ### 4. Fingerprint: co powinniśmy rozpoznać
 

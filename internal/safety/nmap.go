@@ -67,6 +67,7 @@ var nmapFlags = map[string]flagSpec{
 	"--max-hostgroup":       {value: true, check: intIn(1, 4096)},
 	"--exclude":             {value: true, check: anyValue},
 	"--excludefile":         {value: true, check: anyValue},
+	"--exclude-ports":       {value: true, check: func(v string) error { _, _, err := parseNmapPorts(v); return err }},
 	"--dns-servers":         {value: true, check: anyValue},
 	// NSE: only the scripts from allowedScripts (checked separately)
 	"--script":      {value: true},
@@ -117,6 +118,9 @@ type Opts struct {
 	Final       bool
 	TargetsFile string
 	MaxProcRate int
+	// ExcludePorts (LAB-T2): the chunk targets the scanner host - these ports (our own stack)
+	// are cut from -p and ping probes and passed to nmap as --exclude-ports.
+	ExcludePorts PortSet
 }
 
 // Enforce validates nmap arguments against the policy and returns them rewritten:
@@ -172,7 +176,7 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 				if kind == "-PU" {
 					allow = p.UDPPorts
 				}
-				if list == "" || allow == nil {
+				if list == "" || (allow == nil && (kind == "-PU" || o.ExcludePorts == nil)) {
 					out = append(out, a)
 					continue
 				}
@@ -180,7 +184,11 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 				if err != nil {
 					return nil, fmt.Errorf("nmap %s: %w", a, err)
 				}
-				if ps = ps.Intersect(allow); len(ps) > 0 {
+				ps = ps.Intersect(allow)
+				if kind != "-PU" {
+					ps = ps.Subtract(o.ExcludePorts) // LAB-T2: no probes to our own stack
+				}
+				if len(ps) > 0 {
 					out = append(out, kind+ps.String())
 				} // else: ping ports all outside the allow-list -> drop the probe
 				continue
@@ -269,7 +277,7 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 				out = append(out, "--top-ports", "1000")
 			}
 		}
-		tcp = tcp.Intersect(p.Ports)
+		tcp = tcp.Intersect(p.Ports).Subtract(o.ExcludePorts)
 		if hasUDP {
 			udp = udp.Intersect(p.UDPPorts)
 		} else {
@@ -283,13 +291,18 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 			parts = append(parts, "U:"+udp.String())
 		}
 		if len(parts) == 0 {
-			return nil, fmt.Errorf("nmap ports %q: nothing left inside the allow-list (TCP %s, UDP %s)", pSpec, p.Ports, p.UDPPorts)
+			return nil, fmt.Errorf("nmap ports %q: nothing left inside the allow-list (TCP %s, UDP %s) minus own stack ports (%s)",
+				pSpec, p.Ports, p.UDPPorts, o.ExcludePorts)
 		}
 		spec := strings.Join(parts, ",")
 		if !hasUDP {
 			spec = strings.TrimPrefix(spec, "T:")
 		}
 		out = append(out, "-p", spec)
+	}
+	if len(o.ExcludePorts) > 0 && !hasSn {
+		// also covers --top-ports without -p: nmap picks the top N among the remaining ports
+		out = append(out, "--exclude-ports", o.ExcludePorts.String())
 	}
 	if p.Profile == ProfileUnprivileged && !hasUnpriv {
 		out = append(out, "--unprivileged")

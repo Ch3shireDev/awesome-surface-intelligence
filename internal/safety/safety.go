@@ -46,14 +46,16 @@ var builtinExclude = []string{
 const DefaultUDPPorts = "53,123,161"
 
 type Policy struct {
-	Scope    []netip.Prefix // allow-list; empty = no extra restriction (inventory only)
-	Exclude  []netip.Prefix // user exclusions + builtin
-	Ports    PortSet        // allowed TCP ports; nil = all
-	UDPPorts PortSet        // allowed UDP ports (only with AllowUDP)
-	AllowUDP bool
-	MaxRate  int // hard cap on the GLOBAL packet rate (pps) of one run
-	MaxPar   int // hard cap on concurrent tool processes
-	Profile  string
+	Scope     []netip.Prefix // allow-list; empty = no extra restriction (inventory only)
+	Exclude   []netip.Prefix // user exclusions + builtin
+	Ports     PortSet        // allowed TCP ports; nil = all
+	UDPPorts  PortSet        // allowed UDP ports (only with AllowUDP)
+	AllowUDP  bool
+	MaxRate   int // hard cap on the GLOBAL packet rate (pps) of one run
+	MaxPar    int // hard cap on concurrent tool processes
+	Profile   string
+	Self      []netip.Prefix // addresses of the scanner host (LAB-T2, self.go)
+	SelfPorts PortSet        // ports of our own stack, never scanned on Self
 
 	userExclude int // how many of Exclude came from the user (for the summary)
 }
@@ -125,6 +127,9 @@ func FromEnv() (*Policy, error) {
 	switch strings.ToLower(os.Getenv("ASI_ALLOW_UDP")) {
 	case "1", "true", "yes", "on":
 		p.AllowUDP = true
+	}
+	if err := loadSelf(p); err != nil {
+		return nil, fmt.Errorf("ASI_SELF_PORTS / ASI_SELF_IPS: %w", err)
 	}
 	return p, nil
 }
@@ -208,16 +213,20 @@ func (p *Policy) Summary() map[string]any {
 	for i, s := range p.Scope {
 		scope[i] = s.String()
 	}
+	self := "off"
+	if len(p.SelfPorts) > 0 {
+		self = p.SelfPorts.String()
+	}
 	return map[string]any{"profile": p.Profile, "max_rate_pps": p.MaxRate, "max_parallel": p.MaxPar,
 		"scope": scope, "exclusions_user": p.userExclude, "exclusions_builtin": len(p.Exclude) - p.userExclude,
-		"tcp_ports": ports, "udp": udp}
+		"tcp_ports": ports, "udp": udp, "self_ports": self, "self_addrs": len(p.Self)}
 }
 
 func (p *Policy) String() string {
 	s := p.Summary()
-	return fmt.Sprintf("profile=%v max_rate=%vpps max_parallel=%v scope=%v exclusions=%v+%v builtin tcp_ports=%v udp=%v",
+	return fmt.Sprintf("profile=%v max_rate=%vpps max_parallel=%v scope=%v exclusions=%v+%v builtin tcp_ports=%v udp=%v self_ports=%v",
 		s["profile"], s["max_rate_pps"], s["max_parallel"], len(p.Scope), s["exclusions_user"], s["exclusions_builtin"],
-		s["tcp_ports"], s["udp"])
+		s["tcp_ports"], s["udp"], s["self_ports"])
 }
 
 // ---- helpers ----

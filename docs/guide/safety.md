@@ -70,6 +70,35 @@ Worker przycina do niej każdą linię nmapa:
 - `-F` zamieniane na `--top-ports 100` (żeby dało się je połączyć z `-p`),
 - porty sond discovery (`-PS…`, `-PA…`) też są przycinane, więc nawet ping nie dotyka portów spoza listy.
 
+## Skaner nie skanuje samego siebie (LAB-T2)
+
+Gdy celem jest **host skanera**, czyli loopback (`127.0.0.0/8`, `::1`), dowolny adres lokalnego interfejsu
+(kontener skanera ma `network_mode: host`, więc widzi interfejsy VM) albo adres z `ASI_SELF_IPS`, skaner
+pomija **porty naszego stacku**. Bez tego przebieg na `127.0.0.1` (np. lab organizatorów) raportowałby własny
+panel, DefectDojo i asi-db jako „znaleziska” i wysyłał do nich sondy `-sV`.
+
+| porty stacku (domyślnie z `.env`) | |
+|---|---|
+| `DD_PORT` | DefectDojo (8080) |
+| port z `ASI_WEB_ADDR`, `ASI_LIVE_ADDR` | panel ASI i postęp na żywo (8090, 8091) |
+| `ASI_DB_PORT` | asi-db (5433) |
+| 8094, 8095 + port z `-ui` bieżącego skanu | panele `make asi-scan` / `make asi-serve` |
+
+Przeniesienie portów w `.env` (np. `DD_PORT=18080` przed labem `modern`) automatycznie przenosi wykluczenie,
+więc WordPress labu na 8080 jest wtedy normalnie skanowany. `ASI_SELF_PORTS` podaje listę ręcznie,
+`ASI_SELF_PORTS=off` wyłącza mechanizm.
+
+Jak to działa: nmap nie ma wykluczeń portów per host, więc worker wydziela adresy hosta skanera do **osobnej
+paczki** i tylko jej nmap dostaje `--exclude-ports <porty stacku>`. Inne hosty w tym samym przebiegu są skanowane
+bez zmian. `-p` jest przycinane (same porty stacku → paczka odrzucona z komunikatem), `--top-ports N` wybiera
+N portów spośród pozostałych (sprawdzone na nmap 7.99), a z sond discovery `-PS/-PA` znikają porty stacku.
+Skan potwierdzający pomija je tak samo. W logu przebiegu jest linia
+`… target(s) are the scanner host (…) - own stack ports … left out`, a w `run.json` pole `policy.self_ports`.
+
+Sprawdzone na blackarch z działającym stackiem: `-p 22,5433,8080,8090,8091` na `127.0.0.1` daje nmapowi
+`-p 22 --exclude-ports 5433,8080,8090-8091,8094-8095` i tylko port 22 w wynikach. Z `ASI_SELF_PORTS=off`
+widać też 5433, 8080 i 8090.
+
 ## Dozwolone flagi nmapa
 
 Argumenty profili (`-nmap`, `-discovery-args`, port z formularza GUI, skan potwierdzający) przechodzą
@@ -133,6 +162,8 @@ ASI_ALLOW_UDP=1 ./asi scan -nmap "-sS -sU -sV --version-light -Pn -p T:22,80,443
 | `ASI_SCAN_PROFILE` | `raw` | `raw` albo `unprivileged` |
 | `ASI_ALLOW_UDP` | wyłączone | `1` włącza `-sU` |
 | `ASI_UDP_PORTS` | `53,123,161` | dozwolone porty UDP |
+| `ASI_SELF_PORTS` | z `.env` (patrz wyżej) | porty naszego stacku pomijane na hoście skanera; `off` wyłącza |
+| `ASI_SELF_IPS` | — | dodatkowe adresy hosta skanera (np. publiczny IP za NAT) |
 
 Błędna wartość (np. `ASI_SCAN_PROFILE=root`, zły CIDR) zatrzymuje `asi scan` przed wysłaniem
 jakiegokolwiek pakietu.

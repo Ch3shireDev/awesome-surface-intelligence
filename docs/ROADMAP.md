@@ -95,6 +95,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~20:20 | LAB-T2: skaner nie skanuje własnych portów ASI/DD na hoście skanera (osobna paczka z `--exclude-ports`, porty z `.env`) |
 | 21.11 ~20:00 | LAB-T3: 10 bezpiecznych sygnatur pod lab organizatorów (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, NPM, Traefik dashboard, Toxiproxy API, httpbin, WordPress < 6.0) + poprawka `asi-iot-camera-hikvision` (usunięty nagłówek Dahua `DNVRS-Webs`), `nuclei -validate` i test na 12 usługach OK; uporządkowane `TASKS.md` (SEC-2 🟡, DEV-13, OPS-1) |
 | 21.11 ~19:40 | blackarch: szyfrowanie włączone na maszynie demo — `asi-db` przestawiona na `pg_tde` (15/15 tabel, WAL AES-256) z zachowaniem danych (dump → restore → `asi db reseal`), `make crypto-check` 9 OK / 0 FAIL; nowa komenda `asi db reseal` (szyfruje stare jawne `_enc`, idempotentna) |
 | 21.11 ~18:45 | DEV-7: ocena 0–100 z powodami (port, sygnatury, TLS, świeżość, flapping, ocena analityka), grupy podobnych usług i technologii, wzorce pory dnia, zmiana treści HTTP jako `changed` |

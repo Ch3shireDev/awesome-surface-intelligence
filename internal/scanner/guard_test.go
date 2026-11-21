@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"io"
+	"net/netip"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -52,5 +53,33 @@ func TestWorkerRejectsSmuggledTarget(t *testing.T) {
 	r := runGuarded(t, fakeNmap{extra: []string{"198.51.100.7"}}, []string{"192.0.2.1"})
 	if r.State != "failed" || !strings.Contains(r.Error, "not a flag") {
 		t.Fatalf("smuggled target: %s %s", r.State, r.Error)
+	}
+}
+
+// echoNmap prints its command line, so the test can read what nmap would get.
+type echoNmap struct{ fakeNmap }
+
+func (e echoNmap) Parse(r io.Reader) ([]obs.Observation, error) {
+	b, _ := io.ReadAll(r)
+	return []obs.Observation{{Kind: "cmd", AssetKey: string(b)}}, nil
+}
+
+func TestWorkerSelfChunkExcludesOwnPorts(t *testing.T) {
+	dir := t.TempDir()
+	tr := progress.New("t", 2, filepath.Join(dir, "events.ndjson"))
+	pol := safety.Default()
+	pol.Self = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	pol.SelfPorts, _ = safety.ParsePorts("8080,8090")
+	rs := RunPhase(context.Background(), PhaseConfig{Name: "services", Adapter: echoNmap{}, Stage: obs.StageConfig{RatePPS: 10},
+		Parallel: 2, Sizer: &Sizer{Fixed: 10}, OutDir: dir, Guard: pol}, []string{"192.0.2.1", "127.0.0.1", "192.0.2.2"}, tr, nil)
+	if len(rs) != 2 {
+		t.Fatalf("chunks: %d", len(rs))
+	}
+	for _, r := range rs {
+		cmd := r.Observations[0].AssetKey
+		self := strings.Join(r.Hosts, ",") == "127.0.0.1"
+		if self != strings.Contains(cmd, "--exclude-ports 8080,8090") {
+			t.Errorf("hosts %v: cmd %q", r.Hosts, cmd)
+		}
 	}
 }

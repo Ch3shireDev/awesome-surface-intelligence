@@ -221,6 +221,7 @@ func cmdScan(args []string) {
 
 	// SEC-8: hard limits from .env win over flags; profile args must pass the nmap allow-list
 	pol := policy()
+	pol.AddSelfPorts(*ui) // LAB-T2: the live panel of this very scan is ours too
 	var limitNotes []string
 	*rate, *parallel, limitNotes = pol.Limits(*rate, *parallel)
 	checkNmapArgs(pol, "-discovery-args", *discArgs)
