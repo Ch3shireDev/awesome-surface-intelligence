@@ -535,7 +535,11 @@ func cmdScan(args []string) {
 	rec.reconcile(*recCfg)
 	if rec != nil {
 		// SEC-7: conditions from reconcile (missing/gone/flapping/changed) -> test asi-changes
-		exportChanges(dd, rec.st, ddTarget, !interrupted, dir, tr.Logf)
+		scope := make(map[string]bool, len(ips))
+		for _, ip := range ips {
+			scope[ip] = true
+		}
+		exportChanges(dd, rec.st, ddTarget, !interrupted, scope, dir, tr.Logf)
 	}
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)
@@ -683,7 +687,7 @@ func cmdUpload(args []string) {
 		} else if st, err := openStore(context.Background(), url); err != nil {
 			log.Printf("asi-changes skipped: %v", err)
 		} else {
-			exportChanges(c, st, t, *closeOld, "", log.Printf)
+			exportChanges(c, st, t, *closeOld, planScope(*run), "", log.Printf)
 			st.Close()
 		}
 	}

@@ -77,6 +77,37 @@ nie są sprawdzane, a anonimowe logowanie FTP też byłoby próbą logowania.
 
 **Rozwiązane (LAB-T4):** adapter `httpx` uruchamia `-rt` i zapisuje metrykę `response_time_ms` w obserwacji `http` (celowo poza `fp_hash`, więc zmiana opóźnienia nie tworzy fałszywych zdarzeń `changed`). Panel web pokazuje kolumnę `HTTP ms`, filtr „tylko wolne HTTP” oraz ostrzeżenie w szufladzie assetu powyżej progu `ASI_HTTP_SLOW_MS` (domyślnie `500` ms). Metryka trafia także do eksportu CSV (`http_ms`).
 
+## Wyniki LAB-1 (21.11, VM fatusia-hacknation-2, arm64)
+
+Stack `custom-network` przez `quickstart.sh`, cel `127.0.0.1`, `-parallel 1 -rate 1000`. Przebiegi 1-3 na kodzie
+sprzed LAB-T1/T2, z ręcznym pełnym TCP bez portów ASI/DD (`-p 1-5432,5434-8079,8081-8089,8092-8093,8096-65535`).
+Produkt DD `ASI lab-org`, engagement `quickstart`.
+
+| przebieg | zmiana w labie | ASI (reconcile) | DefectDojo |
+|---|---|---|---|
+| 1 | `quickstart.sh up` | 10 usług (5 labu + 5 samej VM), `new` | `ASI discovery` 10, `asi-httpx` 5 |
+| 2 | `change` (8787 stop) | **tylko** `8787` → `missing`, 9 bez zmian | `closed 1` (discovery i httpx), `asi-changes`: „nie odpowiada” |
+| 3 | `up` | `8787` → `reappeared` | `reactivated 1` (discovery i httpx), „nie odpowiada” zamknięte |
+
+Przebieg trwa około 115 s (65 tys. portów, 1 host, 1000 pps). Rozpoznane: nginx 1.31.9 (8787), Gitea (tech, tytuł
+strony **instalacji**), RabbitMQ Management (tytuł, Cowboy/Erlang), AMQP (5673), OpenSSH 10.3 (2223).
+
+**Domyślne ustawienia:**
+
+| kod | widoczne porty | usługi labu |
+|---|---|---|
+| przed LAB-T1/T2 | `22, 3001, 8080, 8090` | **4 z 5 niewidoczne** (8787, 2223, 5673, 15673) |
+| po LAB-T1/T2 (`-ports auto`, pomijanie własnych portów) | 22, 2223, 3001, 5673, 8384, 8787, 15673, 22000 i 2 procesy VM | **5 z 5**, bez 8080/8090 |
+
+Po LAB-T3/T4: sygnatury `asi-gitea` (info) i `asi-rabbitmq-management` (low), czas odpowiedzi HTTP 1-4 ms.
+
+Poprawione w trakcie: `asi-changes` wysyłał do produktu bieżącego przebiegu warunki **wszystkich** assetów w
+bazie (u nas hosty 192.0.2.14/.15 z własnego labu trafiły do `ASI lab-org`). Teraz idą tylko adresy z planu
+przebiegu (`plan.json`). Zweryfikowane: 0 obcych warunków, a DD zamknął 2 błędnie wysłane.
+
+Zostaje: LAB-T5 (diff „gone/new” vs baza „missing/reappeared”), LAB-T6 (instalator Gitea), szum usług samej
+VM (SSH, Syncthing, procesy lokalne). To prawdziwe usługi hosta, w labie jury wykluczyć je zakresem/portami.
+
 ## Jak testować
 
 Wspólne przygotowanie (LAB-0):

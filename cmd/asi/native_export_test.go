@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"asi/internal/store"
 )
 
 func write(t *testing.T, path, s string) {
@@ -49,5 +51,22 @@ func TestConcatJSONL(t *testing.T) {
 	want := `{"url":"http://192.0.2.1"}` + "\n" + `{"url":"https://192.0.2.1"}` + "\n" + `{"url":"http://192.0.2.2"}` + "\n"
 	if n != 2 || string(b) != want {
 		t.Fatalf("got %d files:\n%s", n, b)
+	}
+}
+
+func TestChangesScope(t *testing.T) {
+	assets := []store.Asset{{Key: "192.0.2.1/tcp/80", IP: "192.0.2.1"}, {Key: "198.51.100.7", IP: "198.51.100.7"}}
+	events := []store.Event{{Key: "192.0.2.1/tcp/80", Type: "changed"}, {Key: "198.51.100.7", Type: "missing"}}
+	as, ev := inScope(assets, events, map[string]bool{"192.0.2.1": true})
+	if len(as) != 1 || as[0].IP != "192.0.2.1" || len(ev) != 1 || ev[0].Key != "192.0.2.1/tcp/80" {
+		t.Fatalf("other target sets leaked into the report: %v %v", as, ev)
+	}
+	d := t.TempDir()
+	write(t, filepath.Join(d, "plan.json"), `{"created":"x","hosts":[{"ip":"192.0.2.1"},{"ip":"192.0.2.2"}]}`)
+	if s := planScope(d); len(s) != 2 || !s["192.0.2.2"] {
+		t.Fatalf("planScope = %v", s)
+	}
+	if planScope(t.TempDir()) != nil {
+		t.Fatal("no plan.json must give nil scope (export skipped)")
 	}
 }
