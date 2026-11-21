@@ -17,7 +17,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
         build test test-tokens test-users test-roles asi asi-scan asi-serve docs sync \
-        lab-up lab-down lab-ps demo env-keys crypto-check slides
+        lab-up lab-down lab-ps demo env-keys crypto-check schema-check slides
 
 help:
 	@echo "Cele:"
@@ -37,6 +37,7 @@ help:
 	@echo "  make import-defectdojo FILE=scans/results/xxx.xml  - import XML do DefectDojo"
 	@echo "  make env-keys         - dopisz klucze szyfrowania (SEC-6) do istniejacego .env"
 	@echo "  make crypto-check     - dowod szyfrowania at rest asi-db (TDE + pola AES-GCM)"
+	@echo "  make schema-check     - kompletnosc schematu: migracje, UNIQUE/ON CONFLICT, tabele na heap"
 	@echo "  make import-latest    - import najnowszego scans/results/*.xml"
 	@echo "  make poc              - jeden przebieg PoC: discover + fast + import obu do DD"
 	@echo "  make clean            - usun lokalne wyniki skanow"
@@ -186,6 +187,9 @@ asi-scan:
 # tde_heap, szyfrowany WAL, brak jawnego tekstu w plikach bazy, pola _enc z AES-GCM.
 crypto-check:
 	docker compose exec -T asi-db sh < docker/asi-db/crypto-check.sh
+
+schema-check:
+	docker compose exec -T asi-db sh < docker/asi-db/schema-check.sh
 
 asi-serve:
 	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8095

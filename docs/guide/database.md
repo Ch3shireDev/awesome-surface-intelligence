@@ -26,6 +26,16 @@ Gdy `ASI_DATABASE_URL` jest ustawione, `asi scan` zapisuje przebieg do bazy auto
 | `asi db reseal [-dry-run]` | zaszyfruj wartości `_enc` zapisane wcześniej jawnie (idempotentne; [Szyfrowanie](/guide/encryption#włączenie)) |
 | `asi diff -db [A B]` | diff dwóch przebiegów liczony z bazy (domyślnie dwa ostatnie `completed`) |
 
+## Kontrola schematu (`make schema-check`)
+
+`pg_restore` na istniejącym schemacie bez `--clean/--create` potrafi **pominąć indeksy i ograniczenia
+`UNIQUE`**: odczyty działają, a zapis kończy się `ON CONFLICT ... SQLSTATE 42P10`. `make schema-check`
+(tylko odczyt, w kontenerze `asi-db`) sprawdza migracje, obecność indeksów wymaganych przez kod
+(`targets_set_id_value_key`, `assets_key_key`, `users_username_key`, `schedules_name_key`,
+`target_sets_name_key`, `api_tokens_token_hash_key`, klucze `chunks` i `raw_outputs`), duplikaty w tych
+kluczach i brak tabel na `heap`. Uruchom po każdym restorze i przed demo; naprawa: `asi db migrate`,
+`pg_restore --data-only`, [`scripts/tde-reenable.sql`](/guide/encryption#warstwa-1-tde-pg_tde).
+
 ## Co jest zapisywane w trakcie skanu
 
 | moment | tabela |
