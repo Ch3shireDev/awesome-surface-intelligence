@@ -5,39 +5,52 @@ sterowany z Makefile) -> import wynikow do DefectDojo (dostarczony przez
 CBI AGH, pelni role dashboardu/zarzadzania podatnosciami).
 
 Decyzje i uzasadnienia architektury: [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Plan etapow i mapa wymagan z briefu: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 Kontekst dla agentow AI pracujacych w repo: [`AGENTS.md`](AGENTS.md).
 
-## Zanim cokolwiek odpalisz
+## Wymagania na hoscie (VM z Linuksem)
 
-1. **Potwierdz zakres skanu z mentorami CBI AGH** (adresy/CIDR sandboxa).
-   Bez tego nie skanuj niczego "na sprobe".
-2. Skopiuj `.env.example` -> `.env` i uzupelnij `DD_SECRET_KEY` /
-   `DD_CREDENTIAL_AES_256_KEY` (patrz komentarze w pliku) oraz haslo admina.
-3. Odpal to na VM z Linuksem (nmap w kontenerze potrzebuje uprawnien
-   NET_ADMIN/NET_RAW) - nie na laptopie przez Docker Desktop.
+Tylko: docker + compose plugin, `make`, `openssl`. Wszystko inne (nmap, curl,
+jq) siedzi w kontenerach, konfiguracja w repo.
 
 ## Start
 
 ```bash
-cp .env.example .env            # i uzupelnij wartosci
-make up                         # stawia DefectDojo + kontener skanera
+make env     # .env z .env.example + wygenerowane sekrety i haslo admina
+make up      # DefectDojo + kontener skanera
+make ps      # initializer powinien skonczyc z "Exited (0)" (1. start: kilka minut)
 ```
 
-Pierwsze logowanie do DefectDojo: http://localhost:8080 (login/haslo z
-`DD_ADMIN_USER` / `DD_ADMIN_PASSWORD` w `.env`). Po zalogowaniu:
-Configuration -> API -> API key, utworz Product + Engagement, wpisz
-`DD_API_KEY` i `DD_ENGAGEMENT_ID` do `.env`.
+UI: http://localhost:8080, login `admin`, haslo: `grep DD_ADMIN_PASSWORD .env`.
+Na VM forwardujesz z hosta tylko port **8080/tcp**.
 
 ## Skanowanie
 
+Zakres skanu potwierdzamy z mentorami CBI AGH - do tego czasu tylko
+`127.0.0.1` (test pipeline'u).
+
 ```bash
-cp scans/targets.example.txt scans/targets.txt   # i uzupelnij PO potwierdzeniu zakresu
-make scan-fast                                    # szybki skan top-portow
-make scan-service                                 # + wykrywanie wersji/uslug
-make import-defectdojo FILE=scans/results/fast-<timestamp>.xml
+echo 127.0.0.1 > scans/targets.txt
+make poc                # host discovery + szybki skan portow + wgranie obu do DD
 ```
 
-Pelna lista celow: `make help`.
+W DefectDojo: Product `Attack Surface` -> Engagement `nmap` -> testy
+`nmap-discover` (findingi "Host Up", tag `liveness`) i `nmap-fast` (otwarte
+porty). Kolejne przebiegi ida do tych samych testow (`reimport-scan`), wiec DD
+pokazuje diff: nowe / zamkniete / bez zmian (zakladka historii importow
+testu, a w terminalu podsumowanie `diff`).
+
+Szybki test wykrywania zmian na VM:
+
+```bash
+make poc                                              # przebieg 1
+docker compose exec -d nmap-scanner nc -lk -p 8888    # nowa "usluga"
+make poc                                              # przebieg 2: created 1
+docker compose exec nmap-scanner pkill -f 'nc -lk'
+make poc                                              # przebieg 3: closed 1
+```
+
+Product/Engagement/testy tworza sie przy pierwszym imporcie same. Pelna lista celow: `make help`.
 
 ## Status / co dalej
 

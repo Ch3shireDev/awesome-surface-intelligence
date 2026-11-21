@@ -8,6 +8,8 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
 - Wyzwanie: **Attack Surface Intelligence**, partner: AGH / Centrum
   Bezpieczenstwa Informacji AGH (CBI AGH), hackathon HackNation 2026
   (21-22.11.2026, Bydgoszcz).
+- Pelny brief: https://hacknation.pl/zadania (PDF "Szczegoly"); streszczenie,
+  mapa wymagan i plan etapow: [`ROADMAP.md`](ROADMAP.md).
 - Cel wg briefu: kompleksowe rozwiazanie do automatycznego skanowania
   bezpieczenstwa - integracja narzedzi pentestowych (m.in. Nmap), pipeline
   skanowania podatnosci, dashboard do wizualizacji wynikow, raportowanie.
@@ -49,22 +51,41 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
    (Mozliwy stretch goal pozniej, patrz "Zaleglosci / TODO".)
 
 3. **DefectDojo z oficjalnych obrazow Docker Hub** (`defectdojo/defectdojo-django`,
-   `defectdojo/defectdojo-nginx`), NIE build lokalny z zrodel - oszczednosc
-   czasu na starcie. `docker-compose.yml` w repo NIE byl uruchamiany/testowany
-   w tej sesji - przed pierwszym `make up` zweryfikuj nazwy zmiennych
-   srodowiskowych wzgledem aktualnej dokumentacji DefectDojo (bywaja
-   aktualizowane miedzy wersjami).
+   `defectdojo/defectdojo-nginx`), NIE build lokalny z zrodel. Wersja
+   przypieta w `.env` (`DD_VERSION=3.5.202`, obrazy multi-arch amd64/arm64).
+   Compose wyrownany do upstreamowego `docker-compose.yml` z tej wersji:
+   `DD_DATABASE_URL`, `DD_CELERY_BROKER_URL`, `DD_CACHE_URL`, valkey zamiast
+   redis, `/wait-for-it.sh` przed procesami django, `DD_UWSGI_HOST/PORT` dla
+   nginx. Wystawiony tylko port 8080 (HTTP, bez TLS). Wszystko zamyka sie w
+   repo: konfiguracja bind-mountami z `./docker/...`, dane runtime w nazwanych
+   wolumenach (`make nuke` czysci).
 
 4. **DefectDojo = dashboard.** Nie budujemy wlasnego UI/frontendu -
    DefectDojo juz ma pelny interfejs (findings, severity, engagements,
    metryki, raporty). Nasz wklad to pipeline: skan -> XML -> import do
    DefectDojo (`/api/v2/import-scan/`, `scan_type=Nmap Scan` - wbudowany
    parser, nic nie trzeba pisac recznie).
+   Brief wymaga tez formularza celow, RBAC z 4 rolami i dashboardu - zakladamy,
+   ze pokrywa to DefectDojo (endpointy produktu, role Owner/Maintainer/Writer/
+   Reader, dashboard). **Do potwierdzenia z mentorami** (patrz ROADMAP.md).
 
-5. **Nmap w osobnym, malym kontenerze** (alpine + nmap + curl + jq),
+5. **Nmap w osobnym, malym kontenerze** (alpine + nmap + curl + jq,
+   `network_mode: host` - skanuje z perspektywy VM, bez NAT-u dockera),
    sterowany z `Makefile` (cele `scan-discover` / `scan-fast` / `scan-full`
    / `scan-service` / `scan-udp`), wyniki ladowane do `scans/results/*.xml`
    (zamontowany wolumen), gotowe do importu.
+
+6. **Import do DefectDojo z kontenera skanera** (`docker/nmap/scripts/import-defectdojo.sh`),
+   nie z hosta - na hoscie nie potrzeba curla/jq. Token API pobierany
+   loginem admina (`/api/v2/api-token-auth/`), jesli `DD_API_KEY` pusty.
+   `auto_create_context=true` - Product Type/Product/Engagement tworza sie
+   same, nie trzeba recznie klikac w UI ani trzymac `DD_ENGAGEMENT_ID`.
+
+7. **Cykliczne skany przez `reimport-scan` do stalych testow** (jeden test na
+   rodzaj skanu, np. `nmap-fast`, `close_old_findings=true`). Diff miedzy
+   przebiegami liczy DD - nie piszemy wlasnego porownywania. Liveness (`-sn`)
+   konwertujemy na `Generic Findings Import` (kilka linii awk+jq), bo parser
+   Nmapa ignoruje hosty bez otwartych portow.
 
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
@@ -75,11 +96,24 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
 - [ ] Czy sandbox jest dostepny z poziomu VM od razu, czy wymaga VPN/dostepu
       specjalnego.
 
+## Ustalenia z uruchomienia (21.11)
+
+- Import `-sn` (liveness) do DD przechodzi, ale tworzy 0 findingow - parser
+  Nmapa robi findingi tylko z otwartych portow.
+- DD 3.5.202 ma parsery: Nmap, Masscan, Naabu, httpx, Nuclei, WhatWeb,
+  Testssl, Generic Findings Import (JSON/CSV).
+- `reimport-scan` zwraca diff created/closed/reactivated/untouched - porownanie
+  przebiegow robi DD.
+- Ponowny `import-scan` tego samego pliku duplikuje findingi (dedup domyslnie
+  wylaczony) - do cyklicznych skanow uzywac `reimport-scan`.
+
 ## Zaleglosci / TODO (kolejnosc wedlug priorytetu)
 
-1. Postawic stack na VM, przejsc pierwsze logowanie do DefectDojo, wygenerowac
-   API key, utworzyc Product + Engagement, wpisac `DD_API_KEY` /
-   `DD_ENGAGEMENT_ID` do `.env`.
+Aktualny plan etapow: [`ROADMAP.md`](ROADMAP.md). Ponizsza lista to
+pierwotne TODO.
+
+1. Postawic stack na VM (`make env && make up`), test petli na `127.0.0.1`:
+   `make scan-fast && make import-latest`.
 2. Potwierdzic zakres skanu z mentorami, uzupelnic `scans/targets.txt`.
 3. Przejsc petle: `make scan-fast` -> `make import-defectdojo FILE=...` ->
    sprawdzic findings w UI DefectDojo. To jest core MVP.

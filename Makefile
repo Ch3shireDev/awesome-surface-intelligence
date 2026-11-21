@@ -13,14 +13,17 @@ TARGETS ?= scans/targets.txt
 OUT_DIR := scans/results
 STAMP   := $(shell date +%Y%m%d-%H%M%S)
 
-.PHONY: help up down logs nmap-shell \
+.PHONY: help env up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
-        import-defectdojo clean
+        import-defectdojo import-latest poc clean
 
 help:
 	@echo "Cele:"
+	@echo "  make env              - utworz .env z .env.example z wygenerowanymi sekretami"
 	@echo "  make up               - odpal caly stack (DefectDojo + scanner)"
 	@echo "  make down             - zatrzymaj stack"
+	@echo "  make nuke             - zatrzymaj stack i USUN dane (wolumeny postgres/valkey/media)"
+	@echo "  make ps               - status kontenerow"
 	@echo "  make logs             - sledz logi DefectDojo (uwsgi)"
 	@echo "  make nmap-shell       - wejdz do kontenera skanera"
 	@echo "  make scan-discover    - ping sweep (-sn) po TARGETS"
@@ -29,13 +32,30 @@ help:
 	@echo "  make scan-service     - wykrywanie wersji/uslug (-sV -sC) na top-portach"
 	@echo "  make scan-udp         - top porty UDP (bardzo wolne)"
 	@echo "  make import-defectdojo FILE=scans/results/xxx.xml  - import XML do DefectDojo"
+	@echo "  make import-latest    - import najnowszego scans/results/*.xml"
+	@echo "  make poc              - jeden przebieg PoC: discover + fast + import obu do DD"
 	@echo "  make clean            - usun lokalne wyniki skanow"
+
+# Tworzy .env tylko jesli nie istnieje (nie nadpisuje istniejacego).
+env:
+	@if [ -f .env ]; then echo ".env juz istnieje - nie nadpisuje"; exit 0; fi; \
+	sed -e "s|^DD_SECRET_KEY=.*|DD_SECRET_KEY=$$(openssl rand -hex 32)|" \
+	    -e "s|^DD_CREDENTIAL_AES_256_KEY=.*|DD_CREDENTIAL_AES_256_KEY=$$(openssl rand -hex 16)|" \
+	    -e "s|^DD_ADMIN_PASSWORD=.*|DD_ADMIN_PASSWORD=$$(openssl rand -hex 12)|" \
+	    .env.example > .env && chmod 600 .env && \
+	echo "Utworzono .env (haslo admina: grep DD_ADMIN_PASSWORD .env)"
 
 up:
 	docker compose up -d --build
 
 down:
 	docker compose down
+
+nuke:
+	docker compose down -v
+
+ps:
+	docker compose ps -a
 
 logs:
 	docker compose logs -f uwsgi
@@ -82,17 +102,27 @@ scan-udp: $(OUT_DIR)
 		-oA /scans/results/udp-$(STAMP)
 
 # --- import do DefectDojo ---
-# Wymaga DD_API_KEY i DD_ENGAGEMENT_ID w .env (patrz .env.example: uzupelnij
-# PO pierwszym zalogowaniu sie do UI DefectDojo -> Configuration -> API key).
+# Import idzie z kontenera nmap-scanner (curl+jq w obrazie, env z .env),
+# skrypt: docker/nmap/scripts/import-defectdojo.sh. Token API pobierany
+# automatycznie loginem admina, jesli DD_API_KEY w .env jest pusty.
+# Product Type/Product/Engagement tworza sie same (DD_PRODUCT_* w .env).
 # Uzycie: make import-defectdojo FILE=scans/results/fast-20261121-120000.xml
 import-defectdojo:
-	@if [ -z "$(FILE)" ]; then echo "Podaj FILE=sciezka/do/wyniku.xml"; exit 1; fi
-	source .env && curl -sS \
-		-H "Authorization: Token $$DD_API_KEY" \
-		-F "scan_type=Nmap Scan" \
-		-F "engagement=$$DD_ENGAGEMENT_ID" \
-		-F "file=@$(FILE)" \
-		http://localhost:8080/api/v2/import-scan/
+	@if [ -z "$(FILE)" ]; then echo "Podaj FILE=scans/results/plik.xml"; exit 1; fi
+	docker compose exec -T nmap-scanner /opt/asi/import-defectdojo.sh /scans/$(patsubst scans/%,%,$(FILE))
+
+import-latest:
+	@f=$$(ls -t $(OUT_DIR)/*.xml 2>/dev/null | head -1); \
+	if [ -z "$$f" ]; then echo "Brak plikow XML w $(OUT_DIR)"; exit 1; fi; \
+	$(MAKE) --no-print-directory import-defectdojo FILE=$$f
+
+# Jeden przebieg petli PoC. Odpal dwa razy (np. po wlaczeniu/wylaczeniu
+# uslugi albo hosta) - w DD w testach nmap-discover / nmap-fast widac diff.
+poc:
+	$(MAKE) --no-print-directory scan-discover STAMP=$(STAMP)
+	$(MAKE) --no-print-directory scan-fast STAMP=$(STAMP)
+	$(MAKE) --no-print-directory import-defectdojo FILE=$(OUT_DIR)/discover-$(STAMP).xml
+	$(MAKE) --no-print-directory import-defectdojo FILE=$(OUT_DIR)/fast-$(STAMP).xml
 
 clean:
-	rm -f $(OUT_DIR)/*.xml $(OUT_DIR)/*.nmap $(OUT_DIR)/*.gnmap
+	rm -f $(OUT_DIR)/*.xml $(OUT_DIR)/*.nmap $(OUT_DIR)/*.gnmap $(OUT_DIR)/*.json

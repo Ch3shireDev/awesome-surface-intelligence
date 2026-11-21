@@ -14,25 +14,27 @@ SecureCodeBox zostal swiadomie odrzucony na rzecz wlasnego rozwiazania).
 
 ## Twarde zasady
 
-- **Nie uruchamiaj `docker compose up` ani zadnego celu `make scan-*` w tym
-  srodowisku.** Stack docelowo dziala na dedykowanej VM (nmap potrzebuje
-  NET_ADMIN/NET_RAW), nie na maszynie, na ktorej pracuje agent. Mozesz
-  walidowac skladnie (`docker compose config`, `make -n <cel>`), ale nie
-  faktyczne uruchomienie.
-- **Nie skanuj niczego poza `scans/targets.txt`, a ten plik nie istnieje w
-  repo dopoki zakres nie zostanie potwierdzony z mentorami CBI AGH** (patrz
-  "Otwarte pytania" w `docs/DECISIONS.md`). Nie wpisuj przykladowych
-  adresow IP jako "defaultowych" celow skanu.
+- **Stack uruchamiamy tylko na dedykowanej VM** (nmap potrzebuje
+  NET_ADMIN/NET_RAW i `network_mode: host`). Na innej maszynie tylko
+  walidacja skladni (`docker compose config`, `make -n <cel>`).
+- **Wszystko zamyka sie w repo.** Konfiguracja jako pliki w repo podpinane
+  bind-mountami do kontenerow, narzedzia (nmap, curl, jq) tylko w
+  kontenerach. Na hoscie wymagane wylacznie: docker + compose plugin, make,
+  openssl. Nie instaluj niczego innego na hoscie.
+- **Nie skanuj niczego poza `scans/targets.txt`.** Do czasu potwierdzenia
+  zakresu z mentorami CBI AGH (patrz "Otwarte pytania" w
+  `docs/DECISIONS.md`) jedynym dozwolonym celem jest `127.0.0.1` (sama VM,
+  do testow pipeline'u). Nie wpisuj przykladowych adresow IP jako
+  "defaultowych" celow skanu.
 - **Nie commituj `.env`, `scans/targets.txt` ani plikow wynikowych
   `scans/results/*.xml`** - sa w `.gitignore` celowo (dane ze srodowiska
   sandbox, API key DefectDojo).
 - DefectDojo jest dashboardem docelowym - nie buduj wlasnego frontendu/UI
   do wizualizacji wynikow, to zdublowana praca wzgledem tego, co juz daje
   DefectDojo.
-- `docker-compose.yml` bazuje na typowej, znanej strukturze DefectDojo
-  (oficjalne obrazy z Docker Hub), ale nie byl uruchamiany/testowany w tej
-  sesji. Jesli coś w nim poprawiasz na podstawie faktycznego uruchomienia,
-  zaktualizuj rowniez `docs/DECISIONS.md` (sekcja decyzji nr 3).
+- `docker-compose.yml` jest wyrownany do upstreamowego compose DefectDojo
+  3.5.202. Jesli cos w nim poprawiasz, zaktualizuj rowniez
+  `docs/DECISIONS.md` (sekcja decyzji nr 3).
 
 ## Konwencje
 
@@ -48,9 +50,14 @@ SecureCodeBox zostal swiadomie odrzucony na rzecz wlasnego rozwiazania).
 
 - `docker-compose.yml` - caly stack (DefectDojo + nmap-scanner).
 - `docker/nmap/Dockerfile` - obraz skanera (alpine + nmap + curl + jq).
+- `docker/nmap/scripts/` - skrypty montowane do skanera w `/opt/asi`
+  (`import-defectdojo.sh` - import wynikow przez API v2).
+- `docker/defectdojo/extra_settings/` - nadpisania settings DefectDojo.
 - `Makefile` - sterowanie skanami i importem do DefectDojo.
 - `scans/targets.example.txt` - szablon listy celow (skopiuj do
   `scans/targets.txt` PO potwierdzeniu zakresu).
+- `docs/ROADMAP.md` - streszczenie briefu, mapa wymaganie -> narzedzie,
+  plan etapow. Przed nowym etapem sprawdz, co pokrywa gotowe narzedzie/DD.
 - `docs/DECISIONS.md` - log decyzji, otwarte pytania, TODO wedlug
   priorytetu. Aktualizuj na biezaco zamiast trzymac ustalenia tylko w
   rozmowie.

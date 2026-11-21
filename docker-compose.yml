@@ -1,113 +1,122 @@
 # Attack Surface Intelligence - HackNation 2026 (AGH/CBI AGH)
 #
-# Stos: DefectDojo (obrazy oficjalne z Docker Hub, bez lokalnego builda - szybszy start
-# na hackathonie) + wlasny maly kontener ze skanerem nmap, sterowany z Makefile.
+# Caly stack w jednym compose: DefectDojo (oficjalne obrazy) + wlasny kontener
+# ze skanerem nmap, sterowany z Makefile.
 #
-# Celowo NIE uzywamy SecureCodeBox - jest naciwnie Kubernetes'owy (operator + CRD-y),
-# co nie pasuje do 24h budzetu na postawienie srodowiska w czystym Dockerze. Patrz
-# docs/DECISIONS.md.
+# Zasada: nic poza repo. Konfiguracja = pliki w repo podpinane bind-mountami
+# (./docker/..., ./scans), sekrety w ./.env. Jedyne co zyje poza repo to
+# dane runtime (postgres, valkey, media) w nazwanych wolumenach dockera -
+# `make nuke` usuwa je razem ze stackiem.
 #
-# UWAGA: nie uruchamiano/nie testowano tego pliku w tej rozmowie - przed uzyciem
-# zweryfikuj zmienne srodowiskowe DefectDojo wzgledem aktualnej dokumentacji projektu
-# (nazwy zmiennych bywaja aktualizowane miedzy wersjami).
+# Struktura zgodna z upstreamowym docker-compose.yml DefectDojo 3.5.202
+# (DD_DATABASE_URL / DD_CELERY_BROKER_URL / DD_CACHE_URL, valkey zamiast redis,
+# wait-for-it przed kazdym procesem django). Wersje przypinamy w .env.
+#
+# Celowo NIE uzywamy SecureCodeBox - patrz docs/DECISIONS.md.
 
-x-dd-env: &dd-env
+x-dd-django: &dd-django
+  image: "docker.io/defectdojo/defectdojo-django:${DD_VERSION:-3.5.202}"
   env_file:
     - .env
+  volumes:
+    # nadpisania settings.py (local_settings.py itp.) - pliki z repo
+    - ./docker/defectdojo/extra_settings:/app/docker/extra_settings:ro
+    - dd_media:/app/media
+  networks: [defectdojo]
+  depends_on: &dd-deps
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_started
+    initializer:
+      condition: service_completed_successfully
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
+      PGDATA: /var/lib/postgresql/data
       POSTGRES_DB: ${DD_DATABASE_NAME:-defectdojo}
       POSTGRES_USER: ${DD_DATABASE_USER:-defectdojo}
       POSTGRES_PASSWORD: ${DD_DATABASE_PASSWORD:-defectdojo}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DD_DATABASE_USER:-defectdojo} -d ${DD_DATABASE_NAME:-defectdojo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     volumes:
       - dd_postgres_data:/var/lib/postgresql/data
     networks: [defectdojo]
 
-  redis:
-    image: redis:7-alpine
+  valkey:
+    image: valkey/valkey:9-alpine
     restart: unless-stopped
+    volumes:
+      - dd_valkey_data:/data
     networks: [defectdojo]
 
+  # jednorazowo: migracje, fixtures, konto admina (DD_ADMIN_* z .env)
   initializer:
-    image: defectdojo/defectdojo-django:latest
-    <<: *dd-env
-    command: ["/entrypoint-initializer.sh"]
-    environment:
-      DD_INITIALIZE: "true"
-    depends_on: [postgres, redis]
-    networks: [defectdojo]
+    <<: *dd-django
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "--", "/entrypoint-initializer.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   uwsgi:
-    image: defectdojo/defectdojo-django:latest
-    <<: *dd-env
-    command: ["/entrypoint-uwsgi.sh"]
-    depends_on:
-      initializer:
-        condition: service_completed_successfully
-    volumes:
-      - dd_media:/app/media
-    networks: [defectdojo]
+    <<: *dd-django
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-uwsgi.sh"]
     restart: unless-stopped
 
   celerybeat:
-    image: defectdojo/defectdojo-django:latest
-    <<: *dd-env
-    command: ["/entrypoint-celery-beat.sh"]
-    depends_on:
-      initializer:
-        condition: service_completed_successfully
-    networks: [defectdojo]
+    <<: *dd-django
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-celery-beat.sh"]
     restart: unless-stopped
 
   celeryworker:
-    image: defectdojo/defectdojo-django:latest
-    <<: *dd-env
-    command: ["/entrypoint-celery-worker.sh"]
-    depends_on:
-      initializer:
-        condition: service_completed_successfully
-    volumes:
-      - dd_media:/app/media
-    networks: [defectdojo]
+    <<: *dd-django
+    entrypoint: ["/wait-for-it.sh", "postgres:5432", "-t", "30", "--", "/entrypoint-celery-worker.sh"]
     restart: unless-stopped
 
   nginx:
-    image: defectdojo/defectdojo-nginx:latest
-    <<: *dd-env
+    image: "docker.io/defectdojo/defectdojo-nginx:${DD_VERSION:-3.5.202}"
+    restart: unless-stopped
+    environment:
+      NGINX_METRICS_ENABLED: "false"
+      DD_UWSGI_HOST: uwsgi
+      DD_UWSGI_PORT: "3031"
     depends_on: [uwsgi]
     ports:
-      - "8080:8080"
-      - "8443:8443"
+      # jedyny port wystawiany na zewnatrz VM - UI + API DefectDojo (HTTP)
+      - "${DD_PORT:-8080}:8080"
     volumes:
-      - dd_media:/usr/share/nginx/html/media
+      - dd_media:/usr/share/nginx/html/media:ro
     networks: [defectdojo]
-    restart: unless-stopped
 
   # --- nasz skaner ---
+  # network_mode: host -> nmap widzi siec VM tak jak sama VM (localhost to
+  # VM, nie kontener; brak NAT-u dockera po drodze do sandboxa). Z tego samego
+  # kontenera robimy import do DefectDojo przez http://localhost:${DD_PORT},
+  # wiec na hoscie nie potrzeba curla/jq ani niczego innego.
   nmap-scanner:
     build: ./docker/nmap
-    # cap_add wystarcza dla skanow SYN/wersji z poziomu bridge network.
-    # Jesli skan nie widzi hostow w sieci VM (np. docker NAT blokuje trase do
-    # intranetu), odkomentuj ponizej network_mode: host (dziala tylko na Linuksie)
-    # i usun ten serwis z sieci "defectdojo" (host-mode ignoruje networks:).
-    # network_mode: host
+    network_mode: host
+    env_file:
+      - .env
     cap_add:
       - NET_ADMIN
       - NET_RAW
     volumes:
       - ./scans:/scans
-    networks: [defectdojo]
-    tty: true
-    stdin_open: true
-    entrypoint: ["sleep", "infinity"]  # wchodzimy przez `make nmap-shell` / make scan-*
+      - ./docker/nmap/scripts:/opt/asi:ro
+    restart: unless-stopped
 
 networks:
   defectdojo:
 
 volumes:
   dd_postgres_data:
+  dd_valkey_data:
   dd_media:
