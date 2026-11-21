@@ -1,0 +1,26 @@
+id: asi-login-redirect
+info:
+  name: Przekierowanie do strony logowania
+  author: asi
+  severity: info
+  description: /login albo /admin przekierowuje (3xx) do formularza logowania.
+  tags: asi,panel,login,redirect
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/login"
+      - "{{BaseURL}}/admin"
+    redirects: false
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [301, 302, 303, 307, 308]
+      - type: regex
+        part: header
+        regex: ['(?i)location:\s*\S*(login|signin|auth|sso)']
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex: ['(?i)location:\s*(\S+)']

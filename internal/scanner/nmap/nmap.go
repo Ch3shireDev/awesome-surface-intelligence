@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"asi/internal/nmapxml"
 	"asi/internal/obs"
@@ -49,11 +50,88 @@ func (a *Adapter) Command(ctx context.Context, c obs.Chunk, cfg obs.StageConfig)
 		args = dropFlag(args, "-p", true)
 		args = append(args, "-p", strings.Join(ps, ","))
 	}
+	if a.StageName == obs.StageServices && len(cfg.Ports) == 0 && !hasFlag(args, "-p") {
+		if n := flagValue(args, "--top-ports"); n > 0 {
+			if list := TopPortsPlusRisky(n); list != "" {
+				args = append(dropFlag(args, "--top-ports", true), "-p", list)
+			}
+		}
+	}
 	if cfg.RatePPS > 0 {
 		args = append(dropFlag(args, "--max-rate", true), "--max-rate", strconv.Itoa(cfg.RatePPS))
 	}
 	args = append(args, "--stats-every", "2s", "-oX", out, "-iL", c.TargetsFile)
 	return exec.CommandContext(ctx, "nmap", args...), obs.OutputSpec{Path: out, Format: "nmap-xml"}
+}
+
+// RiskyPorts are services that should never be exposed but are NOT in nmap's top-1000
+// list (checked against nmap 7.9x): without them a services scan misses e.g. an open Redis.
+var RiskyPorts = []int{
+	2375, 2376, // Docker API
+	2379,  // etcd
+	5601,  // Kibana
+	5984,  // CouchDB
+	6379,  // Redis
+	6443,  // Kubernetes API
+	8500,  // Consul
+	9042,  // Cassandra
+	9300,  // Elasticsearch transport
+	10250, // kubelet
+	11211, // Memcached
+	15672, // RabbitMQ management
+	27017, // MongoDB
+	61616, // ActiveMQ
+}
+
+var (
+	topMu    sync.Mutex
+	topCache = map[int]string{}
+)
+
+// TopPortsPlusRisky returns nmap's own top-N TCP port list (asked from nmap, so it
+// follows the installed nmap-services) plus RiskyPorts, as a -p argument. "" if
+// nmap cannot tell (the caller then keeps --top-ports).
+func TopPortsPlusRisky(n int) string {
+	topMu.Lock()
+	defer topMu.Unlock()
+	if v, ok := topCache[n]; ok {
+		return v
+	}
+	// -sL-like trick: scaninfo is printed before any probe; host-timeout 1ms ends it at once
+	out, err := exec.Command("nmap", "-sT", "--top-ports", strconv.Itoa(n), "-oX", "-", "-n", "-Pn",
+		"--max-retries", "0", "--host-timeout", "1ms", "127.0.0.1").Output()
+	list := ""
+	if err == nil {
+		if m := reServices.FindSubmatch(out); m != nil {
+			list = string(m[1])
+			for _, p := range RiskyPorts {
+				list += "," + strconv.Itoa(p)
+			}
+		}
+	}
+	topCache[n] = list
+	return list
+}
+
+var reServices = regexp.MustCompile(` services="([0-9,\-]+)"`)
+
+func hasFlag(args []string, f string) bool {
+	for _, a := range args {
+		if a == f {
+			return true
+		}
+	}
+	return false
+}
+
+func flagValue(args []string, f string) int {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == f {
+			n, _ := strconv.Atoi(args[i+1])
+			return n
+		}
+	}
+	return 0
 }
 
 func dropFlag(args []string, flag string, hasValue bool) []string {

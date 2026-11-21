@@ -146,6 +146,8 @@ services:
       # silnik asi: wejscie i wyniki w repo (gitignored)
       - ./targets:/work/targets
       - ./results:/work/results
+      # wlasne sygnatury nuclei (SEC-5), tylko do odczytu
+      - ./signatures:/work/signatures:ro
     restart: unless-stopped
 
 networks:

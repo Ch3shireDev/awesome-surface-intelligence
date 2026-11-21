@@ -1,0 +1,32 @@
+id: asi-cms-wordpress
+info:
+  name: WordPress (ścieżki /wp-login.php, /readme.html)
+  author: asi
+  severity: info
+  description: Fingerprint WordPressa po ścieżkach. Tylko GET, bez prób logowania.
+  tags: asi,cms,wordpress
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/wp-login.php"
+      - "{{BaseURL}}/readme.html"
+    stop-at-first-match: false
+    matchers-condition: or
+    matchers:
+      - type: word
+        name: wp-login
+        part: body
+        words: ['id="loginform"', 'wp-submit', 'wordpress_test_cookie']
+      - type: word
+        name: readme
+        part: body
+        words: ['<title>WordPress', 'WordPress &rsaquo; ReadMe']
+      - type: regex
+        name: api-link
+        part: header
+        regex: ['(?i)link:\s*<[^>]*/wp-json/>']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)Version ([0-9]+\.[0-9]+(\.[0-9]+)?)']

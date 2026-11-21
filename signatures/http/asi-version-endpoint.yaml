@@ -1,0 +1,26 @@
+id: asi-version-endpoint
+info:
+  name: Endpoint z wersją aplikacji
+  author: asi
+  severity: low
+  description: /version, /api/version albo /actuator/info zwraca wersję aplikacji.
+  tags: asi,version,disclosure
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/version"
+      - "{{BaseURL}}/api/version"
+      - "{{BaseURL}}/actuator/info"
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex: ['(?i)"(version|app_version|build)"\s*:\s*"[^"]+"']
+    extractors:
+      - type: regex
+        part: body
+        group: 2
+        regex: ['(?i)"(version|app_version)"\s*:\s*"([^"]+)"']

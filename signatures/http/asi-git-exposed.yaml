@@ -1,0 +1,15 @@
+id: asi-git-exposed
+info:
+  name: Katalog .git dostępny przez HTTP
+  author: asi
+  severity: medium
+  description: /.git/HEAD jest publiczny, więc kod i historia repozytorium są do pobrania. Sygnatura czyta tylko HEAD.
+  tags: asi,exposure,git
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/HEAD"
+    matchers:
+      - type: regex
+        part: body
+        regex: ['^ref: refs/heads/']

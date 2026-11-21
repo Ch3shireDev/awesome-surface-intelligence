@@ -12,14 +12,14 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 2 | podział na optymalne podgrupy | ✅ | 2 fazy + adaptacyjny `Sizer` (EWMA s/host) + pamięć `tuning.json`; [Podział](/guide/chunking) |
 | 3 | wykrycie aktywnych hostów | ✅ | faza discovery (`-sn`, TCP SYN/connect ping na 8 portów) |
 | 3 | …w sieciach blokujących sondy | ✅ | `-skip-discovery`; profil `raw` (domyślny, `NET_RAW`) pozwala na ICMP `-PE` i ARP, profil `unprivileged` tylko connect; [Profile](/guide/safety#profile-z-surowymi-gniazdami-i-bez-roota) |
-| 4 | identyfikacja usług | ✅ | `-sV --version-light`, top 1000 TCP |
+| 4 | identyfikacja usług | ✅ | `-sV --version-light`, top 1000 TCP **+ porty wysokiego ryzyka spoza top 1000** (Redis, MongoDB, Docker API, Kibana…) |
 | 4 | UDP | 🟡 | decyzja 15: domyślnie wyłączone; `ASI_ALLOW_UDP=1` włącza `-sU` tylko na 53,123,161 (DNS, NTP, SNMP), profil `raw`; [UDP](/guide/safety#udp-decyzja) |
-| 5 | HTTP: tytuł, kod, nagłówki, cookies, TLS, przekierowania | ❌ | **następny krok** — moduł Go `net/http` na usługach http/https z fazy 2 |
-| 6 | wykrywanie technologii / CMS / IoT | ❌ | po module HTTP: reguły na nagłówkach, cookies, HTML, favicon hash |
-| 7 | staging / panel admina | 🟡 | tagi z wejścia (`staging`, `admin`) + ocena portów admin; brak detekcji z treści |
+| 5 | HTTP: tytuł, kod, nagłówki, cookies, TLS, przekierowania | ✅ | etap `http` (httpx): tytuł, status, nagłówki, nazwy ciasteczek, `Location`, certyfikat (CN/SAN/wystawca/ważność/self-signed), favicon mmh3 ([Fingerprint](/guide/fingerprint)) |
+| 6 | wykrywanie technologii / CMS / IoT | ✅ | Wappalyzer w httpx + sygnatury: generator CMS, WordPress po ścieżkach, wersje PHP/Jenkins, hashe favicony; IoT 🟡 (brak sygnatur pod konkretne urządzenia) |
+| 7 | staging / panel admina | ✅ | sygnatury `asi-staging-environment` (nagłówek/tytuł/ciasteczko), `asi-admin-panel`, `asi-login-redirect`, `asi-version-endpoint` |
 | 8 | porównanie przebiegów | ✅ | `asi diff`, panel, automatycznie po skanie; [Porównanie](/guide/diff) |
 | 9 | nowe / znikające / zmienione usługi | ✅ | `new / gone / changed`, plus `created/closed/reactivated` w DefectDojo |
-| 10 | własne sygnatury | ❌ | plan: YAML (nagłówek, cookie, regex HTML, ścieżka GET, favicon mmh3) — po module HTTP |
+| 10 | własne sygnatury | ✅ | nuclei tylko z `signatures/` (14 szablonów, detekcja), instrukcja „jak dodać” w `signatures/README.md`, lint bezpieczeństwa w testach |
 | 11 | formularz: ręcznie + CSV/JSON | ✅ | GUI: formularz ręczny + import CSV/JSON/TXT do bazy, walidacja wejścia ([Panel web](/guide/gui)); **cele z dowolnego tekstu** (inwentarz, notatki) przez DeepSeek lub regex, z podglądem przed zapisem, CLI `asi targets-extract`, serwer MCP `asi mcp` ([Cele z tekstu](/guide/targets-ai)) |
 | 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, audit log |
 | 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI: tagi, notatka, nadpisania na assecie (trwałe), edycja celów; audit log |
@@ -57,33 +57,15 @@ staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo]
 
 ## Decyzje do podjęcia
 
-1. **Architektura UI / RBAC / baza.** Opcje:
-   (a) rozbudować panel w Go + PostgreSQL z `pgcrypto`/szyfrowaniem pól w aplikacji, własny RBAC;
-   (b) oprzeć RBAC na DefectDojo (ma użytkowników, role, uprawnienia per produkt) i trzymać
-   w `asi` tylko skaner + panel postępu;
-   (c) hybryda: logowanie do panelu `asi` przez token DefectDojo i mapowanie jego ról.
-   Spec wymaga 4 konkretnych ról i **własnego** formularza — (b) sam nie wystarczy.
-   **Rekomendacja: (a)** — jedna binarka, SQLite/PostgreSQL, role w kodzie, szyfrowanie pól AES-GCM
-   kluczem z env; DefectDojo jako cel eksportu.
-2. **Zgoda na skan cudzych hostów**: wiersze bez zgody właściciela mają `enabled=false`.
-3. **Punkt obserwacji.** Skan z `blackarch` nie widzi tailnetu Daniela ani sieci Incus. Czy
-   skanujemy z węzła w tailnecie Daniela / z `vision`? Czy wspieramy wiele sond?
-4. **Uprawnienia nmapa.** Bez roota: connect scan, brak ICMP i SYN. Z `CAP_NET_RAW`: szybciej i
-   lepsze discovery, ale skaner wymaga uprawnień. Na zawodach środowisko testowe w kontenerach —
-   prawdopodobnie OK.
-5. **Licencje (regulamin §4.2: rozwiązanie wolne od wad prawnych; prawa przechodzą na AGH).**
-   nmap ma licencję NPSL (ograniczenia redystrybucji w produktach komercyjnych) — wołamy go jako
-   zewnętrzny program, nie dołączamy. DefectDojo — BSD-3. Kod `asi` — tylko stdlib Go.
-   Do potwierdzenia z mentorami, że wywołanie nmapa jest OK.
-6. **Format organizatorów** — czekamy na „przykładowy format eksportu/importu JSON/CSV”,
-   „listę dozwolonych portów” i „limity ruchu” (sekcja 7 spec). `-rate` i `-nmap` są gotowe na te limity.
-7. ~~**Współpraca z repo zespołu**~~ — rozstrzygnięte 21.11: jedno repo, własny system w Go z eksportem
-   do DD (`DECISIONS.md` 8 i 10, `VISION.md`).
+Rozstrzygnięte decyzje są w [`DECISIONS.md`](DECISIONS.md) (architektura, RBAC, baza, szyfrowanie, UDP, polityka skanera).
+Otwarte:
 
-## Następne kroki (kolejność)
+1. **Zgoda na skan cudzych hostów**: wiersze bez zgody właściciela mają `enabled=false`.
+2. **Licencje (regulamin §4.2).** nmap (NPSL) wołamy jako zewnętrzny program; httpx i nuclei (MIT) tak samo;
+   DefectDojo BSD-3. Do potwierdzenia z mentorami, że wywołanie nmapa jest OK.
+3. **Format i limity organizatorów** (SEC-2): przykładowy JSON/CSV, lista dozwolonych portów, limity ruchu.
+   Polityka (`internal/safety`) i `-rate` są gotowe na te wartości.
 
-1. Moduł HTTP/HTTPS (tytuł, kod, nagłówki, cookies, certyfikat, przekierowania, favicon hash) — 10% oceny wprost i podstawa sygnatur.
-2. Sygnatury YAML + detekcja CMS/staging/admin.
-3. Baza (SQLite → PostgreSQL) + szyfrowanie pól + RBAC + formularz w panelu.
-4. Harmonogram + wznawianie w kolejnym oknie + hosty niestabilne.
-5. Eksport CSV, import cudzych wyników.
+## Następne kroki
+
+Aktualna lista z priorytetami: [Roadmapa](ROADMAP.md), sekcja „Co zostało do wzięcia”.

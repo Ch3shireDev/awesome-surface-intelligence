@@ -189,6 +189,16 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Zweryfikowane na labie (4 przebiegi): missing -> (3 braki) gone zamyka "do potwierdzenia" i otwiera
       "zniknal"; w przebiegu bez zmian oba findingi `untouched` (hash stabilny na prawdziwym DD 3.5.202).
 
+17. **Fingerprint HTTP = httpx, sygnatury = nuclei tylko z naszymi szablonami** (21.11, SEC-4/SEC-5).
+    - Gotowe narzedzia ProjectDiscovery (MIT) jako adaptery `obs.Scanner`, binarki z oficjalnych wydan z
+      weryfikacja SHA-256 w Dockerfile (wersje przypiete). Wlasny modul `net/http` odrzucony: Wappalyzer,
+      TLS i favicon mmh3 mamy gratis.
+    - httpx bez podazania za przekierowaniami i z `-nfs`, zeby obserwacja zawsze dotyczyla tego IP:portu.
+    - nuclei: wylacznie `signatures/` (bez publicznej bazy szablonow), `-ni`, `-etags` z lista wykluczen,
+      lint w testach (tylko GET, prefiks `asi-`). Sygnatury sa w repo i przechodza review jak kod.
+    - Etap services skanuje top-N nmapa **plus porty wysokiego ryzyka spoza top 1000** (Redis, MongoDB,
+      Docker API...). Bez tego Redis z labu byl niewidoczny.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
@@ -212,23 +222,3 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
   powtorzy: ubic i odpalic ponownie.
 - Ponowny `import-scan` tego samego pliku duplikuje findingi (dedup domyslnie
   wylaczony) - do cyklicznych skanow uzywac `reimport-scan`.
-
-## Zaleglosci / TODO (kolejnosc wedlug priorytetu)
-
-Aktualny plan etapow: [`ROADMAP.md`](ROADMAP.md). Ponizsza lista to
-pierwotne TODO.
-
-1. Postawic stack na VM (`make env && make up`), test petli na `127.0.0.1`:
-   `make scan-fast && make import-latest`.
-2. Potwierdzic zakres skanu z mentorami, uzupelnic `scans/targets.txt`.
-3. Przejsc petle: `make scan-fast` -> `make import-defectdojo FILE=...` ->
-   sprawdzic findings w UI DefectDojo. To jest core MVP.
-4. Jak dziala podstawowa petla: dodac `scan-service` do wzbogacenia wynikow
-   (wersje uslug), ew. CVSS/CVE jesli DefectDojo tego nie robi automatycznie
-   z samego Nmapa.
-5. Stretch goal (tylko jesli zostanie czas): drugi typ skanera na inna
-   warstwe attack surface (np. Nikto pod warstwe webowa) - DefectDojo ma
-   gotowy parser, wiec koszt dodania jest niski a podnosi "kompletnosc"
-   wzgledem kryteriow oceny.
-6. Stretch goal (opcjonalny, niski priorytet): k3d + prawdziwe SecureCodeBox,
-   tylko jesli MVP dziala i zostaje czas do konca.

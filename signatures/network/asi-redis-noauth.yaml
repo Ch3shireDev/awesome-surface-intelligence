@@ -1,0 +1,16 @@
+id: asi-redis-noauth
+info:
+  name: Redis bez uwierzytelnienia
+  author: asi
+  severity: high
+  description: Redis odpowiada na PING bez hasła. Sygnatura wysyła wyłącznie PING (bez odczytu i zapisu danych).
+  tags: asi,redis,network,exposure
+tcp:
+  - inputs:
+      - data: "PING\r\n"
+    host:
+      - "{{Hostname}}"
+    read-size: 64
+    matchers:
+      - type: word
+        words: ["+PONG"]

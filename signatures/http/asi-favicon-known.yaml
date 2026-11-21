@@ -1,0 +1,22 @@
+id: asi-favicon-known
+info:
+  name: Znany hash favicony (mmh3, jak Shodan)
+  author: asi
+  severity: info
+  description: Rozpoznanie produktu po hashu /favicon.ico. Listę hashy można rozszerzać.
+  tags: asi,favicon,tech
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/favicon.ico"
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: jenkins
+        dsl: ['status_code == 200 && mmh3(base64_py(body)) == "81586312"']
+      - type: dsl
+        name: tomcat
+        dsl: ['status_code == 200 && mmh3(base64_py(body)) == "-297069493"']
+      - type: dsl
+        name: spring-boot
+        dsl: ['status_code == 200 && mmh3(base64_py(body)) == "116323821"']

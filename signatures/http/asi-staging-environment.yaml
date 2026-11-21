@@ -1,0 +1,26 @@
+id: asi-staging-environment
+info:
+  name: Środowisko testowe / staging dostępne w sieci
+  author: asi
+  severity: low
+  description: Nagłówek X-Environment albo tytuł strony wskazuje środowisko staging/dev/test.
+  tags: asi,staging,environment
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        name: header
+        part: header
+        regex: ['(?i)x-(environment|env|app-env):\s*(staging|stage|dev|development|test|testing|qa|uat)']
+      - type: regex
+        name: title
+        part: body
+        regex: ['(?i)<title>[^<]*(\[staging\]|staging|\[dev\]|\[test\]|środowisko testowe)[^<]*</title>']
+    extractors:
+      - type: regex
+        part: header
+        group: 2
+        regex: ['(?i)x-(environment|env|app-env):\s*([a-z]+)']

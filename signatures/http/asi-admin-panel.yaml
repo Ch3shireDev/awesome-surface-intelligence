@@ -1,0 +1,28 @@
+id: asi-admin-panel
+info:
+  name: Panel administracyjny / logowania
+  author: asi
+  severity: low
+  description: Ścieżka administracyjna odpowiada stroną logowania. Wyłącznie GET, bez wysyłania danych logowania.
+  tags: asi,panel,admin,login
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/administrator/"
+      - "{{BaseURL}}/login"
+      - "{{BaseURL}}/wp-admin/"
+      - "{{BaseURL}}/manager/html"
+    stop-at-first-match: false
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 401, 403]
+      - type: regex
+        part: body
+        regex: ['(?i)(type=["'']password["'']|<title>[^<]*(admin|login|logowanie|sign in)[^<]*</title>|www-authenticate)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

@@ -1,0 +1,22 @@
+id: asi-php-outdated
+info:
+  name: Nieaktualny PHP (bez wsparcia bezpieczeństwa)
+  author: asi
+  severity: medium
+  description: X-Powered-By wskazuje PHP 5.x, 7.x albo 8.0 (koniec wsparcia bezpieczeństwa).
+  tags: asi,tech,php,outdated
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - '(?i)x-powered-by:\s*php/(5\.|7\.|8\.0\.)'
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex:
+          - '(?i)x-powered-by:\s*php/([0-9.]+)'

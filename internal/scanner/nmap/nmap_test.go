@@ -2,6 +2,7 @@ package nmap
 
 import (
 	"context"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -69,5 +70,24 @@ func TestCommandRateAndPorts(t *testing.T) {
 	}
 	if p, _, ok := (&Adapter{}).ParseProgress("Stats: 0:00:05 elapsed; 3 hosts completed (2 up), 1 undergoing"); !ok || p != 3 {
 		t.Errorf("progress parse")
+	}
+}
+
+func TestTopPortsPlusRisky(t *testing.T) {
+	if _, err := exec.LookPath("nmap"); err != nil {
+		t.Skip("nmap not installed")
+	}
+	l := TopPortsPlusRisky(100)
+	if !strings.Contains(l, ",6379") || !strings.HasPrefix(l, "7,") && !strings.Contains(l, "80") {
+		t.Fatalf("list: %.80s", l)
+	}
+	cmd, _ := Services(DefaultServicesArgs).Command(context.Background(), obs.Chunk{Dir: "/x", Name: "c", TargetsFile: "/x/t"}, obs.StageConfig{})
+	a := strings.Join(cmd.Args, " ")
+	if strings.Contains(a, "--top-ports") || !strings.Contains(a, "27017") {
+		t.Fatalf("services scan must cover risky ports: %.200s", a)
+	}
+	cmd, _ = Services(DefaultServicesArgs+" -p 22").Command(context.Background(), obs.Chunk{Dir: "/x", Name: "c", TargetsFile: "/x/t"}, obs.StageConfig{})
+	if a := strings.Join(cmd.Args, " "); strings.Contains(a, "27017") {
+		t.Fatalf("explicit -p must win: %s", a)
 	}
 }

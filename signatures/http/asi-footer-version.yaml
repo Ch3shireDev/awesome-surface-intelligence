@@ -1,0 +1,20 @@
+id: asi-footer-version
+info:
+  name: Wersja oprogramowania w stopce strony
+  author: asi
+  severity: info
+  description: 'Stopka strony ujawnia nazwę i wersję (np. "LabPortal 1.8.2", "Powered by X v2.1").'
+  tags: asi,version,html,footer
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?is)<footer[^>]*>.*?\b[A-Z][A-Za-z]+ v?[0-9]+\.[0-9]+(\.[0-9]+)?.*?</footer>']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?is)<footer[^>]*>.*?\b([A-Z][A-Za-z]+ v?[0-9]+\.[0-9]+(?:\.[0-9]+)?)']

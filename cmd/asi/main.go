@@ -203,6 +203,8 @@ func cmdScan(args []string) {
 	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	recCfg := reconcileFlags(fs)
+	httpStage := fs.String("http", "auto", "HTTP fingerprint stage (httpx): auto (if httpx is installed) | on | off")
+	sigDir := fs.String("signatures", "signatures", "nuclei templates directory for the signatures stage (\"\" = off)")
 	resume := fs.String("resume", "", "continue a partial run: scan only its targets not covered when its window closed")
 	scheduleID := fs.Int64("schedule-id", 0, "set by the scheduler (links the run to a schedule)")
 	trigger := fs.String("trigger", "manual", "manual | schedule (recorded in the database)")
@@ -427,6 +429,12 @@ func cmdScan(args []string) {
 			}
 		}
 	}
+	// --- phase 3: HTTP fingerprint (httpx) and phase 4: signatures (nuclei) on web services
+	webSvc := append([]findings.Service(nil), svcs...)
+	webObs := runWebStages(ctx, webStages{runID: runID, dir: dir, httpMode: *httpStage, sigDir: *sigDir,
+		parallel: *parallel, rate: *rate, chunkTimeout: *chunkTimeout, tune: tune}, webSvc, tr, rec)
+	keep(webObs)
+	writeJSON(tunePath, tune)
 	close(upQ)
 	upWG.Wait()
 

@@ -67,6 +67,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/assets", a.need("viewer", a.assets))
 	m.Handle("PATCH /api/v1/asset", a.need("analyst", a.editAsset))
 	m.Handle("GET /api/v1/asset/events", a.need("viewer", a.assetEvents))
+	m.Handle("GET /api/v1/asset/observations", a.need("viewer", a.assetObservations))
 	m.Handle("GET /api/v1/runs", a.need("viewer", a.runs))
 	m.Handle("GET /api/v1/runs/{id}/events", a.need("viewer", a.runEvents))
 	m.Handle("GET /api/v1/target-sets", a.need("viewer", a.targetSets))
@@ -226,6 +227,23 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 			unstable = append(unstable, it)
 		}
 	}
+	// custom signatures (nuclei, SEC-5): everything above "info" is an analyst-relevant finding
+	if _, sigs, err := a.St.LatestSignatures(ctx); err == nil {
+		sevLevel := map[string]string{"critical": "high", "high": "high", "medium": "medium", "low": "medium"}
+		for _, o := range sigs {
+			var d obs.SignatureData
+			o.Decode(&d)
+			lvl, ok := sevLevel[d.Severity]
+			if !ok {
+				continue
+			}
+			reason := "sygnatura " + d.ID
+			if len(d.Extract) > 0 {
+				reason += ": " + strings.Join(d.Extract, ", ")
+			}
+			hot = append(hot, interesting{Key: o.AssetKey, Service: d.Name, Interest: lvl, Reason: reason, State: "active"})
+		}
+	}
 	runs, _ := a.St.Runs(ctx, 20)
 	var latest *store.Run
 	var events []store.Event
@@ -293,6 +311,15 @@ func (a *App) assetEvents(w http.ResponseWriter, r *http.Request, u store.User) 
 		return
 	}
 	writeJSON(w, 200, ev)
+}
+
+func (a *App) assetObservations(w http.ResponseWriter, r *http.Request, u store.User) {
+	os, err := a.St.AssetObservations(r.Context(), r.URL.Query().Get("key"), "http", "signature")
+	if err != nil {
+		fail(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, os)
 }
 
 func (a *App) runs(w http.ResponseWriter, r *http.Request, u store.User) {

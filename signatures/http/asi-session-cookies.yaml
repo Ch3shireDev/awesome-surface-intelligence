@@ -1,0 +1,43 @@
+id: asi-session-cookies
+info:
+  name: Ciasteczko sesji ujawniające technologię
+  author: asi
+  severity: info
+  description: Nazwa ciasteczka zdradza framework lub środowisko (PHPSESSID, JSESSIONID, laravel_session, wordpress_*, staging_session...).
+  tags: asi,cookie,tech
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        name: php
+        part: header
+        regex: ['(?i)set-cookie:\s*PHPSESSID=']
+      - type: regex
+        name: java
+        part: header
+        regex: ['(?i)set-cookie:\s*JSESSIONID[A-Za-z0-9._-]*=']
+      - type: regex
+        name: laravel
+        part: header
+        regex: ['(?i)set-cookie:\s*laravel_session=']
+      - type: regex
+        name: aspnet
+        part: header
+        regex: ['(?i)set-cookie:\s*ASP\.NET_SessionId=']
+      - type: regex
+        name: wordpress
+        part: header
+        regex: ['(?i)set-cookie:\s*wordpress_[a-z_]*=']
+      - type: regex
+        name: staging
+        part: header
+        regex: ['(?i)set-cookie:\s*[a-z_]*(staging|dev|test)[a-z_]*=']
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex:
+          - '(?i)set-cookie:\s*([A-Za-z0-9._-]+)='

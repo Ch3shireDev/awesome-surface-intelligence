@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"asi/internal/obs"
 )
 
 type Asset struct {
@@ -224,4 +226,45 @@ func (s *Store) EventCounts(ctx context.Context, runs int) ([]RunEvents, error) 
 		}
 	}
 	return out, rows.Err()
+}
+
+// AssetObservations: the newest observations of the given kinds for one asset
+// (all of them from the latest run that has any), e.g. http + signature for the GUI.
+func (s *Store) AssetObservations(ctx context.Context, key string, kinds ...string) ([]obs.Observation, error) {
+	var run string
+	err := s.DB.QueryRow(ctx, `SELECT run_id FROM observations WHERE asset_key=$1 AND kind = ANY($2)
+		ORDER BY observed_at DESC LIMIT 1`, key, kinds).Scan(&run)
+	if err == pgx.ErrNoRows {
+		return []obs.Observation{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	all, err := s.Observations(ctx, run)
+	if err != nil {
+		return nil, err
+	}
+	out := []obs.Observation{}
+	want := map[string]bool{}
+	for _, k := range kinds {
+		want[k] = true
+	}
+	for _, o := range all {
+		if o.AssetKey == key && want[string(o.Kind)] {
+			out = append(out, o)
+		}
+	}
+	return out, nil
+}
+
+// LatestSignatures: signature hits of the newest run that ran the signatures stage.
+func (s *Store) LatestSignatures(ctx context.Context) (string, []obs.Observation, error) {
+	var run string
+	err := s.DB.QueryRow(ctx, `SELECT run_id FROM observations WHERE kind='signature' ORDER BY observed_at DESC LIMIT 1`).Scan(&run)
+	if err == pgx.ErrNoRows {
+		return "", nil, nil
+	} else if err != nil {
+		return "", nil, err
+	}
+	os, err := s.Observations(ctx, run, obs.KindSignature)
+	return run, os, err
 }

@@ -1,0 +1,20 @@
+id: asi-html-generator
+info:
+  name: CMS / generator w znaczniku meta
+  author: asi
+  severity: info
+  description: '<meta name="generator"> ujawnia CMS i jego wersję (WordPress, Joomla, Drupal, TYPO3...).'
+  tags: asi,cms,tech,html
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)<meta[^>]+name=["'']generator["''][^>]+content=["''][^"'']+']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<meta[^>]+name=["'']generator["''][^>]+content=["'']([^"'']+)']

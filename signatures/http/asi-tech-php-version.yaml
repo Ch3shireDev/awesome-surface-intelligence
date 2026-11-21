@@ -1,0 +1,22 @@
+id: asi-tech-php-version
+info:
+  name: Wersja PHP w nagłówku X-Powered-By
+  author: asi
+  severity: info
+  description: Serwer ujawnia wersję PHP. Wersje < 8.1 nie mają już wsparcia bezpieczeństwa (osobna sygnatura asi-php-outdated).
+  tags: asi,tech,php,header
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - '(?i)x-powered-by:\s*php/[0-9.]+'
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex:
+          - '(?i)x-powered-by:\s*php/([0-9.]+)'

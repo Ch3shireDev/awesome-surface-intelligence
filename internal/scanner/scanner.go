@@ -319,7 +319,7 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 		p.HostsDone += len(hosts)
 		recomputePartial(s, tr, cfg.Name)
 	})
-	tr.Logf("%s %s: %d targets, %d up, %d open, %.1fs %s", cfg.Name, name, len(hosts), up, open, r.Duration.Seconds(), r.Error)
+	tr.Logf("%s %s: %d targets, %d up, %d open, %d observations, %.1fs %s", cfg.Name, name, len(hosts), up, open, len(r.Observations), r.Duration.Seconds(), r.Error)
 	return r
 }
 

@@ -82,7 +82,8 @@ type Tracker struct {
 func New(runID string, parallel int, eventsPath string) *Tracker {
 	t := &Tracker{subs: map[chan []byte]struct{}{}}
 	t.s = State{RunID: runID, Started: time.Now(), Status: "planning", Parallel: parallel,
-		Phases: []*Phase{{Name: "discovery", State: "pending"}, {Name: "services", State: "pending"}},
+		Phases: []*Phase{{Name: "discovery", State: "pending"}, {Name: "services", State: "pending"},
+			{Name: "http", State: "pending"}, {Name: "signatures", State: "pending"}},
 		Upload: Upload{State: "idle"}, Chunks: []*Chunk{}, Services: []Service{}, Log: []string{}}
 	if eventsPath != "" {
 		t.ev, _ = os.Create(eventsPath)
@@ -145,7 +146,7 @@ func (t *Tracker) snapshotLocked() State {
 	s := t.s
 	s.Elapsed = time.Since(s.Started).Seconds()
 	// weights: discovery is cheap per host, services are where the time goes
-	w := map[string]float64{"discovery": 0.25, "services": 0.75}
+	w := map[string]float64{"discovery": 0.15, "services": 0.6, "http": 0.15, "signatures": 0.1}
 	var pct float64
 	for _, p := range s.Phases {
 		switch p.State {

@@ -28,6 +28,7 @@ export default defineConfig({
         { text: 'Podział na paczki nmap', link: '/guide/chunking' },
         { text: 'Panel web (GUI)', link: '/guide/gui' },
         { text: 'Harmonogram i okna czasowe', link: '/guide/schedule' },
+        { text: 'Fingerprint HTTP i sygnatury', link: '/guide/fingerprint' },
         { text: 'Postęp: CLI i panel web', link: '/guide/progress' },
         { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },
         { text: 'Porównanie przebiegów', link: '/guide/diff' },

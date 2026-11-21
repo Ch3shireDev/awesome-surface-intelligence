@@ -360,19 +360,39 @@ async function openAsset(key){
   <table><tr><th>pierwszy raz</th><td>${fmtT(a.first_seen)}</td></tr><tr><th>ostatnio</th><td>${fmtT(a.last_seen)} (${esc(a.last_seen_run)})</td></tr>
   <tr><th>widziany</th><td>${a.seen_count}× · kolejne braki: ${a.consecutive_misses}</td></tr></table>
   <label>Godziny, w których odpowiadał (UTC)</label><div class="hours">${hrs}</div><div class="hours-l"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div>
-  <label>Ostatnia obserwacja</label><pre class="json mono">${esc(JSON.stringify(a.current,null,2))}</pre>
+  <div id="dr-web"></div>
+  <label>Ostatnia obserwacja usługi</label><pre class="json mono">${esc(JSON.stringify(a.current,null,2))}</pre>
   <h2 style="margin-top:16px">Twoje dane (zachowane przy kolejnych skanach)</h2>
   <label for="dr-tags">tagi (po przecinku)</label><input id="dr-tags" style="width:100%" value="${esc((a.user_tags||[]).join(', '))}" ${can('analyst')?'':'disabled'}>
   <label for="dr-note">notatka (szyfrowana w bazie)</label><textarea id="dr-note" ${can('analyst')?'':'disabled'}>${esc(a.user_note||'')}</textarea>
   ${can('analyst')?'<div style="margin-top:10px"><button class="btn" id="dr-save">Zapisz</button> <span id="dr-msg" class="msg"></span></div>':'<p class="muted">Rola viewer: tylko odczyt.</p>'}
   <h2 style="margin-top:18px">Historia</h2><table>${ev.map(e=>`<tr><td>${badge(e.type)}</td><td>${fmtT(e.at)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">brak</td></tr>'}</table>`;
   $('dr-x').onclick=()=>dr.classList.add('hidden');
+  if(a.kind==='port')api('api/v1/asset/observations?key='+encodeURIComponent(key)).then(renderWeb).catch(()=>{});
   if($('dr-save'))$('dr-save').onclick=async()=>{
     const t=$('dr-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
     try{await api('api/v1/asset?key='+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify({user_tags:t,user_note:$('dr-note').value})});$('dr-msg').className='msg ok';$('dr-msg').textContent='zapisano'}
     catch(e){$('dr-msg').className='msg err';$('dr-msg').textContent=e.message}};
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('drawer').classList.add('hidden')});
+const SEV={critical:'i-high',high:'i-high',medium:'i-medium',low:'i-medium',info:'i-low'};
+function renderWeb(os){
+  const box=$('dr-web');if(!box||!os.length)return;
+  const parse=o=>{try{return typeof o.data==='string'?JSON.parse(o.data):o.data}catch{return {}}};
+  const http=os.filter(o=>o.kind==='http').map(parse), sigs=os.filter(o=>o.kind==='signature').map(parse);
+  let h='<h2 style="margin-top:16px">HTTP i sygnatury</h2>';
+  for(const d of http){
+    const hdr=d.headers||{};const pick=['server','x-powered-by','x-environment','x-jenkins','x-generator','strict-transport-security','content-security-policy','x-frame-options'];
+    h+=`<table><tr><th>URL</th><td class="mono">${esc(d.url)}</td></tr><tr><th>status</th><td>${esc(d.status)}${(d.redirects||[]).length?' → '+esc(d.redirects.join(', ')):''}</td></tr>
+      <tr><th>tytuł</th><td>${esc(d.title||'–')}</td></tr><tr><th>technologie</th><td>${(d.tech||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'–'}</td></tr>
+      <tr><th>ciasteczka</th><td class="mono">${esc((d.cookies||[]).join(', ')||'–')}</td></tr>
+      ${d.tls_subject?`<tr><th>TLS</th><td>${esc(d.tls_subject)} · wystawca ${esc(d.tls_issuer||'?')} · do ${esc((d.tls_not_after||'').slice(0,10))}${d.tls_self_signed?' · <span class="i-medium">self-signed</span>':''}${d.tls_mismatched?' · <span class="i-medium">niezgodna nazwa</span>':''}</td></tr>`:''}
+      ${d.favicon_mmh3?`<tr><th>favicon mmh3</th><td class="mono">${esc(d.favicon_mmh3)}</td></tr>`:''}
+      ${pick.filter(k=>hdr[k]).map(k=>`<tr><th>${esc(k)}</th><td class="mono">${esc(hdr[k].join('; '))}</td></tr>`).join('')}</table>`;
+  }
+  if(sigs.length){h+='<label>Trafienia sygnatur</label><table>'+sigs.sort((a,b)=>(SEV[a.severity]||'').localeCompare(SEV[b.severity]||'')).map(s=>`<tr><td class="${SEV[s.severity]||''}">${esc(s.severity)}</td><td>${esc(s.name)}<br><span class="mono muted">${esc(s.id)}${(s.extract||[]).length?' · '+esc(s.extract.join(', ')):''}</span></td></tr>`).join('')+'</table>'}
+  box.innerHTML=h;
+}
 
 // ---------- targets
 async function loadSets(sel){
