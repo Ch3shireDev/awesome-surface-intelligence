@@ -77,7 +77,7 @@ i `make sync`.
 
 | ID | kto | zadanie |
 |---|---|---|
-| DEV-5 | DEV | Harmonogram: cron, okno, wznawianie niedokończonych paczek w kolejnym oknie (`deferred`). Z panelu: start, pauza, anulowanie. |
+| DEV-5 | DEV 🔨 *w toku: agent blackarch* | Harmonogram: cron, okno, wznawianie niedokończonych paczek w kolejnym oknie (`deferred`). Z panelu: start, pauza, anulowanie. |
 | DEV-6 | DEV 🟡 *eksport assetów CSV/JSON jest (DEV-4); brak importu cudzych wyników* | Eksport JSON i CSV (assety, obserwacje, zdarzenia). Import cudzych wyników (nmap XML, JSON/CSV w formacie organizatorów). |
 | SEC-7 | SEC | Eksport do DD po nowemu: natywne parsery (Nmap, httpx, Nuclei) plus test `asi-changes` (Generic: gone, changed, flapping), bez `close_old` dla przebiegów częściowych. Test na instancji DD organizatorów. |
 | SEC-8 | SEC | Bezpieczeństwo skanera: kontrola zakresu i wykluczeń także w workerze, lista dozwolonych portów, sztywny górny limit pps, profil z `NET_RAW` (`-sS`, ICMP) i bez roota (`-sT`). Decyzja co do UDP (DNS, SNMP, NTP). Strona „Bezpieczeństwo” zaktualizowana. |
