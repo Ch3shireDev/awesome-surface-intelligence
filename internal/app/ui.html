@@ -224,7 +224,7 @@ async function api(path,opt={}){
   opt.headers=Object.assign({'X-ASI':'1'},opt.body&&!(opt.body instanceof FormData)?{'Content-Type':'application/json'}:{},opt.headers||{});
   opt.credentials='same-origin';
   const r=await fetch(path,opt);
-  if(r.status===401){showLogin();throw new Error('login')}
+  if(r.status===401&&!path.endsWith('/login')){showLogin();throw new Error('Sesja wygasła, zaloguj się ponownie')}
   const ct=r.headers.get('content-type')||'';
   const body=ct.includes('json')?await r.json():await r.text();
   if(!r.ok) throw new Error(body.error||body||r.statusText);
