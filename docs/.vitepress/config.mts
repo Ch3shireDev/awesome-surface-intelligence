@@ -9,6 +9,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Start', link: '/guide/quickstart' },
+      { text: 'Cele do wgrania', link: '/guide/lab#pliki-celow-do-wgrania' },
       { text: 'Roadmapa', link: '/ROADMAP' },
       { text: 'Status projektu', link: '/status' },
       { text: 'Wizja', link: '/VISION' },

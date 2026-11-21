@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "target": "192.0.2.8/29",
+      "asset": "lab",
+      "owner": "secops",
+      "tags": [
+        "lab",
+        "cidr"
+      ],
+      "enabled": true,
+      "note": ".8-.15: web-prod wordpress staging-admin cache legacy app"
+    },
+    {
+      "target": "192.0.2.16/30",
+      "asset": "lab",
+      "owner": "secops",
+      "tags": [
+        "lab",
+        "cidr"
+      ],
+      "enabled": true,
+      "note": ".16-.19: jenkins (2. przebieg) flaky"
+    },
+    {
+      "target": "192.0.2.12",
+      "asset": "staging-admin",
+      "owner": "secops",
+      "tags": [
+        "lab",
+        "staging",
+        "admin"
+      ],
+      "enabled": true,
+      "note": "srodowisko testowe z panelem admina"
+    }
+  ]
+}

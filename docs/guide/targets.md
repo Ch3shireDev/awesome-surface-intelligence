@@ -57,3 +57,8 @@ Jeden cel na linię, `#` = komentarz. Wszystko `enabled=true`, bez metadanych �
 Organizatorzy zapowiedzieli „przykładowy format eksportu/importu JSON/CSV”. Gdy się pojawi,
 dopiszemy mapowanie w `internal/targets` — schemat wewnętrzny zostaje.
 :::
+
+## Gotowe pliki do wgrania
+
+Przykładowe pliki (CSV, JSON, TXT) dla labu i dla localhosta są na stronie
+[Lab testowy i demo → Pliki celów do wgrania](/guide/lab#pliki-celow-do-wgrania).

@@ -18,6 +18,30 @@ make lab-down    # usuń lab
 a w DefectDojo do produktu **ASI lab** (engagement `demo`). Porty są zawężone do tych, które lab wystawia,
 więc jeden przebieg trwa ok. 20–30 s.
 
+## Pliki celów do wgrania
+
+Gotowe pliki do formularza **Cele → Import** w panelu (`asi server`, :8090) albo do CLI
+(`asi scan -targets …`). Wszystkie trzy formaty opisują ten sam zakres labu: 12 adresów,
+192.0.2.8–.15 i .16–.19.
+
+| plik | format | do czego |
+|---|---|---|
+| <a href="/cele/lab.csv" download>lab.csv</a> | CSV | lab: zakresy CIDR z tagami i notatkami (kopia `targets/lab.csv`) |
+| <a href="/cele/lab.json" download>lab.json</a> | JSON | to samo w formacie JSON (`asi convert`) |
+| <a href="/cele/lab.txt" download>lab.txt</a> | TXT | to samo jako lista: jeden cel w linii |
+| <a href="/cele/localhost.csv" download>localhost.csv</a> | CSV | tylko `127.0.0.1`, czyli test samej VM (kopia `targets/example.csv`) |
+
+`lab.csv`:
+
+<<< @/public/cele/lab.csv
+
+`lab.json`:
+
+<<< @/public/cele/lab.json
+
+Format kolumn i pól opisuje strona [Format celów](/guide/targets). Przed wgraniem uruchom lab
+(`make lab-up`), bo inaczej skan zwróci 0 aktywnych hostów.
+
 ## Sieć i bezpieczeństwo
 
 - Osobny projekt compose `asi-lab` (`docker/lab/compose.yml`), niezależny od stacku `asi`.

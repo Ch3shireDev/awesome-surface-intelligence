@@ -1,0 +1,4 @@
+target,asset,owner,tags,enabled,note
+# Szablon. Skopiuj do targets/targets.csv (gitignored) i wpisz zakres potwierdzony z CBI AGH.
+# Do tego czasu jedynym celem jest sama VM.
+127.0.0.1,self,secops,local;test,true,VM - test pipeline'u
