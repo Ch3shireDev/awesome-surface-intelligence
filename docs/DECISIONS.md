@@ -231,6 +231,10 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Plik celow **per maszyna** (`targets/lab-org-<host>.csv`, w `note` nazwa stacku), bo reconcile porownuje
       przebiegi: zmiana stacku to celowe masowe `missing` -> `gone` (LAB-6), a nie awaria. GUI: Cele -> Import,
       CLI: `asi scan -targets targets/lab-org-<host>.csv`.
+    - **Etap 2 = wlasna infrastruktura zespolu** (potwierdzone 21.11 21:05): `targets/targets.csv` to nasze cele
+      (Hetzner/Oracle + tailscale `100.x`), a nie przyklad. Wiersze `enabled=false` (ams, hf-brain) to hosty
+      klientow - wlaczamy dopiero po zgodzie wlasciciela, wiec zakres etapu 2 to narazie wiersze `enabled=true`.
+      Oba etapy (lab + wlasna infra) uzywaja tego samego mechanizmu: plik celow + `-targets`, bez zmian w kodzie.
     - Bezpieczenstwo: stacki maja domyslne hasla (WordPress, DVWA, FTP `test/test123`, RabbitMQ `guest`) i
       publikuja na `0.0.0.0`, czyli w tailnecie sa widoczne dla **calego tailnetu** (na maszynie bez firewalla
       takze w LAN). Stawiac tylko na maszynie testowej, po testach `docker compose down`. **Domyslnie nakladka
@@ -266,6 +270,34 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       rozwiązywałyby się pod `/assets/…`. Ten sam powód dla `/live/` w iframe.
     - Zamykanie panelu szczegółów: klik w wiersz dokłada wpis historii, „✕”/`Esc` robi krok wstecz; wejście
       z linku (bez wpisu w historii) tylko czyści adres `replaceState`, żeby nie wypychać użytkownika z panelu.
+
+22. **Jeden kanoniczny DefectDojo, nie instancja na każdą VM** (21.11 21:05, po sprawdzeniu fatusia-1/fatusia-2).
+    - Stan: fatusia-1 ma pełny stack (DD `:18080`, `asi server`, `asi-db`, LAB-4), fatusia-2 ma pełny stack
+      (DD `:8080`, `asi server`, lab `modern-proxy`, LAB-T8), blackarch bez DD (stacja dev). Oba DD są osiągalne
+      z tailnetu (`/login` z blackarch: 200, 0,27 s f1 i 1,19 s f2).
+    - Wniosek: **jedna instancja kanoniczna** = to, co pokazujemy jury; druga tylko jako „scratch” do izolacji
+      pracy agentów (wolno ją wyczyścić `make nuke`, nigdy nie jest demowana). Powody:
+      (1) jury widzi jeden system końcowy - findings rozproszone po VM to dwa źródła prawdy;
+      (2) `asi-changes`, `close_old` i dedupe po hashu są per-instancja, więc porównanie przebiegów z różnych
+      maszyn ma sens tylko w jednej bazie;
+      (3) koszt: 5 kontenerów i ~1,1-1,9 GB RAM na instancję, a VM 7 GB z labem (WordPress + mariadb + NPM +
+      Traefik) nie ma zapasu;
+      (4) DD na `8080` = port labu `modern` (WordPress), panel `8090` = DVWA - z DD domyślnym każda VM musi
+      przenumerować porty i dokumentację, a `:18080` zostawia 8080/8090 labom;
+      (5) jeden admin, jeden token, jedna wersja `DD_VERSION` (brak rozjazdu migracji przy równoległej pracy).
+    - Wdrożenie: kanoniczny = fatusia-1 `http://100.113.45.50:18080` (6 rdzeni, relay „waw”). Pozostałe VM:
+      tylko skaner + lab, `DD_URL` na kanoniczny, **osobny token API per maszyna** (audyt), produkt per źródło
+      (`ASI lab-org @ f1`), żeby dedupe nie mieszał przebiegów z dwóch maszyn. fatusia-2: DD albo wyłączyć,
+      albo przenumerować na `18080` i traktować jako scratch.
+    - Wymóg konfiguracji: do `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` kanonicznego dopisać
+      `http://100.113.45.50:18080` - bez tego logowanie z przeglądarki przez tailnet wpadnie na CSRF (dziś
+      wpisany jest tylko `localhost`).
+    - Odporność (dlaczego wspólny DD nie jest pojedynczym punktem awarii danych): każdy przebieg zostawia
+      `results/<run>` + `run.json`, a `asi upload` odtwarza import po podniesieniu DD. DD jest celem eksportu,
+      nie magazynem prawdy (decyzja 8).
+    - Do rozstrzygnięcia: **która VM jest demo** - kanoniczny DD ma stać tam, gdzie robimy demo; jeśli demo
+      idzie z innej maszyny, przenosimy kanoniczny (wolumen `asi_db_data`/DD trzeba wtedy przenieść albo
+      zaakceptować świeży start i reimport z `results/`).
 
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 

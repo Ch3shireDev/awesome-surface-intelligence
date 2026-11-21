@@ -81,6 +81,10 @@ Otwarte:
    portów ustalamy sami w `.env`, zakres skanu jest per przebieg (decyzja 19), a wykryty firewall raportujemy jako
    „wynik niepełny”, nie jako brak usług (decyzja 20, `LAB-T11`).
 
+4. **Topologia DefectDojo (decyzja 22)**: kanoniczny DD na fatusia-1 (`:18080`), pozostałe VM tylko skaner + lab;
+   druga instancja co najwyżej jako „scratch”. Do rozstrzygnięcia: **z której VM idzie demo** - tam ma stać
+   kanoniczny DD (dziś w `.env` na fatusia-1 jest `DD_SITE_URL=http://localhost:18080`, bez adresu tailnetu).
+
 ## Następne kroki
 
 Aktualna lista z priorytetami: [Roadmapa](ROADMAP.md), sekcja „Co zostało do wzięcia”.
