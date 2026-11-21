@@ -127,6 +127,26 @@ func tokenHash(t string) string {
 	return hex.EncodeToString(h[:])
 }
 
+// SetPassword replaces a user's password. Recovery path: the admin seeded from .env
+// exists only when the users table was empty, so a stale hash (password changed in
+// .env afterwards) cannot be fixed from the GUI without logging in. Clears disabled.
+func (s *Store) SetPassword(ctx context.Context, username, password string) (User, error) {
+	if len(password) < 10 {
+		return User{}, fmt.Errorf("password too short (min. 10 characters)")
+	}
+	h, err := HashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
+	var u User
+	err = s.DB.QueryRow(ctx, `UPDATE users SET password_hash=$2, disabled=false WHERE username=$1
+		RETURNING id, username, role, disabled`, username, h).Scan(&u.ID, &u.Username, &u.Role, &u.Disabled)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return User{}, fmt.Errorf("no user %q", username)
+	}
+	return u, err
+}
+
 func (s *Store) UserByToken(ctx context.Context, tok string) (User, error) {
 	var u User
 	err := s.DB.QueryRow(ctx, `UPDATE api_tokens t SET last_used_at=now() FROM users u

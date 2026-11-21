@@ -32,6 +32,15 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 Pierwszy admin powstaje przy starcie z `ASI_ADMIN_USER` / `ASI_ADMIN_PASSWORD`, gdy w bazie nie ma
 użytkowników. Kolejnych dodaje admin w GUI. RBAC jest lokalny, bez synchronizacji z DefectDojo (ustalenie z mentorem).
 
+Zmiana hasła w `.env` **nie zmienia** hasła istniejącego konta (konto powstaje tylko raz, przy pustej tabeli
+`users`). Odzyskanie dostępu bez logowania do panelu:
+
+```bash
+asi user list                                   # kto jest w bazie
+asi user passwd -user admin -password 'nowe-haslo'  # reset (min. 10 znaków, zdejmuje blokadę)
+asi user add -user jury -password 'haslo-jury' -role viewer
+```
+
 ## Bezpieczeństwo panelu
 
 - Hasła: PBKDF2-SHA256, 600 000 iteracji. Sesje: losowy token, w bazie tylko jego SHA-256, ważność 12 h,
