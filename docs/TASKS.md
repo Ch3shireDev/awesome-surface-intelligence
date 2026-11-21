@@ -84,7 +84,7 @@ i `make sync`.
 | SEC-4 | SEC ✅ *zrobione (agent blackarch): `internal/scanner/httpx`, etap `http`* | Etap `http`: adapter **httpx** (tytuł, kod, nagłówki, cookies, cert TLS, przekierowania, tech, hash favicony) na usługach http/https z fazy 2. httpx dochodzi do obrazu skanera. | fingerprint 10% + discovery 30% |
 | SEC-5 | SEC ✅ *zrobione (agent blackarch): `internal/scanner/nuclei`, `signatures/` (14), `signatures/README.md`* | Etap `signatures`: **nuclei** z naszymi szablonami w `signatures/` (nagłówek, cookie, favicon, fragment HTML, ścieżki `/login` `/admin` `/version` bez logowania, wersja w stopce, CMS, staging). Tagi `intrusive,dos,fuzz,brute-force` wykluczone. Krótki opis „jak dodać sygnaturę”. | sygnatury (pkt 10 PDF) |
 | DEV-2 | DEV ✅ *zrobione (blackarch)* | Reconcile w bazie: stany `new/active/missing(n)/gone`, `reappeared`, `flapping`, `hours_seen`, próg braków dla hostów. Edycje użytkownika (tagi, notatki, nadpisania) trzymane na assecie. | zmiany w czasie 15% |
-| DEV-3 | DEV 🟡 *w dużej części w DEV-4: 4 role, sesje/tokeny (hash), audit log, użytkownicy w GUI; brak: wydawanie tokenów API w GUI* | API `/api/v1` i RBAC: role `admin` / `operator` (dodawanie, usuwanie, modyfikacja) / `analyst` (modyfikacja i odczyt) / `viewer` (odczyt), tokeny (w bazie tylko hash), middleware, audit log. Pierwszy admin z `.env`. | role 10% |
+| DEV-3 | DEV 🔨 *w toku: goose/blackarch (21.11 19:55) — zostały tokeny API w GUI*; reszta w DEV-4: 4 role, sesje/tokeny (hash), audit log, użytkownicy w GUI; brak: wydawanie tokenów API w GUI* | API `/api/v1` i RBAC: role `admin` / `operator` (dodawanie, usuwanie, modyfikacja) / `analyst` (modyfikacja i odczyt) / `viewer` (odczyt), tokeny (w bazie tylko hash), middleware, audit log. Pierwszy admin z `.env`. | role 10% |
 | SEC-6 | SEC ✅ *zrobione (agent fatusia, 21.11): pg_tde + pola AES-256-GCM, `make crypto-check`* | `internal/crypto`: AES-256-GCM dla pól wrażliwych (surowe wyjścia, nagłówki, cookies, certyfikaty, notatki). Klucze `ASI_ENCRYPTION_KEYS` z id, żeby dało się rotować. Opis w dokumentacji, co jest szyfrowane i dlaczego. | ochrona danych (część 10%) |
 | DEV-4 | DEV ✅ *zrobione (blackarch)* | Panel web na API: logowanie, **formularz celów** (ręcznie oraz upload CSV/JSON), lista assetów z edycją, **dashboard**: najważniejsze znaleziska, zmiany z ostatniego przebiegu, niestabilne hosty. Widoki zależne od roli. | dashboard 15% |
 
@@ -105,8 +105,8 @@ i `make sync`.
 |---|---|---|
 | DEV-9 | DEV ✅ *zrobione (agent blackarch)* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
 | DEV-10 | DEV ✅ *zrobione (agent blackarch): docs/guide/scale.md* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
-| SEC-10 | SEC | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
-| SEC-9 | SEC | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
+| SEC-10 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
+| SEC-9 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
 | ALL-1 | oboje | Prezentacja do 10 slajdów: problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
 | ALL-2 | oboje | Dokumentacja: `status.md` na 100%, quickstart przetestowany przez drugą osobę na czystej VM. |
 
