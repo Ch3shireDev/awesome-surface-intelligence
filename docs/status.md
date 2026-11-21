@@ -15,13 +15,13 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 4 | identyfikacja usług | ✅ | `-sV --version-light`, top 1000 TCP **+ porty wysokiego ryzyka spoza top 1000** (Redis, MongoDB, Docker API, Kibana…) |
 | 4 | UDP | 🟡 | decyzja 15: domyślnie wyłączone; `ASI_ALLOW_UDP=1` włącza `-sU` tylko na 53,123,161 (DNS, NTP, SNMP), profil `raw`; [UDP](/guide/safety#udp-decyzja) |
 | 5 | HTTP: tytuł, kod, nagłówki, cookies, TLS, przekierowania | ✅ | etap `http` (httpx): tytuł, status, nagłówki, nazwy ciasteczek, `Location`, certyfikat (CN/SAN/wystawca/ważność/self-signed), favicon mmh3 ([Fingerprint](/guide/fingerprint)) |
-| 6 | wykrywanie technologii / CMS / IoT | ✅ | Wappalyzer w httpx + sygnatury: generator CMS, WordPress po ścieżkach, wersje PHP/Jenkins, hashe favicony; IoT 🟡 (brak sygnatur pod konkretne urządzenia) |
+| 6 | wykrywanie technologii / CMS / IoT | ✅ | Wappalyzer w httpx + sygnatury: generator CMS, WordPress po ścieżkach, wersje PHP/Jenkins, hashe favicony; **IoT (SEC-10): 9 sygnatur** — kamery Hikvision/Dahua/ogólne wizyjne, RouterOS, LuCI, drukarki, NAS (Synology/QNAP/TrueNAS), wbudowane serwery firmware'u (`GoAhead-Webs`, `Boa`, `uc-httpd`), opis UPnP; [Fingerprint](/guide/fingerprint#sygnatury-iot-sec-10) |
 | 7 | staging / panel admina | ✅ | sygnatury `asi-staging-environment` (nagłówek/tytuł/ciasteczko), `asi-admin-panel`, `asi-login-redirect`, `asi-version-endpoint` |
 | 8 | porównanie przebiegów | ✅ | dwa dowolne przebiegi w GUI (Skany), `asi diff -db`, automatycznie po skanie |
 | 9 | nowe / znikające / zmienione usługi | ✅ | `new / gone / changed`, plus `created/closed/reactivated` w DefectDojo |
 | 10 | własne sygnatury | ✅ | nuclei tylko z `signatures/` (14 szablonów, detekcja), instrukcja „jak dodać” w `signatures/README.md`, lint bezpieczeństwa w testach |
 | 11 | formularz: ręcznie + CSV/JSON | ✅ | GUI: formularz ręczny + import CSV/JSON/TXT do bazy, walidacja wejścia ([Panel web](/guide/gui)); **cele z dowolnego tekstu** (inwentarz, notatki) przez DeepSeek lub regex, z podglądem przed zapisem, CLI `asi targets-extract`, serwer MCP `asi mcp` ([Cele z tekstu](/guide/targets-ai)) |
-| 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, audit log |
+| 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, **tokeny API w GUI (DEV-3)**: zakładka Konto, ważność 0–3650 dni, tylko hash w bazie, unieważnianie, audyt; audit log |
 | 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI: tagi, notatka, **ocena analityka** (fałszywy alarm / zaakceptowane / nadpisana ocena, trwała i eksportowana do DD), edycja celów i harmonogramów; audit log |
 | 15 | czytelny interfejs + dashboard | ✅ | dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, wykres zmian w czasie; postęp skanu na żywo |
 | 16 | szyfrowanie at-rest | ✅ | 2 warstwy (sprawdzone `make crypto-check` 9/9 także na blackarch po `asi db reseal`): TDE `pg_tde` w `asi-db` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM w aplikacji (`ASI_ENCRYPTION_KEYS`, rotacja); dowód `make crypto-check`; [Szyfrowanie](/guide/encryption) |
@@ -35,7 +35,8 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | — | grupowanie podobnych usług, pora dnia | ✅ | grupy po produkcie/wersji i technologii; wzorce z `hours_seen` |
 | — | ocena „ciekawości” | ✅ | 0–100 z powodami: port, sygnatury, TLS, świeżość, flapping; ocena analityka wygrywa ([Ocena](/guide/insights)) |
 | — | tagi | ✅ | tagi celów (formularz/import) i assetów (edycja w GUI, trwałe między skanami) |
-| — | dokumentacja | ✅ | ta strona (VitePress) |
+| — | dokumentacja | ✅ | ta strona (VitePress); publiczne repo: https://github.com/Ch3shireDev/awesome-surface-intelligence |
+| — | repozytorium publiczne (SEC-9) | ✅ | link ze zgłoszenia; historia bez `.env`/`.dd_token`/realnych celów (sprawdzone), czysty start z GitHuba: `make env && make build && make test` ([Quickstart](/guide/quickstart#czysty-start-od-zera-sec-9-sprawdzony)) |
 
 ## Lab i demo (SEC-3, 21.11)
 
