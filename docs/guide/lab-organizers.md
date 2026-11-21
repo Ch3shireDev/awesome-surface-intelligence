@@ -77,7 +77,7 @@ nie są sprawdzane, a anonimowe logowanie FTP też byłoby próbą logowania.
 
 ### 5. Czas odpowiedzi (Toxiproxy)
 
-**Rozwiązane (LAB-T4):** adapter `httpx` uruchamia `-rt` i zapisuje metrykę `response_time_ms` w obserwacji `http` (celowo poza `fp_hash`, więc zmiana opóźnienia nie tworzy fałszywych zdarzeń `changed`). Panel web pokazuje kolumnę `HTTP ms`, filtr „tylko wolne HTTP” oraz ostrzeżenie w szufladzie assetu powyżej progu `ASI_HTTP_SLOW_MS` (domyślnie `500` ms). Metryka trafia także do eksportu CSV (`http_ms`).
+**Rozwiązane (LAB-T4):** adapter `httpx` uruchamia `-rt` i zapisuje metrykę `response_time_ms` w obserwacji `http` (celowo poza `fp_hash`, więc zmiana opóźnienia nie tworzy fałszywych zdarzeń `changed`). Panel web pokazuje kolumnę `HTTP ms`, filtr „tylko wolne HTTP” oraz ostrzeżenie w szufladzie assetu powyżej progu `ASI_HTTP_SLOW_MS` (domyślnie `300` ms, LAB-T9). Metryka trafia także do eksportu CSV (`http_ms`).
 
 ## Wyniki LAB-1 (21.11, VM fatusia-hacknation-2, arm64)
 
@@ -176,7 +176,7 @@ przełączanie zakłóceń przez `.env` labu jak w README organizatorów. Przebi
 |---|---|---|---|---|
 | 1 | brak (tuż po starcie stacku) | 302, 36 ms | **0 portów**, 10× `missing` + `flapping` | ❌ błąd LAB-T7 (opis niżej) |
 | 1' | brak (powtórka) | 302, 6 ms | 8 usług, WordPress (sygnatury), 6 ms | ✅ |
-| 2 | `latency` 500 ms ±50 | 302, 537 ms | bez zmian, **czas odpowiedzi 493 ms** | ✅ (próg „wolna” 500 ms - LAB-T9) |
+| 2 | `latency` 500 ms ±50 | 302, 537 ms | bez zmian, **czas odpowiedzi 493 ms** | ✅ (wtedy próg „wolna” 500 ms - LAB-T9; teraz 300 ms, flaga pewna) |
 | 3 | `timeout` 1000 ms | 502, 1,0 s | 8085: `changed` (Apache → Go/Traefik, TLS, 404), DD closed/created | ⚠️ LAB-T8 |
 | 4 | brak | 302 | 8085: znowu `changed`, DD closed/reactivated | ⚠️ LAB-T8 |
 | 5 | `bandwidth` 100 KB/s | 200 | bez zmian | ✅ |

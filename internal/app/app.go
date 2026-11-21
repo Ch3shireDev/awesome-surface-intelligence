@@ -316,7 +316,7 @@ func parseEventTypes(v string) []string {
 	return out
 }
 
-const defaultSlowHTTPMs = 500
+const defaultSlowHTTPMs = 300 // LAB-T9: organizers' Toxiproxy scenario is 500±50 ms - 500 made the flag random
 
 func slowHTTPThresholdMs() int {
 	if v := strings.TrimSpace(os.Getenv("ASI_HTTP_SLOW_MS")); v != "" {

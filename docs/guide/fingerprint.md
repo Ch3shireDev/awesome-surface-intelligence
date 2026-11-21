@@ -21,7 +21,7 @@ widział TLS albo port to 443/8443/9443.
 | przekierowanie (`Location`, bez podążania) | `redirects` |
 | certyfikat TLS: CN, SAN, wystawca, ważność, self-signed, niezgodność nazwy, SHA-256 | `tls_*` |
 | technologie (Wappalyzer), serwer, hash favicony (mmh3) | `tech`, `webserver`, `favicon_mmh3` |
-| czas odpowiedzi HTTP (ms, flaga `-rt`, próg `ASI_HTTP_SLOW_MS`, dom. 500 ms) | `response_time_ms` |
+| czas odpowiedzi HTTP (ms, flaga `-rt`, próg `ASI_HTTP_SLOW_MS`, dom. 300 ms) | `response_time_ms` |
 
 Bezpieczeństwo: jeden GET na URL, `-rl` (żądania/s na proces, ≤ 100) z globalnego limitu, timeout 8 s,
 1 ponowienie, `-nfs` (bez przeskakiwania http↔https), bez podążania za przekierowaniami, żeby obserwacja

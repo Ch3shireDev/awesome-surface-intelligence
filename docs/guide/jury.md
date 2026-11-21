@@ -117,7 +117,7 @@ Pokrywa punkty walidacji **3, 4, 5, 6, 7, 8, 10** (10% fingerprinting + 15% zmia
 | gdzie | co sprawdzić | wymaganie |
 |---|---|---|
 | **Dashboard** | kafelki (aktywne hosty, usługi, nowe, braki, zniknięte, niestabilne), *Najważniejsze znaleziska* z oceną 0–100 i powodem, *Niestabilne i zniknięte*, *Grupy podobnych usług*, *Wzorce pory dnia* (`hours_seen`), wykres *Zmiany w czasie* | pkt 15, ocena, grupy, pora dnia |
-| **Assety** | filtr po stanie (`new`, `active`, `missing`, `gone`), **tylko flapping**, kolumna **HTTP ms** i filtr **tylko wolne HTTP** (próg `ASI_HTTP_SLOW_MS=500`, LAB-T4); szuflada portu: sekcja **HTTP i sygnatury** (tytuł, kod, czas odpowiedzi, nagłówki, ciasteczka, przekierowania, certyfikat TLS, technologie, favicon mmh3), historia zdarzeń, pasek *Godziny, w których odpowiadał (UTC)* `0–23` | pkt 4–9 |
+| **Assety** | filtr po stanie (`new`, `active`, `missing`, `gone`), **tylko flapping**, kolumna **HTTP ms** i filtr **tylko wolne HTTP** (próg `ASI_HTTP_SLOW_MS=300`, LAB-T4/LAB-T9); szuflada portu: sekcja **HTTP i sygnatury** (tytuł, kod, czas odpowiedzi, nagłówki, ciasteczka, przekierowania, certyfikat TLS, technologie, favicon mmh3), historia zdarzeń, pasek *Godziny, w których odpowiadał (UTC)* `0–23` | pkt 4–9 |
 | **Skany → Porównanie dwóch przebiegów** | usługi nowe, zniknięte i zmienione (przed → po) między dowolnymi dwoma przebiegami; przycisk **zmiany →** przy przebiegu | pkt 8–9 |
 | terminal | `make asi ARGS='changes'`, `make asi ARGS='changes -asset 192.0.2.15/tcp/80'`, `make asi ARGS='diff -db'`, `make asi ARGS='diff -db -json'`, `make asi ARGS='assets -state missing'`, `make asi ARGS='assets -flapping'` | pkt 8–9 |
 
