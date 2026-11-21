@@ -29,6 +29,9 @@ make demo     # lab testowy -> przebieg 1 -> zmiany w labie -> przebieg 2 -> por
 
 Pierwszy `make up` buduje obrazy i pobiera DefectDojo, co zajmuje kilka minut. `make demo` trwa około 2 minut.
 
+**Jak testować krok po kroku** (lab → 2 przebiegi → edycja znalezisk → import → role → eksport → DefectDojo →
+szyfrowanie → bezpieczeństwo, z oczekiwanymi wynikami): [`docs/guide/jury.md`](docs/guide/jury.md).
+
 | co | adres | login |
 |---|---|---|
 | panel ASI | http://127.0.0.1:8090 | `admin`, hasło: `grep ASI_ADMIN_PASSWORD .env` |

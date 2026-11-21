@@ -9,6 +9,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Start', link: '/guide/quickstart' },
+      { text: 'Jak testować', link: '/guide/jury' },
       { text: 'Cele do wgrania', link: '/guide/lab#pliki-celow-do-wgrania' },
       { text: 'Roadmapa', link: '/ROADMAP' },
       { text: 'Status projektu', link: '/status' },
@@ -20,6 +21,7 @@ export default defineConfig({
       { text: 'Wprowadzenie', items: [
         { text: 'Czym jest ASI', link: '/' },
         { text: 'Szybki start', link: '/guide/quickstart' },
+        { text: 'Ścieżka testowania (dla jury)', link: '/guide/jury' },
         { text: 'Architektura', link: '/guide/architecture' },
       ]},
       { text: 'Działanie', items: [

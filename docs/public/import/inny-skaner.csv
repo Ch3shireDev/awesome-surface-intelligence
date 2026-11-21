@@ -1,0 +1,7 @@
+ip,port,proto,service,product,version,state
+198.51.100.20,22,tcp,ssh,OpenSSH,9.6p1,open
+198.51.100.20,443,tcp,https,nginx,1.25.3,open
+198.51.100.21,3306,tcp,mysql,MySQL,5.7.44,open
+198.51.100.21,8080,tcp,http,Apache Tomcat,9.0.80,open
+198.51.100.22,161,udp,snmp,,,open
+198.51.100.22,23,tcp,telnet,,,closed
