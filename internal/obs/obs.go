@@ -107,9 +107,10 @@ type HTTPData struct {
 	TLSNotAfter string              `json:"tls_not_after,omitempty"`
 	TLSSANs     []string            `json:"tls_sans,omitempty"`
 	Tech        []string            `json:"tech,omitempty"`
-	FaviconMMH3 string              `json:"favicon_mmh3,omitempty"`
-	ContentHash string              `json:"content_hash,omitempty"`
-	WebServer   string              `json:"webserver,omitempty"`
+	FaviconMMH3    string `json:"favicon_mmh3,omitempty"`
+	ContentHash    string `json:"content_hash,omitempty"`
+	WebServer      string `json:"webserver,omitempty"`
+	ResponseTimeMs int    `json:"response_time_ms,omitempty"` // metric only, excluded from fp_hash
 }
 
 type SignatureData struct {

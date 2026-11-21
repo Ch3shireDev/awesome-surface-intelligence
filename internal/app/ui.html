@@ -141,12 +141,13 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
       <div><label for="a-int">Ocena</label><select id="a-int"><option value="">wszystkie</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></div>
       <div><label for="a-kind">Rodzaj</label><select id="a-kind"><option value="">wszystkie</option><option value="host">hosty</option><option value="port">porty</option></select></div>
       <div><label><input type="checkbox" id="a-flap"> tylko flapping</label></div>
+      <div><label><input type="checkbox" id="a-slow"> tylko wolne HTTP</label></div>
       <div><button class="btn sec" id="a-go">Filtruj</button></div>
       <div style="margin-left:auto"><a href="api/v1/export/assets.csv" class="btn sec" style="text-decoration:none;display:inline-block;padding:8px 14px;border-radius:6px;background:var(--soft);color:var(--ink)">Eksport CSV</a>
         <a href="api/v1/export/assets.json" style="margin-left:6px">JSON</a></div>
     </div>
   </div>
-  <div class="card"><div class="scroll" style="max-height:none"><table><thead><tr><th>asset</th><th>usługa</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
+  <div class="card"><div class="scroll" style="max-height:none"><table><thead><tr><th>asset</th><th>usługa</th><th>HTTP ms</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
     <div id="a-count" class="muted" style="margin-top:8px"></div></div>
 </section>
 
@@ -200,7 +201,7 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
         <div><label for="s-set">Zbiór celów</label><select id="s-set"></select></div>
         <div><label for="s-par">Równoległość</label><input id="s-par" type="number" min="1" max="32" value="5" style="width:90px"></div>
         <div><label for="s-rate">Limit pps (łącznie)</label><input id="s-rate" type="number" min="1" max="5000" value="300" style="width:110px"></div>
-        <div><label for="s-ports">Porty</label><select id="s-ports"><option value="top100">top 100</option><option value="top1000" selected>top 1000</option><option value="custom">własne…</option></select></div>
+        <div><label for="s-ports">Porty</label><select id="s-ports"><option value="auto" selected>auto (pełne TCP ≤16 hostów / top 1000)</option><option value="all">wszystkie TCP (1-65535 / z polityki)</option><option value="top1000">top 1000 (+ ryzykowne)</option><option value="top100">top 100</option><option value="custom">własne…</option></select></div>
         <div id="s-custom-w" class="hidden"><label for="s-custom">lista portów</label><input id="s-custom" placeholder="22,80,443,8000-8100"></div>
         <div><label for="s-window">Okno czasowe</label><input id="s-window" placeholder="np. 2h" style="width:90px"></div>
         <div><label for="s-upload">DefectDojo</label><select id="s-upload"><option value="off">bez eksportu</option><option value="end" selected>na końcu</option><option value="live">na żywo</option></select></div>
@@ -338,8 +339,10 @@ function go(p){
 }
 
 // ---------- dashboard
+let slowHTTPMs=500;
 async function loadDash(){
   const d=await api('api/v1/dashboard');
+  if(d.slow_http_ms)slowHTTPMs=d.slow_http_ms;
   const h=d.counts.host||{},p=d.counts.port||{};
   const lastNew=(d.latest_events||[]).filter(e=>e.type==='new'||e.type==='reappeared').length;
   // [klasa, liczba, opis, filtr w zakladce Assety]
@@ -382,20 +385,25 @@ async function loadDash(){
 function bindRows(){document.querySelectorAll('tr.click[data-k]').forEach(tr=>tr.onclick=()=>openAsset(tr.dataset.k))}
 
 // ---------- assets
+function fmtHTTPMs(ms,slow){
+  if(!ms)return '<span class="muted">–</span>';
+  const isSlow=slow!==undefined?slow:(ms>=slowHTTPMs);
+  return isSlow?`<span class="i-medium mono" title="wolna odpowiedź (≥${slowHTTPMs} ms)">${ms} ms ⚠</span>`:`<span class="mono muted">${ms} ms</span>`;
+}
 async function loadAssets(){
-  const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':''});
+  const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':'',slow:$('a-slow').checked?'1':''});
   if(assetSvc){q.set('svc',assetSvc)}
   let rows=await api('api/v1/assets?'+q);
   const want=$('a-int').value;if(want)rows=rows.filter(a=>(a.interest||'')===want);
-  $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
+  $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Brak assetów. Uruchom skan.</td></tr>';
   $('a-count').innerHTML=rows.length+' assetów'+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'');
   if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();
 }
-$('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;
+$('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;$('a-slow').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
 let assetSvc='';
 function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kind').value=f.kind||'';
-  $('a-flap').checked=!!f.flap;$('a-int').value=f.interest||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
+  $('a-flap').checked=!!f.flap;$('a-slow').checked=!!f.slow;$('a-int').value=f.interest||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
 
 async function openAsset(key){
   const [rows,ev]=await Promise.all([api('api/v1/assets?q='+encodeURIComponent(key)),api('api/v1/asset/events?key='+encodeURIComponent(key))]);
@@ -440,6 +448,7 @@ function renderWeb(os){
   for(const d of http){
     const hdr=d.headers||{};const pick=['server','x-powered-by','x-environment','x-jenkins','x-generator','strict-transport-security','content-security-policy','x-frame-options'];
     h+=`<table><tr><th>URL</th><td class="mono">${esc(d.url)}</td></tr><tr><th>status</th><td>${esc(d.status)}${(d.redirects||[]).length?' → '+esc(d.redirects.join(', ')):''}</td></tr>
+      ${d.response_time_ms?`<tr><th>czas odpowiedzi</th><td><span class="mono">${esc(d.response_time_ms)} ms</span>${d.response_time_ms>=slowHTTPMs?` <span class="badge t-missing">wolna odpowiedź (≥${slowHTTPMs} ms)</span>`:''}</td></tr>`:''}
       <tr><th>tytuł</th><td>${esc(d.title||'–')}</td></tr><tr><th>technologie</th><td>${(d.tech||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'–'}</td></tr>
       <tr><th>ciasteczka</th><td class="mono">${esc((d.cookies||[]).join(', ')||'–')}</td></tr>
       ${d.tls_subject?`<tr><th>TLS</th><td>${esc(d.tls_subject)} · wystawca ${esc(d.tls_issuer||'?')} · do ${esc((d.tls_not_after||'').slice(0,10))}${d.tls_self_signed?' · <span class="i-medium">self-signed</span>':''}${d.tls_mismatched?' · <span class="i-medium">niezgodna nazwa</span>':''}</td></tr>`:''}
@@ -582,7 +591,7 @@ async function loadSchedules(){
   document.querySelectorAll('.sc-ed').forEach(b=>b.onclick=()=>{const x=d.schedules.find(s=>s.id==b.dataset.id);editSched=x;
     $('sc-name').value=x.name;$('sc-set').value=x.set;$('sc-cron').value=x.cron;$('sc-preset').value=[...$('sc-preset').options].some(o=>o.value===x.cron)?x.cron:'';$('sc-win').value=x.window_minutes;
     const p=x.params||{};if(p.parallel)$('s-par').value=p.parallel;if(p.rate)$('s-rate').value=p.rate;if(p.upload)$('s-upload').value=p.upload;
-    if(p.ports==='top100'||p.ports==='top1000'){$('s-ports').value=p.ports}else if(p.ports){$('s-ports').value='custom';$('s-custom').value=p.ports;$('s-custom-w').classList.remove('hidden')}
+    if(p.ports==='auto'||p.ports==='all'||p.ports==='top100'||p.ports==='top1000'){$('s-ports').value=p.ports;$('s-custom-w').classList.add('hidden')}else if(p.ports==='lab'||p.ports==='allowed'||p.ports==='full'||p.ports==='policy'){$('s-ports').value='all';$('s-custom-w').classList.add('hidden')}else if(p.ports){$('s-ports').value='custom';$('s-custom').value=p.ports;$('s-custom-w').classList.remove('hidden')}
     $('sc-add').textContent='Zapisz zmiany';$('sc-cancel').classList.remove('hidden');$('sc-msg').className='msg';$('sc-msg').textContent='Edytujesz „'+x.name+'”. Parametry skanu są w formularzu „Nowy skan” wyżej.';previewCron();$('sc-name').scrollIntoView({block:'center'})});
   document.querySelectorAll('.sc-en').forEach(cb=>cb.onchange=async()=>{const x=d.schedules.find(s=>s.id==cb.dataset.id);x.enabled=cb.checked;
     try{await api('api/v1/schedules/'+x.id,{method:'PUT',body:JSON.stringify(x)});loadSchedules()}catch(e){alert(e.message)}});

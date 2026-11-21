@@ -40,10 +40,7 @@ zestawem są:
 | `vulnerable` | `21000-21010` (pasywne FTP, nieistotne) |
 | `modern` | wszystko w zestawie |
 
-Bez zmiany ustawień ASI **nie zobaczy usługi z quickstartu**. Obejście bez kodu: pełny zakres TCP albo
-lista portów, np. `make asi ARGS='scan -targets targets/lab-org.csv -nmap "-sT -sV --version-light -Pn -p- -T4 --max-retries 2 --open"'`,
-pole portów w GUI albo `ASI_ALLOWED_PORTS`. Docelowo (zadanie LAB-T1): pełny zakres TCP automatycznie dla
-małych zbiorów celów i profil pod „listę dozwolonych portów” od organizatorów.
+**Rozwiązane (LAB-T1):** domyślny profil portów `-ports auto` (w CLI i GUI) automatycznie używa pełnego zakresu TCP (`-p 1-65535`, zawsze przycinanego do `ASI_ALLOWED_PORTS`, jeśli jest ustawione) dla małych zbiorów celów (≤ 16 hostów), a dla większych sieci zostaje przy top 1000 + portach ryzykownych. Dostępne są też jawne profile `-ports all` / `lab` / `allowed` / `top100` / `top1000` oraz własna lista portów. Jawne `-p` w `-nmap` (np. w `make demo`) zachowuje pierwszeństwo.
 
 ### 2. Konflikty portów z naszym stackiem
 
@@ -76,10 +73,7 @@ nie są sprawdzane, a anonimowe logowanie FTP też byłoby próbą logowania.
 
 ### 5. Czas odpowiedzi (Toxiproxy)
 
-httpx podaje czas odpowiedzi, ale adapter go nie zapisuje (`obs.HTTPData` nie ma takiego pola). Opóźnienie
-zobaczymy dziś tylko pośrednio: w czasie paczek (`timings.csv`, `sec_per_host`). Zadanie LAB-T4: czas
-odpowiedzi jako metryka obserwacji (poza fingerprintem, żeby nie robić fałszywych „changed”), widoczna w
-panelu, z progiem „wolna odpowiedź”.
+**Rozwiązane (LAB-T4):** adapter `httpx` uruchamia `-rt` i zapisuje metrykę `response_time_ms` w obserwacji `http` (celowo poza `fp_hash`, więc zmiana opóźnienia nie tworzy fałszywych zdarzeń `changed`). Panel web pokazuje kolumnę `HTTP ms`, filtr „tylko wolne HTTP” oraz ostrzeżenie w szufladzie assetu powyżej progu `ASI_HTTP_SLOW_MS` (domyślnie `500` ms). Metryka trafia także do eksportu CSV (`http_ms`).
 
 ## Jak testować
 

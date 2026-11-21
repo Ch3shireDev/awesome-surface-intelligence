@@ -27,6 +27,7 @@ type Asset struct {
 	SeenCount         int             `json:"seen_count"`
 	HoursSeen         int             `json:"hours_seen"` // bit h = seen at hour h (UTC)
 	Current           json.RawMessage `json:"current,omitempty"`
+	HTTP              json.RawMessage `json:"http,omitempty"`
 	UserTags          []string        `json:"user_tags"`
 	UserNote          string          `json:"user_note,omitempty"`
 	UserOverrides     json.RawMessage `json:"user_overrides"`
@@ -42,7 +43,7 @@ type AssetFilter struct {
 
 func (s *Store) Assets(ctx context.Context, f AssetFilter) ([]Asset, error) {
 	q := `SELECT key, kind, parent_key, host(ip), port, state, flapping, first_seen, last_seen, last_seen_run,
-		consecutive_misses, seen_count, hours_seen, current_enc, user_tags, user_note_enc, user_overrides FROM assets WHERE true`
+		consecutive_misses, seen_count, hours_seen, current_enc, http_enc, user_tags, user_note_enc, user_overrides FROM assets WHERE true`
 	var args []any
 	add := func(cond string, v any) {
 		args = append(args, v)
@@ -75,9 +76,9 @@ func (s *Store) Assets(ctx context.Context, f AssetFilter) ([]Asset, error) {
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Asset, error) {
 		var a Asset
-		var cur, note []byte
+		var cur, httpEnc, note []byte
 		if err := r.Scan(&a.Key, &a.Kind, &a.Parent, &a.IP, &a.Port, &a.State, &a.Flapping, &a.FirstSeen, &a.LastSeen,
-			&a.LastSeenRun, &a.ConsecutiveMisses, &a.SeenCount, &a.HoursSeen, &cur, &a.UserTags, &note, &a.UserOverrides); err != nil {
+			&a.LastSeenRun, &a.ConsecutiveMisses, &a.SeenCount, &a.HoursSeen, &cur, &httpEnc, &a.UserTags, &note, &a.UserOverrides); err != nil {
 			return a, err
 		}
 		if cur != nil {
@@ -86,6 +87,13 @@ func (s *Store) Assets(ctx context.Context, f AssetFilter) ([]Asset, error) {
 				return a, err
 			}
 			a.Current = b
+		}
+		if httpEnc != nil {
+			b, err := s.Sealer.Open(httpEnc)
+			if err != nil {
+				return a, err
+			}
+			a.HTTP = b
 		}
 		if note != nil {
 			b, err := s.Sealer.Open(note)

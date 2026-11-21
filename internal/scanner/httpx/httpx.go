@@ -13,12 +13,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/url"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"asi/internal/findings"
 	"asi/internal/obs"
@@ -44,7 +46,7 @@ func (a *Adapter) Command(ctx context.Context, c obs.Chunk, cfg obs.StageConfig)
 	threads := min(10, max(1, len(c.Targets)))
 	args := []string{"-l", c.TargetsFile, "-json", "-o", out, "-silent", "-nc", "-duc",
 		"-nfs", // keep the scheme we give (no https->http fallback on another port)
-		"-title", "-sc", "-td", "-server", "-cl", "-location", "-tls-grab", "-favicon", "-irh",
+		"-title", "-sc", "-td", "-server", "-cl", "-rt", "-location", "-tls-grab", "-favicon", "-irh",
 		"-rl", strconv.Itoa(rl), "-t", strconv.Itoa(threads), "-timeout", strconv.Itoa(t), "-retries", "1",
 		"-maxr", "0"}
 	args = append(args, cfg.Args...)
@@ -66,6 +68,7 @@ type line struct {
 	Location   string         `json:"location"`
 	Favicon    string         `json:"favicon"`
 	ContentLen int            `json:"content_length"`
+	Time       string         `json:"time"` // e.g. "50.84ms", "1.2s"
 	Header     map[string]any `json:"header"`
 	TLS        *struct {
 		SubjectCN  string   `json:"subject_cn"`
@@ -129,7 +132,7 @@ func toObservation(l line) (obs.Observation, bool) {
 		return obs.Observation{}, false
 	}
 	d := HTTPData{HTTPData: obs.HTTPData{URL: l.URL, Status: l.Status, Title: strings.TrimSpace(l.Title),
-		WebServer: l.Webserver, Tech: l.Tech, FaviconMMH3: l.Favicon}}
+		WebServer: l.Webserver, Tech: l.Tech, FaviconMMH3: l.Favicon, ResponseTimeMs: parseResponseTimeMs(l.Time)}}
 	if l.Location != "" {
 		d.Redirects = []string{l.Location}
 	}
@@ -153,7 +156,8 @@ func toObservation(l line) (obs.Observation, bool) {
 	}
 	tech := append([]string(nil), l.Tech...)
 	sort.Strings(tech)
-	// fingerprint = what an analyst would call "the same site" (no dates, no cookie values)
+	// fingerprint = what an analyst would call "the same site" (no dates, no cookie values,
+	// no response time: latency changes must not trigger "changed" events).
 	fp := []string{strconv.Itoa(l.Status), d.Title, l.Webserver, strings.Join(tech, ","), l.Favicon,
 		strings.Join(d.Cookies, ","), d.TLSSHA256, l.Location}
 	conf := 90
@@ -192,9 +196,32 @@ func isAttr(n string) bool {
 	return false
 }
 
+// parseResponseTimeMs parses httpx's Go duration string (e.g. "50.84ms", "1.2s", "400µs")
+// into milliseconds. Any positive sub-millisecond duration rounds up to 1 ms so 0 means "not measured".
+func parseResponseTimeMs(raw string) int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		return 0
+	}
+	ms := int(math.Round(float64(d) / float64(time.Millisecond)))
+	if ms < 1 {
+		return 1
+	}
+	return ms
+}
+
 // webPorts are probed even when nmap did not name the service http (e.g. 8888 "sun-answerbook").
-var webPorts = map[int]bool{80: true, 443: true, 8000: true, 8008: true, 8080: true, 8081: true, 8088: true,
-	8443: true, 8888: true, 3000: true, 5000: true, 9000: true, 9090: true, 9443: true}
+var webPorts = map[int]bool{
+	80: true, 81: true, 443: true,
+	3000: true, 3001: true, 5000: true,
+	8000: true, 8008: true, 8080: true, 8081: true, 8085: true, 8086: true, 8088: true, 8089: true, 8090: true,
+	8443: true, 8474: true, 8787: true, 8888: true,
+	9000: true, 9090: true, 9443: true, 15672: true, 15673: true,
+}
 
 // URLs builds the http stage input from services found by nmap: one URL per web port.
 func URLs(svcs []findings.Service) []string {

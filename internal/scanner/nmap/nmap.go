@@ -3,6 +3,7 @@ package nmap
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,11 @@ import (
 const (
 	DefaultDiscoveryArgs = "-sn -n -PS21,22,25,80,443,3389,8080,8443 -T4 --max-retries 1"
 	DefaultServicesArgs  = "-sT -sV --version-light -Pn --top-ports 1000 -T4 --max-retries 2 --host-timeout 10m --open"
+
+	// SmallTargetAutoFullMax: in "auto" port mode, target sets with at most this many
+	// hosts get a full TCP scan (-p 1-65535, still bounded by rate and ASI_ALLOWED_PORTS)
+	// so services on non-standard ports (e.g. lab 8787, 15432, 15673) are not missed.
+	SmallTargetAutoFullMax = 16
 )
 
 // Adapter runs nmap for one stage. Args are the base nmap flags of the profile.
@@ -47,10 +53,10 @@ func (a *Adapter) Command(ctx context.Context, c obs.Chunk, cfg obs.StageConfig)
 			ps[i] = strconv.Itoa(p)
 		}
 		args = dropFlag(args, "--top-ports", true)
-		args = dropFlag(args, "-p", true)
+		args = dropPortFlag(args)
 		args = append(args, "-p", strings.Join(ps, ","))
 	}
-	if a.StageName == obs.StageServices && len(cfg.Ports) == 0 && !hasFlag(args, "-p") {
+	if a.StageName == obs.StageServices && len(cfg.Ports) == 0 && !hasPortFlag(args) {
 		if n := flagValue(args, "--top-ports"); n > 0 {
 			if list := TopPortsPlusRisky(n); list != "" {
 				args = append(dropFlag(args, "--top-ports", true), "-p", list)
@@ -114,6 +120,69 @@ func TopPortsPlusRisky(n int) string {
 }
 
 var reServices = regexp.MustCompile(` services="([0-9,\-]+)"`)
+var rePortList = regexp.MustCompile(`^[0-9]{1,5}(-[0-9]{1,5})?(,[0-9]{1,5}(-[0-9]{1,5})?)*$`)
+
+// ApplyPorts rewrites nmap service-scan arguments according to a port profile:
+//   - "" or "auto": keeps explicit -p in baseArgs; otherwise switches to full TCP
+//     (-p 1-65535) when 0 < hostCount <= SmallTargetAutoFullMax, else keeps baseArgs.
+//   - "all", "full", "lab", "allowed", "policy", "-": full TCP (-p 1-65535;
+//     internal/safety intersects it with ASI_ALLOWED_PORTS when set).
+//   - "top100", "top1000": --top-ports 100 / 1000 (+ RiskyPorts in Command).
+//   - custom list/ranges like "22,80,443,8000-8100": -p <list>.
+func ApplyPorts(baseArgs, spec string, hostCount int) (string, string, error) {
+	args := strings.Fields(baseArgs)
+	mode := strings.ToLower(strings.TrimSpace(spec))
+	switch {
+	case mode == "" || mode == "auto":
+		if hasPortFlag(args) {
+			return strings.Join(args, " "), "", nil
+		}
+		if hostCount > 0 && hostCount <= SmallTargetAutoFullMax {
+			args = append(dropPortFlag(dropFlag(args, "--top-ports", true)), "-p", "1-65535")
+			note := fmt.Sprintf("auto: small target set (%d <= %d hosts) -> full TCP (-p 1-65535; policy allow-list applies)", hostCount, SmallTargetAutoFullMax)
+			return strings.Join(args, " "), note, nil
+		}
+		return strings.Join(args, " "), "", nil
+	case mode == "all" || mode == "full" || mode == "lab" || mode == "allowed" || mode == "policy" || mode == "-":
+		args = append(dropPortFlag(dropFlag(args, "--top-ports", true)), "-p", "1-65535")
+		return strings.Join(args, " "), fmt.Sprintf("profile %q -> full TCP (-p 1-65535; policy allow-list applies)", mode), nil
+	case mode == "top100":
+		args = append(dropPortFlag(dropFlag(args, "--top-ports", true)), "--top-ports", "100")
+		return strings.Join(args, " "), "profile top100 (+ risky ports)", nil
+	case mode == "top1000":
+		args = append(dropPortFlag(dropFlag(args, "--top-ports", true)), "--top-ports", "1000")
+		return strings.Join(args, " "), "profile top1000 (+ risky ports)", nil
+	case rePortList.MatchString(mode):
+		args = append(dropPortFlag(dropFlag(args, "--top-ports", true)), "-p", mode)
+		return strings.Join(args, " "), "custom ports " + mode, nil
+	default:
+		return "", "", fmt.Errorf("invalid ports %q: expected auto, all, lab, allowed, top100, top1000 or list e.g. 22,80,443,8000-8100", spec)
+	}
+}
+
+func hasPortFlag(args []string) bool {
+	for _, a := range args {
+		if a == "-p" || (strings.HasPrefix(a, "-p") && len(a) > 2) {
+			return true
+		}
+	}
+	return false
+}
+
+func dropPortFlag(args []string) []string {
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		if args[i] == "-p" {
+			i++
+			continue
+		}
+		if strings.HasPrefix(args[i], "-p") && len(args[i]) > 2 {
+			continue
+		}
+		out = append(out, args[i])
+	}
+	return out
+}
 
 func hasFlag(args []string, f string) bool {
 	for _, a := range args {

@@ -199,6 +199,7 @@ func cmdScan(args []string) {
 	dChunk := fs.Int("discovery-chunk", 0, "fixed hosts per discovery chunk (0 = adaptive)")
 	discArgs := fs.String("discovery-args", defaultDiscovery, "nmap args for host discovery")
 	svcArgs := fs.String("nmap", defaultServices, "nmap args for service scan")
+	ports := fs.String("ports", "auto", "port profile: auto (full TCP <=16 hosts, else top1000) | all | lab | allowed | top100 | top1000 | list e.g. 22,80,443,8000-8100")
 	skipDisc := fs.Bool("skip-discovery", false, "treat every IP as up (for networks dropping probes)")
 	chunkTimeout := fs.Duration("chunk-timeout", 20*time.Minute, "kill a single nmap after this")
 	window := fs.Duration("window", 0, "scan window: stop everything after this (e.g. 2h), 0 = no limit")
@@ -223,6 +224,9 @@ func cmdScan(args []string) {
 	var limitNotes []string
 	*rate, *parallel, limitNotes = pol.Limits(*rate, *parallel)
 	checkNmapArgs(pol, "-discovery-args", *discArgs)
+	if _, _, err := nmapad.ApplyPorts(*svcArgs, *ports, 0); err != nil {
+		log.Fatalf("-ports: %v", err)
+	}
 	checkNmapArgs(pol, "-nmap", *svcArgs)
 
 	runID := time.Now().Format("20060102-150405")
@@ -294,8 +298,19 @@ func cmdScan(args []string) {
 		s.Targets, s.Skipped, s.Status = len(ips), len(plan.Skipped), "running"
 	})
 	tr.Logf("plan: %d IPs, %d targets skipped (see plan.json)", len(ips), len(plan.Skipped))
+	// LAB-T1: apply port profile (auto -> full TCP for small target sets <= 16 hosts)
+	resolvedSvc, portNote, err := nmapad.ApplyPorts(*svcArgs, *ports, len(ips))
+	if err != nil {
+		bar.Stop()
+		log.Fatalf("-ports: %v", err)
+	}
+	*svcArgs = resolvedSvc
+	checkNmapArgs(pol, "-nmap", *svcArgs)
+	if portNote != "" {
+		tr.Logf("ports: %s", portNote)
+	}
 	rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
-		"discovery_args": *discArgs, "nmap_args": *svcArgs, "window": window.String(), "targets": len(ips),
+		"discovery_args": *discArgs, "nmap_args": *svcArgs, "ports": *ports, "window": window.String(), "targets": len(ips),
 		"policy": pol.Summary()})
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")

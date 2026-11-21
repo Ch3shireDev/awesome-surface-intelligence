@@ -128,10 +128,10 @@ Zadania kodu wynikające z analizy (przed LAB-1…5):
 
 | ID | kto | zadanie |
 |---|---|---|
-| LAB-T1 | DEV 🔨 *w toku: agy/blackarch* | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
+| LAB-T1 | DEV ✅ *zrobione (agy/blackarch): `-ports auto` (pełne TCP ≤16 hostów), `all`/`lab`/`allowed` w CLI i GUI, zgodne z `ASI_ALLOWED_PORTS`* | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
 | LAB-T2 | SEC | Nie skanować samego siebie: wykluczenie portów ASI/DD przy celu = host skanera (wykluczenia per port albo automatyczne). |
 | LAB-T3 | SEC ✅ *zrobione (agy/blackarch, 21.11): 10 sygnatur w `signatures/http/` (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, NPM, Traefik, Toxiproxy, httpbin, WordPress < 6.0) + poprawka `asi-iot-camera-hikvision` (usunięty nagłówek Dahua `DNVRS-Webs`), `nuclei -validate` OK, test na 12-usługowej atrapie HTTP 100% trafień / 0 FP* | Sygnatury detekcyjne (`signatures/`): phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, Nginx Proxy Manager, Traefik dashboard (`api.insecure`), API Toxiproxy, httpbin, nieaktualny WordPress (< 6.0). Tylko detekcja, bez logowania. Uzupełnia SEC-10 (IoT). |
-| LAB-T4 | DEV 🔨 *w toku: agy/blackarch* | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
+| LAB-T4 | DEV ✅ *zrobione (agy/blackarch): `httpx -rt` → `response_time_ms` poza `fp_hash`, kolumna `HTTP ms` + filtr wolnych + szuflada + CSV, `ASI_HTTP_SLOW_MS=500`* | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
 
 ## Ryzyka
 

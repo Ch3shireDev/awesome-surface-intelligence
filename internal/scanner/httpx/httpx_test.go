@@ -82,12 +82,61 @@ func TestCommand(t *testing.T) {
 	cmd, spec := (&Adapter{}).Command(context.Background(), obs.Chunk{Dir: "/x", Name: "chunk_0001", TargetsFile: "/x/t", Targets: []string{"a", "b"}},
 		obs.StageConfig{RatePPS: 40})
 	a := strings.Join(cmd.Args, " ")
-	for _, w := range []string{"-l /x/t", "-o /x/chunk_0001.jsonl", "-rl 40", "-t 2", "-nfs", "-maxr 0"} {
+	for _, w := range []string{"-l /x/t", "-o /x/chunk_0001.jsonl", "-rl 40", "-t 2", "-nfs", "-rt", "-maxr 0"} {
 		if !strings.Contains(a, w) {
 			t.Errorf("missing %q in %s", w, a)
 		}
 	}
 	if strings.Contains(a, " -fr") || spec.Format != "jsonl" {
 		t.Errorf("must not follow redirects: %s", a)
+	}
+}
+
+func TestResponseTimeOutsideFP(t *testing.T) {
+	mk := func(tm string) obs.Observation {
+		raw := `{"port":"8085","url":"http://192.0.2.20:8085","input":"http://192.0.2.20:8085","title":"Shop","scheme":"http","webserver":"nginx","host":"192.0.2.20","host_ip":"192.0.2.20","status_code":200,"time":"` + tm + `","failed":false}`
+		os, err := (&Adapter{}).Parse(strings.NewReader(raw + "\n"))
+		if err != nil || len(os) != 1 {
+			t.Fatalf("parse %s: len=%d err=%v", tm, len(os), err)
+		}
+		return os[0]
+	}
+	cases := []struct {
+		raw  string
+		want int
+	}{
+		{"400µs", 1},
+		{"18.4ms", 18},
+		{"650.2ms", 650},
+		{"1.25s", 1250},
+	}
+	var firstFP string
+	for _, tc := range cases {
+		o := mk(tc.raw)
+		var d HTTPData
+		if err := o.Decode(&d); err != nil {
+			t.Fatal(err)
+		}
+		if d.ResponseTimeMs != tc.want {
+			t.Errorf("time %q: got %d ms, want %d", tc.raw, d.ResponseTimeMs, tc.want)
+		}
+		if firstFP == "" {
+			firstFP = o.FPHash
+		} else if o.FPHash != firstFP {
+			t.Fatalf("latency change (%s) altered FPHash: %s != %s", tc.raw, o.FPHash, firstFP)
+		}
+	}
+}
+
+func TestURLsLabPorts(t *testing.T) {
+	u := URLs([]findings.Service{
+		{IP: "127.0.0.1", Port: 8787, Proto: "tcp", Name: "unknown"},
+		{IP: "127.0.0.1", Port: 8474, Proto: "tcp", Name: "unknown"},
+		{IP: "127.0.0.1", Port: 15673, Proto: "tcp", Name: "unknown"},
+		{IP: "127.0.0.1", Port: 15432, Proto: "tcp", Name: "postgresql"},
+	})
+	want := "http://127.0.0.1:8787 http://127.0.0.1:8474 http://127.0.0.1:15673"
+	if strings.Join(u, " ") != want {
+		t.Fatalf("lab urls: got %q, want %q", strings.Join(u, " "), want)
 	}
 }

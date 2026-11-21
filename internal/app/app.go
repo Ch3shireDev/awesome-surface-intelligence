@@ -286,7 +286,30 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 		"groups": ins.Groups, "time_patterns": ins.Patterns,
 		"counts": counts, "interesting": hot, "unstable": unstable, "latest_run": latest,
 		"latest_events": events, "timeline": timeline, "scan": a.scanStatus(),
+		"slow_http_ms": slowHTTPThresholdMs(),
 	})
+}
+
+const defaultSlowHTTPMs = 500
+
+func slowHTTPThresholdMs() int {
+	if v := strings.TrimSpace(os.Getenv("ASI_HTTP_SLOW_MS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultSlowHTTPMs
+}
+
+func assetHTTPMs(as store.Asset) int {
+	if len(as.HTTP) == 0 {
+		return 0
+	}
+	var d obs.HTTPData
+	if json.Unmarshal(as.HTTP, &d) != nil {
+		return 0
+	}
+	return d.ResponseTimeMs
 }
 
 // ---------------------------------------------------------------- assets
@@ -295,8 +318,12 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 	q := r.URL.Query()
 	f := store.AssetFilter{State: q.Get("state"), Kind: q.Get("kind"), Search: q.Get("q"), Flapping: q.Get("flapping") == "1", Limit: 5000}
 	svcQ := strings.ToLower(q.Get("svc")) // group link: service/product text instead of key
-	if svcQ != "" {
-		f.Search, f.Kind, f.Limit = "", "port", 100000
+	slowOnly := q.Get("slow") == "1"
+	if svcQ != "" || slowOnly {
+		f.Kind, f.Limit = "port", 100000
+		if svcQ != "" {
+			f.Search = ""
+		}
 	}
 	as, err := a.St.Assets(r.Context(), f)
 	if err != nil {
@@ -309,6 +336,8 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		Reason   string `json:"reason,omitempty"`
 		Service  string `json:"service,omitempty"`
 		Verdict  string `json:"verdict,omitempty"`
+		HTTPMs   int    `json:"http_ms,omitempty"`
+		SlowHTTP bool   `json:"slow_http,omitempty"`
 	}
 	if svcQ != "" {
 		kept := as[:0]
@@ -319,16 +348,25 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		}
 		as = kept
 	}
-	out := make([]row, len(as))
-	for i, x := range as {
-		out[i] = row{Asset: x}
+	slowMs := slowHTTPThresholdMs()
+	out := make([]row, 0, len(as))
+	for _, x := range as {
+		item := row{Asset: x}
 		if x.Kind == "port" {
 			s := portService(x)
 			s.Interest, s.Reason = findings.Score(s)
 			verdictOf(x).Apply(&s)
-			out[i].Interest, out[i].Reason, out[i].Verdict = s.Interest, s.Reason, s.Verdict
-			out[i].Service = strings.TrimSpace(s.Fingerprint())
+			item.Interest, item.Reason, item.Verdict = s.Interest, s.Reason, s.Verdict
+			item.Service = strings.TrimSpace(s.Fingerprint())
+			if ms := assetHTTPMs(x); ms > 0 {
+				item.HTTPMs = ms
+				item.SlowHTTP = ms >= slowMs
+			}
 		}
+		if slowOnly && !item.SlowHTTP {
+			continue
+		}
+		out = append(out, item)
 	}
 	writeJSON(w, 200, out)
 }

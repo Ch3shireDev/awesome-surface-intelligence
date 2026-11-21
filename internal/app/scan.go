@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"asi/internal/obs"
 	"asi/internal/scanner/nmap"
 	"asi/internal/store"
 	"asi/internal/targets"
@@ -92,12 +93,10 @@ type ScanRequest struct {
 	Set      string `json:"set"`
 	Parallel int    `json:"parallel"`
 	Rate     int    `json:"rate"`
-	Ports    string `json:"ports"`  // "top100" | "top1000" | "22,80,443,8000-8100"
+	Ports    string `json:"ports"`  // "auto" | "all" | "lab" | "allowed" | "top100" | "top1000" | "22,80,443,8000-8100"
 	Window   string `json:"window"` // "" | "30m" | "2h"
 	Upload   string `json:"upload"` // off | end | live
 }
-
-var rePorts = regexp.MustCompile(`^[0-9]{1,5}(-[0-9]{1,5})?(,[0-9]{1,5}(-[0-9]{1,5})?)*$`)
 
 // Hard limits of the GUI (the CLI operator can go further deliberately).
 const (
@@ -112,19 +111,15 @@ func (req ScanRequest) args(targetsFile, results, live string) ([]string, error)
 	if req.Rate < 1 || req.Rate > maxRate {
 		return nil, fmt.Errorf("tempo 1-%d pps", maxRate)
 	}
-	svc := strings.Replace(nmap.DefaultServicesArgs, "--top-ports 1000", "", 1)
-	switch {
-	case req.Ports == "top100":
-		svc += " --top-ports 100"
-	case req.Ports == "top1000" || req.Ports == "":
-		svc += " --top-ports 1000"
-	case rePorts.MatchString(req.Ports):
-		svc += " -p " + req.Ports
-	default:
-		return nil, fmt.Errorf("porty: top100, top1000 albo lista np. 22,80,443,8000-8100")
+	portsMode := strings.TrimSpace(req.Ports)
+	if portsMode == "" {
+		portsMode = "auto"
+	}
+	if _, _, err := nmap.ApplyPorts(nmap.DefaultServicesArgs, portsMode, 0); err != nil {
+		return nil, fmt.Errorf("porty: auto, all (1-65535 / z polityki), lab, allowed, top100, top1000 albo lista np. 22,80,443,8000-8100")
 	}
 	args := []string{"scan", "-targets", targetsFile, "-out", results, "-ui", live, "-ui-wait=false",
-		"-parallel", strconv.Itoa(req.Parallel), "-rate", strconv.Itoa(req.Rate), "-nmap", strings.Join(strings.Fields(svc), " ")}
+		"-parallel", strconv.Itoa(req.Parallel), "-rate", strconv.Itoa(req.Rate), "-ports", portsMode}
 	if req.Window != "" {
 		d, err := time.ParseDuration(req.Window)
 		if err != nil || d < time.Minute || d > 24*time.Hour {
@@ -307,14 +302,21 @@ func safe(s string) string {
 
 func writeAssetsCSV(w io.Writer, as []store.Asset) {
 	c := csv.NewWriter(w)
-	c.Write([]string{"key", "kind", "ip", "port", "state", "flapping", "service", "first_seen", "last_seen",
+	c.Write([]string{"key", "kind", "ip", "port", "state", "flapping", "service", "http_ms", "first_seen", "last_seen",
 		"seen_count", "consecutive_misses", "user_tags", "user_note"})
 	for _, x := range as {
 		svc := ""
 		if x.Kind == "port" {
 			svc = portService(x).Fingerprint()
 		}
-		c.Write([]string{x.Key, x.Kind, x.IP, strconv.Itoa(x.Port), x.State, strconv.FormatBool(x.Flapping), svc,
+		httpMs := ""
+		if len(x.HTTP) > 0 {
+			var hd obs.HTTPData
+			if json.Unmarshal(x.HTTP, &hd) == nil && hd.ResponseTimeMs > 0 {
+				httpMs = strconv.Itoa(hd.ResponseTimeMs)
+			}
+		}
+		c.Write([]string{x.Key, x.Kind, x.IP, strconv.Itoa(x.Port), x.State, strconv.FormatBool(x.Flapping), svc, httpMs,
 			x.FirstSeen.Format(time.RFC3339), x.LastSeen.Format(time.RFC3339), strconv.Itoa(x.SeenCount),
 			strconv.Itoa(x.ConsecutiveMisses), strings.Join(x.UserTags, ";"), x.UserNote})
 	}
