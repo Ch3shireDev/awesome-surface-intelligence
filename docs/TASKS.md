@@ -96,8 +96,8 @@ i `make sync`.
 - **Ścieżka krytyczna to DEV-1 → DEV-2 → DEV-3 → DEV-4** (baza, reconcile, API, UI). Jeśli do jutra rana nie
   będzie bazy, awaryjnie zostaje obecny zapis w plikach plus prosty RBAC na tokenach z `.env`. Wtedy formularz i
   edycja zapisują się do pliku `assets.json`, szyfrowanego AES-GCM.
-- Build obrazu z `asi` nie był jeszcze uruchomiony (blackarch nie ma dostępu do dockera w sesji agenta).
-  Sprawdza to SEC-1.
+- Build obrazu `nmap-scanner` z `asi` sprawdzony na blackarch (amd64, 21.11 ~15:50, po dodaniu go.sum).
+  arm64 (fatusia-2) sprawdza SEC-1. Mirror Alpine bywa bardzo wolny: jeśli `apk add` padnie, ponów build.
 - Środowisko jury jest nieznane. Bez SEC-2 stroimy na ślepo (porty, tempo, ICMP).
 - Dwóch agentów w jednym repo: małe commity, `make sync` przed i po pracy, każdy w swoich pakietach
   (SEC: `internal/scanner/{httpx,nuclei}`, `internal/crypto`, `signatures/`, `docker/`; DEV: reszta).
