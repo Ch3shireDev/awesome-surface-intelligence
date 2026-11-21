@@ -47,33 +47,39 @@ $(OUT_DIR):
 	mkdir -p $(OUT_DIR)
 
 # --- skany ---
-# Kazdy cel pisze XML do /scans/results (zamontowane jako ./scans w repo),
-# zeby mozna bylo od razu zaimportowac go do DefectDojo (scan_type=Nmap Scan).
+# Kazdy cel uzywa -oA (zamiast samego -oX), wiec jednym przebiegiem nmapa
+# dostajemy TRZY pliki w /scans/results (zamontowane jako ./scans w repo):
+#   <nazwa>.nmap  - czytelny dla czlowieka (szybki podglad bez DefectDojo)
+#   <nazwa>.gnmap - grepowalny (np. `grep open *.gnmap` do szybkich zestawien)
+#   <nazwa>.xml   - do importu w DefectDojo (scan_type=Nmap Scan)
+# Nmap nie ma natywnego eksportu JSON - jesli zajdzie potrzeba JSON-a (np. pod
+# inny dashboard niz DefectDojo), dopisz osobny cel konwertujacy .xml (patrz
+# komentarz przy import-defectdojo nizej).
 
 scan-discover: $(OUT_DIR)
 	docker compose exec -T nmap-scanner \
 		nmap -sn -iL /scans/$(notdir $(TARGETS)) \
-		-oX /scans/results/discover-$(STAMP).xml
+		-oA /scans/results/discover-$(STAMP)
 
 scan-fast: $(OUT_DIR)
 	docker compose exec -T nmap-scanner \
 		nmap -T4 -F -iL /scans/$(notdir $(TARGETS)) \
-		-oX /scans/results/fast-$(STAMP).xml
+		-oA /scans/results/fast-$(STAMP)
 
 scan-full: $(OUT_DIR)
 	docker compose exec -T nmap-scanner \
 		nmap -T4 -p- -iL /scans/$(notdir $(TARGETS)) \
-		-oX /scans/results/full-$(STAMP).xml
+		-oA /scans/results/full-$(STAMP)
 
 scan-service: $(OUT_DIR)
 	docker compose exec -T nmap-scanner \
 		nmap -T4 -sV -sC --top-ports 1000 -iL /scans/$(notdir $(TARGETS)) \
-		-oX /scans/results/service-$(STAMP).xml
+		-oA /scans/results/service-$(STAMP)
 
 scan-udp: $(OUT_DIR)
 	docker compose exec -T nmap-scanner \
 		nmap -sU --top-ports 100 -iL /scans/$(notdir $(TARGETS)) \
-		-oX /scans/results/udp-$(STAMP).xml
+		-oA /scans/results/udp-$(STAMP)
 
 # --- import do DefectDojo ---
 # Wymaga DD_API_KEY i DD_ENGAGEMENT_ID w .env (patrz .env.example: uzupelnij
@@ -89,4 +95,4 @@ import-defectdojo:
 		http://localhost:8080/api/v2/import-scan/
 
 clean:
-	rm -f $(OUT_DIR)/*.xml
+	rm -f $(OUT_DIR)/*.xml $(OUT_DIR)/*.nmap $(OUT_DIR)/*.gnmap

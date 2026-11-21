@@ -1,4 +1,6 @@
 .env
 scans/targets.txt
 scans/results/*.xml
+scans/results/*.nmap
+scans/results/*.gnmap
 scans/results/*.json
