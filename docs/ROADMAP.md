@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 21.11.2026, 17:10** (agent blackarch). Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 21.11.2026, 17:30** (agent blackarch, przegląd wymagań PDF vs kod). Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -10,11 +10,11 @@ M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)█████████░  90%  🔨  DEV-0/1 ✅, SEC-1 ✅, SEC-3 lab ✅; brak: SEC-2 materiały od organizatorów
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
-M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅ (cele z tekstu + MCP), oś czasu i KPI ✅, sekcja HTTP i sygnatury w assecie ✅
+M4 Web GUI                ████████░░  85%  🔨  DEV-4 ✅, DEV-8 ✅, HTTP/sygnatury w assecie ✅; brak: porównanie 2 przebiegów i edycja wyników/harmonogramu w GUI (DEV-9)
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur (DEV-7 osobno)
 M6 Ochrona danych i role  █████████░  95%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅; brak: tokeny API w GUI (DEV-3)
-M7 Harmonogram i eksport  ████████░░  85%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 🟡 (eksport ✅, import ❌)
-M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 nie zaczęte (dokumentacja VitePress jest)
+M7 Harmonogram i eksport  ███████░░░  75%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 🟡 (eksport ✅, import ❌)
+M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 nie zaczęte; brak testu skali 10k+ IP (DEV-10)
 ```
 
 ## Etapy
@@ -35,27 +35,60 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 
 ```
 DEV-0 ✅ → DEV-1 ✅ → DEV-2 ✅ → DEV-4 ✅ ─────────────────────────────→ demo (2 przebiegi + GUI) ✅ działa
-                         ↘ SEC-4 🔨 → SEC-5 🔨 → SEC-7 (httpx/nuclei) → sekcja w GUI ↗
+                         ↘ SEC-4 ✅ → SEC-5 ✅ → sekcja w GUI ✅ → SEC-7 parsery httpx/nuclei ↗
                          ↘ SEC-6 ✅ (szyfrowanie)                                    ↗
 M8: SEC-9 (czyste repo + uruchomienie od zera) → ALL-1 (prezentacja + nagranie) → oddanie
 ```
 
-## Co zostało do wzięcia (21.11, 17:00)
+## Pokrycie wymagań PDF (przegląd 21.11, 17:30)
 
-| zadanie | etap | co konkretnie | zależy od | waga |
+Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`status.md`](status.md).
+
+| wymaganie z PDF | stan | brakuje |
+|---|---|---|
+| 1. wczytanie IP / CIDR / domen | ✅ | – |
+| 2. bezpieczny, wielowątkowy skan; czas trwania; podział na podgrupy | ✅ | – |
+| 3–4. aktywne hosty, identyfikacja usług | ✅ | – |
+| 5. HTTP: tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania | ✅ | – |
+| 6. CMS, framework, serwer aplikacyjny, **urządzenia IoT** | 🟡 | brak sygnatur IoT (kamery, routery, drukarki) → **SEC-10** |
+| 7. staging, panel administracyjny | ✅ | – |
+| 8–9. porównanie przebiegów; nowe / znikające / zmienione | 🟡 | zmiana treści HTTP (tytuł, certyfikat, technologie) nie daje zdarzenia `changed`; w GUI nie da się porównać **dwóch dowolnych** przebiegów → **DEV-7, DEV-9** |
+| 10. własne sygnatury | ✅ | (opcja) wgrywanie sygnatur z GUI |
+| 11. formularz celów, ręcznie + CSV/JSON | ✅ | – |
+| 12–13. RBAC, 4 role | ✅ | tokeny API w GUI (DEV-3, mała) |
+| 14. edycja wartości niezależnie od skanu, trwała | 🟡 | edycja tagów i notatek jest; brak w GUI: oznaczenia wyniku (fałszywy alarm, zaakceptowane ryzyko, nadpisanie oceny) i edycji harmonogramu → **DEV-9** |
+| 15. czytelny interfejs, dashboard | ✅ | – |
+| 16. szyfrowanie w spoczynku | ✅ | – |
+| min.: import wyników skanów JSON/CSV | ❌ | **DEV-6** |
+| min.: obsługa >10 000 IP | 🟡 | architektura gotowa, **nigdy nie przetestowana na 10k** (wydajność skanu, bazy, przeliczania stanów, dashboardu) → **DEV-10** |
+| min.: porównanie dwóch skanów | 🟡 | CLI ✅ (`asi diff -db`), GUI ❌ → **DEV-9** |
+| min.: edycja danych istniejących skanów, wyników i konfiguracji | 🟡 | → **DEV-9** |
+| mile widziane: pora dnia, ocena ciekawości, grupowanie usług | 🟡 | `hours_seen` zbierane, ale nieanalizowane; ocena tylko z portów i sygnatur osobno; brak grupowania → **DEV-7** |
+| mile widziane: eksport wybranych obserwacji do DD | 🟡 | eksport jest całościowy; natywne parsery httpx/nuclei → **SEC-7** |
+| formalne: repozytorium, dokumentacja, prezentacja ≤10 slajdów + demo | 🟡 | publiczne repo (**SEC-9**), prezentacja (**ALL-1**), uruchomienie od zera (**ALL-2**) |
+
+## Co zostało do wzięcia (kolejność wg wagi w ocenie)
+
+| zadanie | etap | co konkretnie | kto | waga |
 |---|---|---|---|---|
-| **SEC-9** | M8 | publiczne repo (GitHub) bez sekretów i realnych IP; `git clone && make env && make up && make demo` od zera na czystej VM | nic | formalny wymóg (repo) + 20% „łatwość uruchomienia” |
-| **ALL-1** | M8 | prezentacja ≤10 slajdów + scenariusz i nagranie demo (lab, 2 przebiegi, GUI, DD, szyfrowanie) | najlepiej po M5 | formalny wymóg |
-| **ALL-2** | M8 | `status.md` na 100% wg wymagań PDF, quickstart przetestowany przez drugą osobę | nic | 20% (dokumentacja) |
-| **DEV-6 import** | M7 | import cudzych wyników skanów (nmap XML, JSON/CSV) do bazy i reconcile | nic | minimum z PDF („import wyników skanów JSON/CSV”) |
-| **DEV-3 tokeny** | M6 | wydawanie/odwoływanie tokenów API w GUI (dla MCP i integracji) | nic | mała |
-| **DEV-7** | M5 | ocena „ciekawości” z danymi HTTP/sygnaturami, grupowanie podobnych usług, wykrywanie różnic zależnych od pory dnia (`hours_seen`) | ✅ odblokowane (SEC-4/5 gotowe) | 10% + „mile widziane” |
-| **SEC-2** | M2 | materiały organizatorów (lab, porty, limity, format JSON/CSV, testowe DD) | człowiek na miejscu | ryzyko testu jury |
+| **DEV-6** | M7 | import wyników skanów (nmap XML, JSON/CSV) z GUI i CLI do bazy jako przebieg, z przeliczeniem stanów | 🔨 agent blackarch | minimum PDF, test jury „import” |
+| **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | ⏳ agent blackarch | minimum PDF, test jury „edycja znalezisk” |
+| **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ⏳ agent blackarch | 30% („w dużej infrastrukturze”) |
+| **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ⏳ agent blackarch | 10–15% + „mile widziane” |
+| **SEC-10** | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | wolne (SEC) | pkt 6 PDF |
+| **SEC-7** | M7 | natywne parsery httpx/nuclei do DD | wolne (SEC) | 20% (integracja DD) |
+| **SEC-9** | M8 | publiczne repo bez sekretów i realnych IP; `git clone && make env && make up && make demo` | wolne | formalny wymóg |
+| **ALL-1** | M8 | prezentacja ≤10 slajdów + nagranie demo | wszyscy | formalny wymóg |
+| **ALL-2** | M8 | `status.md` 100%, quickstart przetestowany przez drugą osobę | wszyscy | 20% |
+| **DEV-3** | M6 | tokeny API w GUI | wolne | mała |
+| **SEC-2** | M2 | materiały organizatorów (lab, porty, limity, format JSON/CSV) | człowiek na miejscu | ryzyko testu jury |
+| drobne | docs | `vitepress preview` ignoruje `--host` i słucha na wszystkich interfejsach (`make docs`) | wolne | bezpieczeństwo |
 
 ## Dziennik postępu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~17:30 | przegląd wymagań PDF vs kod: M4 85% (brak porównania przebiegów i edycji wyników w GUI), brak importu wyników, brak testu 10k, brak sygnatur IoT; nowe zadania DEV-9, DEV-10, SEC-10 |
 | 21.11 ~17:10 | M5: SEC-4 httpx (etap `http`), SEC-5 nuclei + 14 sygnatur (etap `signatures`), porty wysokiego ryzyka spoza top 1000 (Redis wykryty), szuflada „HTTP i sygnatury” i sygnatury na dashboardzie; blokery: `make env-sync`, restart nginx, import scala tagi |
 | 21.11 ~13:00 | PoC: chunkowany nmap → DefectDojo (`~/asi-poc`) |
 | 21.11 ~14:00 | 2 fazy, adaptacyjne paczki, postęp CLI + web, diff, potwierdzanie zniknięć, Generic Findings |
