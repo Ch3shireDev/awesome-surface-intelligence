@@ -204,6 +204,7 @@ func (a *App) launch(ctx context.Context, req ScanRequest, by string, o launchOp
 	if err != nil {
 		return err
 	}
+	args = append(args, "-set", req.Set)
 	if o.ResumeRun != "" { // replace "-targets <file>" with "-resume <run>"
 		args[1], args[2] = "-resume", o.ResumeRun
 	}

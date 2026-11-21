@@ -178,3 +178,11 @@ func TestLessDetailed(t *testing.T) {
 		}
 	}
 }
+
+func TestSetKey(t *testing.T) {
+	for in, want := range map[string]string{"20261121-162414-lab-demo.json": "lab-demo", "lab-demo": "lab-demo", "lab.csv": "lab", "resume:20261121-152210": "resume:20261121-152210"} {
+		if got := SetKey(in); got != want {
+			t.Errorf("%s -> %s want %s", in, got, want)
+		}
+	}
+}

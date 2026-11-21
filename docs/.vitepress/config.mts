@@ -29,6 +29,7 @@ export default defineConfig({
         { text: 'Panel web (GUI)', link: '/guide/gui' },
         { text: 'Harmonogram i okna czasowe', link: '/guide/schedule' },
         { text: 'Import wyników skanów', link: '/guide/import' },
+        { text: 'Test skali (10 000+ IP)', link: '/guide/scale' },
         { text: 'Fingerprint HTTP i sygnatury', link: '/guide/fingerprint' },
         { text: 'Postęp: CLI i panel web', link: '/guide/progress' },
         { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },

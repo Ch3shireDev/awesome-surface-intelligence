@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"asi/internal/findings"
 	"asi/internal/obs"
@@ -34,20 +36,30 @@ func (s *Store) Verdicts(ctx context.Context) (map[string]findings.Verdict, erro
 // DiffRuns compares two runs stored in the database (ports/services and live hosts).
 func (s *Store) DiffRuns(ctx context.Context, a, b string) (findings.Diff, error) {
 	if a == "" || b == "" {
-		rs, err := s.Runs(ctx, 100)
+		// default: the newest completed run and the previous completed run OF THE SAME
+		// target set (comparing different sets would report everything as new/gone)
+		rs, err := s.Runs(ctx, 500)
 		if err != nil {
 			return findings.Diff{}, err
 		}
-		var done []string
-		for _, r := range rs {
-			if r.Status == "completed" {
-				done = append(done, r.ID)
+		var newest *Run
+		for i := range rs {
+			r := &rs[i]
+			if r.Status != "completed" {
+				continue
+			}
+			if newest == nil {
+				newest = r
+				continue
+			}
+			if SetKey(r.SetName) == SetKey(newest.SetName) {
+				a, b = r.ID, newest.ID
+				break
 			}
 		}
-		if len(done) < 2 {
-			return findings.Diff{}, fmt.Errorf("potrzebne są dwa zakończone przebiegi, jest %d", len(done))
+		if a == "" {
+			return findings.Diff{}, fmt.Errorf("brak dwóch zakończonych przebiegów tego samego zbioru celów")
 		}
-		a, b = done[1], done[0]
 	}
 	load := func(id string) ([]findings.Service, []string, error) {
 		os, err := s.Observations(ctx, id, obs.KindPort, obs.KindService)
@@ -66,4 +78,16 @@ func (s *Store) DiffRuns(ctx context.Context, a, b string) (findings.Diff, error
 		return findings.Diff{}, err
 	}
 	return findings.Compare(a, b, sa, sb, ua, ub), nil
+}
+
+// SetKey normalizes a run's set label: GUI runs used to store the frozen targets file name
+// ("20261121-162414-lab-demo.json"), now the set name ("lab-demo") - both map to "lab-demo".
+func SetKey(name string) string {
+	n := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(name, ".json"), ".csv"), ".txt")
+	if len(n) > 16 && n[8] == '-' && n[15] == '-' {
+		if _, err := strconv.Atoi(n[:8]); err == nil {
+			n = n[16:]
+		}
+	}
+	return n
 }

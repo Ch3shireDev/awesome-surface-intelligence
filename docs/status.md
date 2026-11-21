@@ -26,6 +26,7 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 15 | czytelny interfejs + dashboard | ✅ | dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, wykres zmian w czasie; postęp skanu na żywo |
 | 16 | szyfrowanie at-rest | ✅ | 2 warstwy: TDE `pg_tde` w `asi-db` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM w aplikacji (`ASI_ENCRYPTION_KEYS`, rotacja); dowód `make crypto-check`; [Szyfrowanie](/guide/encryption) |
 | — | harmonogram, okna czasowe | ✅ | cron + okno w GUI, wznawianie niezeskanowanych celów w kolejnym oknie, wstrzymaj/wznów/anuluj ([Harmonogram](/guide/schedule)) |
+| — | obsługa >10 000 IP | ✅ | 16 384 adresy w 86 s end-to-end, 49 tys. assetów w panelu ([Test skali](/guide/scale)) |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, `-parallel`, timeouty |
 | — | eksport JSON/CSV | ✅ | assety CSV/JSON z GUI/API; `services.json`, `findings_defectdojo.json` |
 | — | import wyników skanów JSON/CSV | ✅ | nmap XML, CSV, JSON, JSONL httpx/nuclei; GUI + `asi import`; pokrycie `auto`/`none`, import historyczny ([Import](/guide/import)) |

@@ -14,7 +14,7 @@ M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, D
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur (DEV-7 osobno)
 M6 Ochrona danych i role  █████████░  95%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅; brak: tokeny API w GUI (DEV-3)
 M7 Harmonogram i eksport  █████████░  90%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 ✅ (eksport + import)
-M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 nie zaczęte; brak testu skali 10k+ IP (DEV-10)
+M8 Finisz dla jury        ███░░░░░░░  30%  🔨  test skali ✅ (DEV-10); SEC-9, ALL-1, ALL-2 nie zaczęte
 ```
 
 ## Etapy
@@ -60,7 +60,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | 15. czytelny interfejs, dashboard | ✅ | – |
 | 16. szyfrowanie w spoczynku | ✅ | – |
 | min.: import wyników skanów JSON/CSV | ✅ | DEV-6: nmap XML, CSV, JSON, JSONL; GUI i CLI |
-| min.: obsługa >10 000 IP | 🟡 | architektura gotowa, **nigdy nie przetestowana na 10k** (wydajność skanu, bazy, przeliczania stanów, dashboardu) → **DEV-10** |
+| min.: obsługa >10 000 IP | ✅ | DEV-10: 16 384 adresy w 86 s (z bazą i przeliczeniem stanów), dashboard 0,22 s przy 49 tys. assetów ([Test skali](/guide/scale)) |
 | min.: porównanie dwóch skanów | ✅ | GUI i CLI (DEV-9) |
 | min.: edycja danych istniejących skanów, wyników i konfiguracji | ✅ | wyniki: ocena analityka, tagi, notatki; konfiguracja: cele, harmonogramy (DEV-9) |
 | mile widziane: pora dnia, ocena ciekawości, grupowanie usług | 🟡 | `hours_seen` zbierane, ale nieanalizowane; ocena tylko z portów i sygnatur osobno; brak grupowania → **DEV-7** |
@@ -73,7 +73,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 |---|---|---|---|---|
 | **DEV-6** | M7 | import wyników skanów (nmap XML, JSON/CSV) z GUI i CLI do bazy jako przebieg, z przeliczeniem stanów | ✅ agent blackarch | minimum PDF, test jury „import” |
 | **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | ✅ agent blackarch | minimum PDF, test jury „edycja znalezisk” |
-| **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | 🔨 agent blackarch | 30% („w dużej infrastrukturze”) |
+| **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ✅ agent blackarch | 30% („w dużej infrastrukturze”) |
 | **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ⏳ agent blackarch | 10–15% + „mile widziane” |
 | **SEC-10** | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | wolne (SEC) | pkt 6 PDF |
 | **SEC-7** | M7 | natywne parsery httpx/nuclei do DD | wolne (SEC) | 20% (integracja DD) |
@@ -88,6 +88,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~18:30 | DEV-10: test skali 16 384 adresów (loopback) w 86 s, dashboard 0,22 s przy 49 tys. assetów; poprawione domyślne porównanie (ten sam zbiór celów), `-set` dla skanów z GUI, ponawianie `apk add` w Dockerfile |
 | 21.11 ~18:10 | DEV-9: porównanie dwóch przebiegów w GUI, ocena analityka (FP / zaakceptowane / ocena) trwała i eksportowana do DD jako false_p / risk_accepted, edycja harmonogramu; ocena usunięta z opisu znaleziska DD (stabilny hash) |
 | 21.11 ~17:50 | DEV-6: import wyników (nmap XML, CSV, JSON, JSONL httpx/nuclei) w GUI i `asi import`, pokrycie auto/none, import historyczny; mniej szczegółowa obserwacja usługi nie jest już „zmianą” |
 | 21.11 ~17:30 | przegląd wymagań PDF vs kod: M4 85% (brak porównania przebiegów i edycji wyników w GUI), brak importu wyników, brak testu 10k, brak sygnatur IoT; nowe zadania DEV-9, DEV-10, SEC-10 |

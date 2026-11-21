@@ -207,6 +207,7 @@ func cmdScan(args []string) {
 	recCfg := reconcileFlags(fs)
 	httpStage := fs.String("http", "auto", "HTTP fingerprint stage (httpx): auto (if httpx is installed) | on | off")
 	sigDir := fs.String("signatures", "signatures", "nuclei templates directory for the signatures stage (\"\" = off)")
+	setName := fs.String("set", "", "target set name recorded with the run (default: targets file name)")
 	resume := fs.String("resume", "", "continue a partial run: scan only its targets not covered when its window closed")
 	scheduleID := fs.Int64("schedule-id", 0, "set by the scheduler (links the run to a schedule)")
 	trigger := fs.String("trigger", "manual", "manual | schedule (recorded in the database)")
@@ -265,6 +266,9 @@ func cmdScan(args []string) {
 	// --- plan (or: the not-yet-scanned remainder of a partial run)
 	var plan targets.Plan
 	setLabel := filepath.Base(*pf.targets)
+	if *setName != "" {
+		setLabel = *setName
+	}
 	if *resume != "" {
 		var err error
 		plan, err = resumePlan(*outRoot, *resume, rec)

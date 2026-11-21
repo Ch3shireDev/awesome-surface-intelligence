@@ -10,12 +10,11 @@ COPY internal ./internal
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/asi ./cmd/asi
 
 FROM alpine:3.20
-RUN apk add --no-cache \
-    nmap \
-    nmap-scripts \
-    bash \
-    curl \
-    jq
+# mirror Alpine bywa bardzo wolny (zdarzaly sie przerwy): 3 proby z przerwa
+RUN for i in 1 2 3; do \
+      apk add --no-cache nmap nmap-scripts bash curl jq && exit 0; \
+      echo "apk add: proba $i nieudana, ponawiam"; sleep 10; \
+    done; exit 1
 COPY --from=build /out/asi /usr/local/bin/asi
 
 # httpx (etap http, SEC-4) i nuclei (etap signatures, SEC-5): oficjalne wydania ProjectDiscovery

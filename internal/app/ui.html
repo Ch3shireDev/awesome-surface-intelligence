@@ -479,7 +479,9 @@ async function loadScans(){
   document.querySelectorAll('tr[data-run]').forEach(tr=>tr.onclick=()=>showRun(tr.dataset.run));
   const opts=runs.map(r=>`<option value="${esc(r.id)}">${esc(r.id)} · ${esc(PL[r.status]||r.status)} · ${esc(r.set_name)}</option>`).join('');
   const done=runs.filter(r=>r.status==='completed');
-  if(!$('df-a').options.length){$('df-a').innerHTML=opts;$('df-b').innerHTML=opts;if(done.length>1){$('df-a').value=done[1].id;$('df-b').value=done[0].id}}
+  const setKey=n=>String(n||'').replace(/\.(json|csv|txt)$/,'').replace(/^\d{8}-\d{6}-/,'');
+  if(!$('df-a').options.length){$('df-a').innerHTML=opts;$('df-b').innerHTML=opts;
+    if(done.length){const b=done[0],a=done.slice(1).find(r=>setKey(r.set_name)===setKey(b.set_name));$('df-b').value=b.id;if(a)$('df-a').value=a.id}}
   document.querySelectorAll('.r-res').forEach(b=>b.onclick=async e=>{e.stopPropagation();
     try{await api('api/v1/runs/'+encodeURIComponent(b.dataset.id)+'/resume',{method:'POST',body:JSON.stringify(scanParams())});$('s-msg').className='msg ok';$('s-msg').textContent='Wznawiam '+b.dataset.id;setTimeout(()=>loadScanStatus(true),1500)}
     catch(err){$('s-msg').className='msg err';$('s-msg').textContent=err.message}});
@@ -491,8 +493,9 @@ $('df-go').onclick=async()=>{const o=$('df-out');
     const cnt=k=>ch.filter(c=>c.kind===k).length;
     const fp=x=>x?esc([x.service,x.product,x.version].filter(Boolean).join(' ')):'–';
     o.className='';o.innerHTML=`<p><span class="badge t-new">nowe ${cnt('new')}</span> <span class="badge t-gone">zniknęły ${cnt('gone')}</span> <span class="badge t-changed">zmienione ${cnt('changed')}</span> · bez zmian ${d.unchanged}
-      · hosty nowe: ${(d.hosts_new||[]).map(esc).join(', ')||'–'} · hosty znikłe: ${(d.hosts_gone||[]).map(esc).join(', ')||'–'}</p>`+
-      (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.map(c=>`<tr><td><span class="badge t-${c.kind==='gone'?'gone':c.kind}">${c.kind==='new'?'nowa':c.kind==='gone'?'zniknęła':'zmiana'}</span></td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
+      · hosty nowe: ${(d.hosts_new||[]).length>20?(d.hosts_new.length+' (lista w CLI)'):(d.hosts_new||[]).map(esc).join(', ')||'–'} · hosty znikłe: ${(d.hosts_gone||[]).length>20?(d.hosts_gone.length+' (lista w CLI)'):(d.hosts_gone||[]).map(esc).join(', ')||'–'}</p>`+
+      (ch.length>500?`<p class="muted">Pokazuję pierwsze 500 z ${ch.length} różnic. Pełna lista: <span class="mono">asi diff -db ${esc(d.from)} ${esc(d.to)} -json</span>.</p>`:'')+
+      (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.slice(0,500).map(c=>`<tr><td><span class="badge t-${c.kind==='gone'?'gone':c.kind}">${c.kind==='new'?'nowa':c.kind==='gone'?'zniknęła':'zmiana'}</span></td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
   catch(e){o.className='msg err';o.textContent=e.message}};
 async function showRun(id){
   const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');const dr=$('drawer');dr.classList.remove('hidden');
