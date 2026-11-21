@@ -32,7 +32,8 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | — | import wyników skanów JSON/CSV | ✅ | nmap XML, CSV, JSON, JSONL httpx/nuclei; GUI + `asi import`; pokrycie `auto`/`none`, import historyczny ([Import](/guide/import)) |
 | — | hosty / usługi niestabilne | ✅ | stany `new/active/missing/gone`, `reappeared`, `flapping`, progi braków, zasady pokrycia i hierarchii ([Historia](/guide/history)); skan potwierdzający |
 | — | integracja DefectDojo | ✅ | Generic Findings, reimport do stałego testu, upload na żywo; test `asi-changes` (missing/gone/flapping/zmiany, zamykane w DD, gdy warunek mija; bez `close_old` dla przebiegów częściowych, też w `asi upload`); nmap XML natywnie do stałego `asi-nmap`; [DefectDojo](/guide/defectdojo) |
-| — | ocena „ciekawości” | ✅ | `high/medium/low` + powód; mapowanie na severity w DefectDojo |
+| — | grupowanie podobnych usług, pora dnia | ✅ | grupy po produkcie/wersji i technologii; wzorce z `hours_seen` |
+| — | ocena „ciekawości” | ✅ | 0–100 z powodami: port, sygnatury, TLS, świeżość, flapping; ocena analityka wygrywa ([Ocena](/guide/insights)) |
 | — | tagi | ✅ | tagi celów (formularz/import) i assetów (edycja w GUI, trwałe między skanami) |
 | — | dokumentacja | ✅ | ta strona (VitePress) |
 

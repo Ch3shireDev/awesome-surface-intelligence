@@ -189,6 +189,7 @@ type interesting struct {
 	Reason   string   `json:"reason"`
 	State    string   `json:"state"`
 	Tags     []string `json:"tags"`
+	Score    int      `json:"score,omitempty"`
 }
 
 func portService(as store.Asset) findings.Service {
@@ -271,7 +272,15 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 		events, _ = a.St.Events(ctx, latest.ID, "", 200)
 	}
 	timeline, _ := a.St.EventCounts(ctx, 20)
+	ins := a.buildInsights(ctx, all)
+	if len(ins.Ranked) > 0 || len(hot) == 0 {
+		hot = hot[:0]
+		for _, x := range ins.Ranked {
+			hot = append(hot, interesting{Key: x.Key, Service: x.Service, Interest: x.Interest, Reason: x.Reason, State: x.State, Tags: x.Tags, Score: x.Score})
+		}
+	}
 	writeJSON(w, 200, map[string]any{
+		"groups": ins.Groups, "time_patterns": ins.Patterns,
 		"counts": counts, "interesting": hot, "unstable": unstable, "latest_run": latest,
 		"latest_events": events, "timeline": timeline, "scan": a.scanStatus(),
 	})
@@ -282,6 +291,10 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 	q := r.URL.Query()
 	f := store.AssetFilter{State: q.Get("state"), Kind: q.Get("kind"), Search: q.Get("q"), Flapping: q.Get("flapping") == "1", Limit: 5000}
+	svcQ := strings.ToLower(q.Get("svc")) // group link: service/product text instead of key
+	if svcQ != "" {
+		f.Search, f.Kind, f.Limit = "", "port", 100000
+	}
 	as, err := a.St.Assets(r.Context(), f)
 	if err != nil {
 		fail(w, 500, err.Error())
@@ -293,6 +306,15 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		Reason   string `json:"reason,omitempty"`
 		Service  string `json:"service,omitempty"`
 		Verdict  string `json:"verdict,omitempty"`
+	}
+	if svcQ != "" {
+		kept := as[:0]
+		for _, x := range as {
+			if strings.Contains(strings.ToLower(portService(x).Fingerprint()), svcQ) {
+				kept = append(kept, x)
+			}
+		}
+		as = kept
 	}
 	out := make([]row, len(as))
 	for i, x := range as {

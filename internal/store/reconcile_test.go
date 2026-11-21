@@ -186,3 +186,49 @@ func TestSetKey(t *testing.T) {
 		}
 	}
 }
+
+func TestReconcileHTTPChange(t *testing.T) {
+	st := testStore(t, xorSealer{})
+	ctx := context.Background()
+	prefix := fmt.Sprintf("rh%d", time.Now().UnixNano())
+	ip := "203.0.113.77"
+	key := obs.PortKey(ip, "tcp", 80)
+	t.Cleanup(func() {
+		st.DB.Exec(ctx, `DELETE FROM assets WHERE key LIKE '203.0.113.77%'`)
+		st.DB.Exec(ctx, `DELETE FROM runs WHERE id LIKE $1`, prefix+"%")
+	})
+	run := func(i int, title string) ReconcileResult {
+		id := fmt.Sprintf("%s-%d", prefix, i)
+		st.CreateRun(ctx, id, "t", "manual", nil)
+		for _, stg := range []string{"discovery", "services"} {
+			st.StartChunk(ctx, id, stg, 0, []string{ip})
+			st.FinishChunk(ctx, id, stg, 0, "done", time.Second, "")
+		}
+		os := []obs.Observation{
+			obs.New(obs.KindHost, ip, "t", obs.HostData{Up: true}, 100, "up"),
+			obs.New(obs.KindPort, key, "t", obs.PortData{State: "open"}, 100, "open"),
+			obs.New(obs.KindService, key, "t", obs.ServiceData{Name: "http", Product: "nginx"}, 100, "http", "nginx"),
+		}
+		if title != "" {
+			os = append(os, obs.New(obs.KindHTTP, key, "httpx", obs.HTTPData{Status: 200, Title: title}, 90, "200", title))
+		}
+		st.InsertObservations(ctx, id, "x", 0, os)
+		st.FinishRun(ctx, id, "completed", nil)
+		r, err := st.Reconcile(ctx, id, ReconcileConfig{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	run(1, "Intranet")
+	if r := run(2, ""); r.Counts["changed"] != 0 {
+		t.Fatalf("run without http stage must not be a change: %v", r.Counts)
+	}
+	if r := run(3, "Intranet"); r.Counts["changed"] != 0 {
+		t.Fatalf("same page: %v", r.Counts)
+	}
+	r := run(4, "Intranet - konserwacja")
+	if !has(r, "changed", key) {
+		t.Fatalf("changed title must be an event: %+v", r.Events)
+	}
+}

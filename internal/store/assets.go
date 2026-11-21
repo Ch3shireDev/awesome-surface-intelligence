@@ -268,3 +268,34 @@ func (s *Store) LatestSignatures(ctx context.Context) (string, []obs.Observation
 	os, err := s.Observations(ctx, run, obs.KindSignature)
 	return run, os, err
 }
+
+// LatestKind: observations of one kind from the newest run that produced that kind
+// (e.g. http when the last scans skipped the http stage).
+func (s *Store) LatestKind(ctx context.Context, kind obs.Kind) ([]obs.Observation, error) {
+	var run string
+	err := s.DB.QueryRow(ctx, `SELECT run_id FROM observations WHERE kind=$1 ORDER BY observed_at DESC LIMIT 1`, string(kind)).Scan(&run)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return s.Observations(ctx, run, kind)
+}
+
+// ScannedHours: 24-bit mask (UTC) of hours in which scans ran during the last `days` days.
+func (s *Store) ScannedHours(ctx context.Context, days int) (int, error) {
+	rows, err := s.DB.Query(ctx, `SELECT DISTINCT extract(hour from started_at AT TIME ZONE 'UTC')::int FROM runs
+		WHERE started_at > now() - make_interval(days => $1) AND status IN ('completed','partial')`, days)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	m := 0
+	for rows.Next() {
+		var h int
+		if rows.Scan(&h) == nil {
+			m |= 1 << h
+		}
+	}
+	return m, rows.Err()
+}

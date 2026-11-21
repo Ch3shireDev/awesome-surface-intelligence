@@ -65,6 +65,8 @@ type assetRow struct {
 	misses, seen, hours               int
 	fp                                string
 	current                           []byte // sealed
+	httpFP                            string
+	httpCur                           []byte // sealed
 	transitions                       []string
 	dirty, isNew                      bool
 }
@@ -131,11 +133,12 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 	res.CoveredHosts = len(covHosts)
 
 	// what was observed
-	os, err := s.Observations(ctx, runID, obs.KindHost, obs.KindPort, obs.KindService)
+	os, err := s.Observations(ctx, runID, obs.KindHost, obs.KindPort, obs.KindService, obs.KindHTTP)
 	if err != nil {
 		return res, err
 	}
 	now := map[string]*seen{}
+	httpNow := map[string]obs.Observation{}
 	live := map[string]bool{}
 	for _, o := range os {
 		ip, _, port := obs.SplitKey(o.AssetKey)
@@ -153,6 +156,8 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 			}
 		case obs.KindService: // service fingerprint wins over the bare port
 			now[o.AssetKey] = &seen{kind: "port", ip: addr, port: port, fp: o.FPHash, current: o.Data}
+		case obs.KindHTTP:
+			httpNow[o.AssetKey] = o
 		}
 	}
 	for ip := range live {
@@ -181,7 +186,8 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
 		// load all assets (10k hosts * few ports fits in memory)
 		ar, err := tx.Query(ctx, `SELECT id, key, kind, parent_key, ip, port, state, flapping, first_seen, last_seen,
-			last_seen_run, consecutive_misses, seen_count, hours_seen, current_fp_hash, current_enc, transition_runs
+			last_seen_run, consecutive_misses, seen_count, hours_seen, current_fp_hash, current_enc, transition_runs,
+			http_fp, http_enc
 			FROM assets FOR UPDATE`)
 		if err != nil {
 			return err
@@ -190,7 +196,8 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 		for ar.Next() {
 			a := &assetRow{}
 			if err := ar.Scan(&a.id, &a.key, &a.kind, &a.parent, &a.ip, &a.port, &a.state, &a.flapping, &a.firstSeen,
-				&a.lastSeen, &a.lastRun, &a.misses, &a.seen, &a.hours, &a.fp, &a.current, &a.transitions); err != nil {
+				&a.lastSeen, &a.lastRun, &a.misses, &a.seen, &a.hours, &a.fp, &a.current, &a.transitions,
+				&a.httpFP, &a.httpCur); err != nil {
 				ar.Close()
 				return err
 			}
@@ -237,6 +244,12 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				a = &assetRow{key: k, kind: o.kind, parent: parent, ip: o.ip, port: o.port, state: "new",
 					firstSeen: runStart, lastSeen: runStart, lastRun: runID, seen: 1, hours: hourBit,
 					fp: o.fp, current: sealed, isNew: true, dirty: true}
+				if h, ok := httpNow[k]; ok {
+					if a.httpCur, err = s.Sealer.Seal(h.Data); err != nil {
+						return err
+					}
+					a.httpFP = h.FPHash
+				}
 				assets[k] = a
 				emit(a, "new", nil, o.current)
 				continue
@@ -262,6 +275,17 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				}
 			}
 			a.fp, a.current = o.fp, sealed
+			// web content: compared only when the http stage observed this port in this run
+			if h, ok := httpNow[k]; ok {
+				if a.httpFP != "" && a.httpFP != h.FPHash {
+					emit(a, "changed", open(a.httpCur), h.Data)
+				}
+				hs, err := s.Sealer.Seal(h.Data)
+				if err != nil {
+					return err
+				}
+				a.httpFP, a.httpCur = h.FPHash, hs
+			}
 			a.lastSeen, a.lastRun = runStart, runID
 			a.misses = 0
 			a.seen++
@@ -336,17 +360,18 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 			}
 			if a.isNew {
 				if err := tx.QueryRow(ctx, `INSERT INTO assets (key, kind, parent_key, ip, port, state, flapping, first_seen,
-					last_seen, last_seen_run, consecutive_misses, seen_count, hours_seen, current_fp_hash, current_enc, transition_runs)
-					VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+					last_seen, last_seen_run, consecutive_misses, seen_count, hours_seen, current_fp_hash, current_enc, transition_runs,
+					http_fp, http_enc)
+					VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
 					a.key, a.kind, a.parent, a.ip, a.port, a.state, a.flapping, a.firstSeen, a.lastSeen, a.lastRun,
-					a.misses, a.seen, a.hours, a.fp, a.current, nonNil(a.transitions)).Scan(&a.id); err != nil {
+					a.misses, a.seen, a.hours, a.fp, a.current, nonNil(a.transitions), a.httpFP, a.httpCur).Scan(&a.id); err != nil {
 					return fmt.Errorf("insert asset %s: %w", a.key, err)
 				}
 			} else if _, err := tx.Exec(ctx, `UPDATE assets SET state=$2, flapping=$3, last_seen=$4, last_seen_run=$5,
 					consecutive_misses=$6, seen_count=$7, hours_seen=$8, current_fp_hash=$9, current_enc=$10,
-					transition_runs=$11, updated_at=now() WHERE id=$1`,
+					transition_runs=$11, http_fp=$12, http_enc=$13, updated_at=now() WHERE id=$1`,
 				a.id, a.state, a.flapping, a.lastSeen, a.lastRun, a.misses, a.seen, a.hours, a.fp, a.current,
-				nonNil(a.transitions)); err != nil {
+				nonNil(a.transitions), a.httpFP, a.httpCur); err != nil {
 				return fmt.Errorf("update asset %s: %w", a.key, err)
 			}
 			ids[a.key] = a.id

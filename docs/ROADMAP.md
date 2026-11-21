@@ -52,7 +52,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | 5. HTTP: tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania | ✅ | – |
 | 6. CMS, framework, serwer aplikacyjny, **urządzenia IoT** | 🟡 | brak sygnatur IoT (kamery, routery, drukarki) → **SEC-10** |
 | 7. staging, panel administracyjny | ✅ | – |
-| 8–9. porównanie przebiegów; nowe / znikające / zmienione | 🟡 | porównanie dwóch dowolnych przebiegów w GUI ✅ (DEV-9); zmiana treści HTTP (tytuł, certyfikat, technologie) nie daje jeszcze zdarzenia `changed` → **DEV-7** |
+| 8–9. porównanie przebiegów; nowe / znikające / zmienione | ✅ | porównanie w GUI (DEV-9); zmiana usługi i treści HTTP (tytuł, certyfikat, technologie) jako `changed` (DEV-7) |
 | 10. własne sygnatury | ✅ | (opcja) wgrywanie sygnatur z GUI |
 | 11. formularz celów, ręcznie + CSV/JSON | ✅ | – |
 | 12–13. RBAC, 4 role | ✅ | tokeny API w GUI (DEV-3, mała) |
@@ -63,7 +63,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | min.: obsługa >10 000 IP | ✅ | DEV-10: 16 384 adresy w 86 s (z bazą i przeliczeniem stanów), dashboard 0,22 s przy 49 tys. assetów ([Test skali](/guide/scale)) |
 | min.: porównanie dwóch skanów | ✅ | GUI i CLI (DEV-9) |
 | min.: edycja danych istniejących skanów, wyników i konfiguracji | ✅ | wyniki: ocena analityka, tagi, notatki; konfiguracja: cele, harmonogramy (DEV-9) |
-| mile widziane: pora dnia, ocena ciekawości, grupowanie usług | 🟡 | `hours_seen` zbierane, ale nieanalizowane; ocena tylko z portów i sygnatur osobno; brak grupowania → **DEV-7** |
+| mile widziane: pora dnia, ocena ciekawości, grupowanie usług | ✅ | DEV-7: ocena 0–100 z powodami, grupy usług/technologii, wzorce pory dnia ([Ocena, grupy, pora dnia](/guide/insights)) |
 | mile widziane: eksport wybranych obserwacji do DD | 🟡 | eksport jest całościowy; natywne parsery httpx/nuclei → **SEC-7** |
 | formalne: repozytorium, dokumentacja, prezentacja ≤10 slajdów + demo | 🟡 | publiczne repo (**SEC-9**), prezentacja (**ALL-1**), uruchomienie od zera (**ALL-2**) |
 
@@ -74,7 +74,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | **DEV-6** | M7 | import wyników skanów (nmap XML, JSON/CSV) z GUI i CLI do bazy jako przebieg, z przeliczeniem stanów | ✅ agent blackarch | minimum PDF, test jury „import” |
 | **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | ✅ agent blackarch | minimum PDF, test jury „edycja znalezisk” |
 | **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ✅ agent blackarch | 30% („w dużej infrastrukturze”) |
-| **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ⏳ agent blackarch | 10–15% + „mile widziane” |
+| **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ✅ agent blackarch | 10–15% + „mile widziane” |
 | **SEC-10** | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | wolne (SEC) | pkt 6 PDF |
 | **SEC-7** | M7 | natywne parsery httpx/nuclei do DD | wolne (SEC) | 20% (integracja DD) |
 | **SEC-9** | M8 | publiczne repo bez sekretów i realnych IP; `git clone && make env && make up && make demo` | wolne | formalny wymóg |
@@ -88,6 +88,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~18:45 | DEV-7: ocena 0–100 z powodami (port, sygnatury, TLS, świeżość, flapping, ocena analityka), grupy podobnych usług i technologii, wzorce pory dnia, zmiana treści HTTP jako `changed` |
 | 21.11 ~18:30 | DEV-10: test skali 16 384 adresów (loopback) w 86 s, dashboard 0,22 s przy 49 tys. assetów; poprawione domyślne porównanie (ten sam zbiór celów), `-set` dla skanów z GUI, ponawianie `apk add` w Dockerfile |
 | 21.11 ~18:10 | DEV-9: porównanie dwóch przebiegów w GUI, ocena analityka (FP / zaakceptowane / ocena) trwała i eksportowana do DD jako false_p / risk_accepted, edycja harmonogramu; ocena usunięta z opisu znaleziska DD (stabilny hash) |
 | 21.11 ~17:50 | DEV-6: import wyników (nmap XML, CSV, JSON, JSONL httpx/nuclei) w GUI i `asi import`, pokrycie auto/none, import historyczny; mniej szczegółowa obserwacja usługi nie jest już „zmianą” |

@@ -35,6 +35,7 @@ export default defineConfig({
         { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },
         { text: 'Porównanie przebiegów', link: '/guide/diff' },
         { text: 'Historia i stany assetów', link: '/guide/history' },
+        { text: 'Ocena, grupy, pora dnia', link: '/guide/insights' },
         { text: 'Bezpieczeństwo skanowania', link: '/guide/safety' },
         { text: 'Szyfrowanie danych w spoczynku', link: '/guide/encryption' },
         { text: 'Lab testowy i demo', link: '/guide/lab' },

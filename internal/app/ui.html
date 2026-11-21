@@ -116,12 +116,16 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
 <section id="p-dash">
   <div class="kpis" id="kpis"></div>
   <div class="grid3">
-    <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
+    <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co i dlaczego</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
     <div class="card"><h2>Skan</h2><div id="d-scan"></div></div>
   </div>
   <div class="grid2">
     <div class="card"><h2 id="d-ev-title">Zmiany w ostatnim przebiegu</h2><div class="scroll"><table><tbody id="d-ev"></tbody></table></div></div>
     <div class="card"><h2>Niestabilne i zniknięte</h2><div class="scroll"><table><tbody id="d-unst"></tbody></table></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Grupy podobnych usług</h2><p class="muted" style="margin-top:0;font-size:12.5px">Ta sama usługa / wersja / technologia na wielu hostach: jedna aktualizacja albo jedna decyzja dla całej grupy.</p><div class="scroll"><table><tbody id="d-groups"></tbody></table></div></div>
+    <div class="card"><h2>Wzorce pory dnia</h2><p class="muted" style="margin-top:0;font-size:12.5px">Hosty, które odpowiadają tylko w części godzin, w których były skanowane (z historii <span class="mono">hours_seen</span>).</p><div class="scroll"><table><tbody id="d-tod"></tbody></table></div></div>
   </div>
   <div class="card"><h2>Zmiany w czasie (ostatnie przebiegi)</h2><div class="bars" id="d-bars"></div>
     <div class="legend" id="d-legend"></div></div>
@@ -287,7 +291,9 @@ const fmtT=s=>s?new Date(s).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit
 const tags=a=>(a||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
 const badge=(t,cls='t')=>`<span class="badge ${cls}-${esc(t)}">${esc(PL[t]||t)}</span>`;
 const can=r=>me&&LV[me.role]>=LV[r];
-function svcOf(cur){try{const d=typeof cur==='string'?JSON.parse(cur):cur;if(!d)return'';if(d.up)return'host aktywny';return[d.name,d.product,d.version].filter(Boolean).join(' ')}catch{return''}}
+function svcOf(cur){try{const d=typeof cur==='string'?JSON.parse(cur):cur;if(!d)return'';if(d.up)return'host aktywny';
+  if(d.status&&d.url!==undefined||d.title!==undefined&&d.status)return `HTTP ${d.status}${d.title?' „'+d.title+'”':''}${(d.tech||[]).length?' · '+d.tech.join(', '):''}${d.tls_subject?' · TLS '+d.tls_subject:''}`;
+  return[d.name,d.product,d.version].filter(Boolean).join(' ')}catch{return''}}
 
 // ---------- auth
 function showLogin(){$('v-app').classList.add('hidden');$('v-login').classList.remove('hidden');clearInterval(timer)}
@@ -327,7 +333,12 @@ async function loadDash(){
   document.querySelectorAll('#kpis .kpi').forEach(b=>b.onclick=()=>showAssets(k[b.dataset.i][3]));
   const order={high:0,medium:1,low:2};
   const hot=(d.interesting||[]).sort((a,b)=>order[a.interest]-order[b.interest]);
-  $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${x.interest}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
+  $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${x.interest}${x.score?`<br><span class="muted">${x.score}/100</span>`:''}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
+  $('d-groups').innerHTML=(d.groups||[]).map(g=>`<tr><td><b>${esc(g.label)}</b> <span class="muted">${g.kind==='tech'?'technologia':'usługa'}</span></td><td>${g.count} ${g.count===1?'host':'hostów'}</td>
+    <td>${g.kind==='service'?`<button class="link grp" data-svc="${esc(g.query)}">pokaż →</button>`:g.keys.slice(0,3).map(k=>`<button class="link grp-k" data-k="${esc(k)}">${esc(k)}</button>`).join(' ')}</td></tr>`).join('')||'<tr><td class="empty">Brak grup (min. 2 hosty z tą samą usługą).</td></tr>';
+  document.querySelectorAll('.grp').forEach(b=>b.onclick=()=>{assetSvc=b.dataset.svc;showAssets({kind:'port'})});
+  document.querySelectorAll('.grp-k').forEach(b=>b.onclick=()=>openAsset(b.dataset.k));
+  $('d-tod').innerHTML=(d.time_patterns||[]).map(p=>`<tr class="click" data-k="${esc(p.key)}"><td class="mono">${esc(p.key)}</td><td>odpowiada: <b>${esc(p.seen_at)}</b><br><span class="muted">brak o: ${esc(p.missed_at)}</span></td><td>${badge(p.state,'s')}</td></tr>`).join('')||'<tr><td class="empty">Brak wzorców (potrzeba skanów o różnych porach).</td></tr>';
   const lr=d.latest_run;
   $('d-ev-title').textContent=lr?`Zmiany w ostatnim przebiegu · ${lr.id} (${PL[lr.status]||lr.status})`:'Zmiany w ostatnim przebiegu';
   $('d-ev').innerHTML=(d.latest_events||[]).map(e=>`<tr class="click" data-k="${esc(e.key)}"><td>${badge(e.type)}</td><td class="mono">${esc(e.key)}</td><td class="muted">${esc(svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">Brak zmian.</td></tr>';
@@ -354,13 +365,16 @@ function bindRows(){document.querySelectorAll('tr.click[data-k]').forEach(tr=>tr
 // ---------- assets
 async function loadAssets(){
   const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':''});
+  if(assetSvc){q.set('svc',assetSvc)}
   let rows=await api('api/v1/assets?'+q);
   const want=$('a-int').value;if(want)rows=rows.filter(a=>(a.interest||'')===want);
   $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
-  $('a-count').textContent=rows.length+' assetów';bindRows();
+  $('a-count').innerHTML=rows.length+' assetów'+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'');
+  if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();
 }
-$('a-go').onclick=loadAssets;$('a-int').onchange=loadAssets;
+$('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
+let assetSvc='';
 function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kind').value=f.kind||'';
   $('a-flap').checked=!!f.flap;$('a-int').value=f.interest||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
 
