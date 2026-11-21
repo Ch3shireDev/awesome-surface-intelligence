@@ -284,39 +284,7 @@ func diffFromDB(url, a, b string) (findings.Diff, error) {
 		return findings.Diff{}, err
 	}
 	defer st.Close()
-	if a == "" {
-		rs, err := st.Runs(ctx, 50)
-		if err != nil {
-			return findings.Diff{}, err
-		}
-		var done []string
-		for _, r := range rs {
-			if r.Status == "completed" {
-				done = append(done, r.ID)
-			}
-		}
-		if len(done) < 2 {
-			return findings.Diff{}, fmt.Errorf("need two completed runs in the database, have %d", len(done))
-		}
-		a, b = done[1], done[0]
-	}
-	load := func(id string) ([]findings.Service, []string, error) {
-		os, err := st.Observations(ctx, id, obs.KindPort, obs.KindService)
-		if err != nil {
-			return nil, nil, err
-		}
-		up, err := st.LiveHosts(ctx, id)
-		return findings.FromObservations(os, nil), up, err
-	}
-	sa, ua, err := load(a)
-	if err != nil {
-		return findings.Diff{}, err
-	}
-	sb, ub, err := load(b)
-	if err != nil {
-		return findings.Diff{}, err
-	}
-	return findings.Compare(a, b, sa, sb, ua, ub), nil
+	return st.DiffRuns(ctx, a, b)
 }
 
 // ---------------------------------------------------------------- reconcile / assets / changes

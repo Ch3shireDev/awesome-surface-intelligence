@@ -71,6 +71,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/asset/observations", a.need("viewer", a.assetObservations))
 	m.Handle("GET /api/v1/runs", a.need("viewer", a.runs))
 	m.Handle("GET /api/v1/runs/{id}/events", a.need("viewer", a.runEvents))
+	m.Handle("GET /api/v1/diff", a.need("viewer", a.diffRuns))
 	m.Handle("GET /api/v1/target-sets", a.need("viewer", a.targetSets))
 	m.Handle("GET /api/v1/targets", a.need("viewer", a.listTargets))
 	m.Handle("POST /api/v1/targets", a.need("operator", a.addTargets))
@@ -214,9 +215,12 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 		var it interesting
 		if as.Kind == "port" {
 			s := portService(as)
-			lvl, why := findings.Score(s)
+			s.Interest, s.Reason = findings.Score(s)
+			v := verdictOf(as)
+			v.Apply(&s)
+			lvl, why := s.Interest, s.Reason
 			it = interesting{Key: as.Key, Service: strings.TrimSpace(s.Fingerprint()), Interest: lvl, Reason: why, State: as.State, Tags: as.UserTags}
-			if (as.State == "active" || as.State == "new") && lvl != "low" {
+			if (as.State == "active" || as.State == "new") && lvl != "low" && !v.Dismissed() {
 				hot = append(hot, it)
 			}
 		} else {
@@ -230,13 +234,26 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 		}
 	}
 	// custom signatures (nuclei, SEC-5): everything above "info" is an analyst-relevant finding
+	dismissed, levelOverride := map[string]bool{}, map[string]string{}
+	for _, as := range all {
+		v := verdictOf(as)
+		if v.Dismissed() {
+			dismissed[as.Key] = true
+		}
+		if v.Interest != "" {
+			levelOverride[as.Key] = v.Interest // analyst's level applies to the whole asset, signatures too
+		}
+	}
 	if _, sigs, err := a.St.LatestSignatures(ctx); err == nil {
 		sevLevel := map[string]string{"critical": "high", "high": "high", "medium": "medium", "low": "medium"}
 		for _, o := range sigs {
 			var d obs.SignatureData
 			o.Decode(&d)
 			lvl, ok := sevLevel[d.Severity]
-			if !ok {
+			if lo, has := levelOverride[o.AssetKey]; has {
+				lvl, ok = lo, lo != "low"
+			}
+			if !ok || dismissed[o.AssetKey] {
 				continue
 			}
 			reason := "sygnatura " + d.ID
@@ -275,13 +292,16 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		Interest string `json:"interest,omitempty"`
 		Reason   string `json:"reason,omitempty"`
 		Service  string `json:"service,omitempty"`
+		Verdict  string `json:"verdict,omitempty"`
 	}
 	out := make([]row, len(as))
 	for i, x := range as {
 		out[i] = row{Asset: x}
 		if x.Kind == "port" {
 			s := portService(x)
-			out[i].Interest, out[i].Reason = findings.Score(s)
+			s.Interest, s.Reason = findings.Score(s)
+			verdictOf(x).Apply(&s)
+			out[i].Interest, out[i].Reason, out[i].Verdict = s.Interest, s.Reason, s.Verdict
 			out[i].Service = strings.TrimSpace(s.Fingerprint())
 		}
 	}
@@ -294,6 +314,16 @@ func (a *App) editAsset(w http.ResponseWriter, r *http.Request, u store.User) {
 	if key == "" || json.NewDecoder(io.LimitReader(r.Body, 64<<10)).Decode(&e) != nil {
 		fail(w, 400, "bad request")
 		return
+	}
+	if e.Overrides != nil {
+		var v findings.Verdict
+		if json.Unmarshal(*e.Overrides, &v) != nil || !v.Valid() {
+			fail(w, 400, "ocena analityka: status false_positive|accepted|\"\", interest high|medium|low|\"\"")
+			return
+		}
+		norm, _ := json.Marshal(v) // store only known fields
+		raw := json.RawMessage(norm)
+		e.Overrides = &raw
 	}
 	if e.Note != nil && len(*e.Note) > 4000 {
 		fail(w, 400, "note too long")
@@ -331,6 +361,22 @@ func (a *App) runs(w http.ResponseWriter, r *http.Request, u store.User) {
 		return
 	}
 	writeJSON(w, 200, rs)
+}
+
+func verdictOf(as store.Asset) findings.Verdict {
+	var v findings.Verdict
+	json.Unmarshal(as.UserOverrides, &v)
+	return v
+}
+
+// diffRuns: GET /api/v1/diff?from=A&to=B - compare any two runs (PDF minimum: "porównanie dwóch skanów").
+func (a *App) diffRuns(w http.ResponseWriter, r *http.Request, u store.User) {
+	d, err := a.St.DiffRuns(r.Context(), r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, d)
 }
 
 func (a *App) runEvents(w http.ResponseWriter, r *http.Request, u store.User) {

@@ -250,12 +250,16 @@ func cmdScan(args []string) {
 	}
 
 	var rec *dbRecorder
+	verdicts := map[string]findings.Verdict{}
 	if st, err := openStore(context.Background(), *dbURL); err != nil {
 		tr.Logf("db: %v - continuing with files only", err)
 	} else if st != nil {
 		defer st.Close()
 		rec = &dbRecorder{st: st, runID: runID, logf: tr.Logf}
 		tr.Logf("db: recording run %s", runID)
+		if v, err := st.Verdicts(context.Background()); err == nil {
+			verdicts = v // analyst decisions (false positive / accepted / interest) go into the export
+		}
 	}
 
 	// --- plan (or: the not-yet-scanned remainder of a partial run)
@@ -386,7 +390,9 @@ func cmdScan(args []string) {
 			tr.AddServices(live)
 			tr.Update(func(s *progress.State) { s.Open += len(got) })
 			if dd != nil && *upload == "live" && len(got) > 0 {
-				upQ <- got
+				live := append([]findings.Service(nil), got...)
+				findings.ApplyVerdicts(live, verdicts)
+				upQ <- live
 			}
 		})
 	if v := z.SecPerHost(); v > 0 {
@@ -452,6 +458,7 @@ func cmdScan(args []string) {
 		tr.Logf("pending: %d targets not covered - resume with: asi scan -resume %s", len(pending), runID)
 	}
 	findings.Sort(svcs)
+	findings.ApplyVerdicts(svcs, verdicts)
 	must(findings.Save(filepath.Join(dir, "services.json"), svcs))
 	must(os.WriteFile(filepath.Join(dir, "findings_defectdojo.json"), findings.GenericJSON(svcs), 0o644))
 	obs.Sort(allObs)
@@ -628,6 +635,12 @@ func cmdUpload(args []string) {
 		res, err = c.Reimport("merged.xml", b, t, *closeOld)
 	} else {
 		svcs, e := findings.Load(filepath.Join(*run, "services.json"))
+		if st, err := openStore(context.Background(), os.Getenv("ASI_DATABASE_URL")); err == nil && st != nil {
+			if v, err := st.Verdicts(context.Background()); err == nil {
+				findings.ApplyVerdicts(svcs, v)
+			}
+			st.Close()
+		}
 		must(e)
 		t.ScanType, t.TestTitle = "Generic Findings Import", "ASI discovery"
 		res, err = c.Reimport("asi-findings.json", findings.GenericJSON(svcs), t, *closeOld)

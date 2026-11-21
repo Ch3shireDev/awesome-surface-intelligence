@@ -220,7 +220,7 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
           <option value="0 3 * * 0">w niedzielę 03:00</option><option value="">własny cron…</option></select></div>
         <div><label for="sc-cron">cron (min godz dzień mies dzień_tyg)</label><input id="sc-cron" class="mono" value="0 2 * * *" style="width:150px"></div>
         <div><label for="sc-win">Okno (minuty)</label><input id="sc-win" type="number" min="1" max="1440" value="120" style="width:90px"></div>
-        <div><button class="btn" id="sc-add">Zapisz</button></div>
+        <div><button class="btn" id="sc-add">Zapisz</button> <button class="btn sec hidden" id="sc-cancel">Anuluj edycję</button></div>
       </div>
       <div class="muted" id="sc-preview" style="margin-top:8px;font-size:13px"></div>
       <p class="muted" style="font-size:12.5px">Parametry skanu (równoległość, limit pps, porty, DefectDojo) biorą się z formularza „Nowy skan” powyżej.</p>
@@ -238,6 +238,10 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
     </div>
     <div id="ri-msg" class="msg"></div>
   </div>
+  <div class="card"><h2>Porównanie dwóch przebiegów</h2>
+    <div class="row"><div><label for="df-a">starszy</label><select id="df-a"></select></div><div><label for="df-b">nowszy</label><select id="df-b"></select></div>
+      <div><button class="btn sec" id="df-go">Porównaj</button></div></div>
+    <div id="df-out" class="muted" style="margin-top:10px">Wybierz dwa przebiegi (domyślnie: dwa ostatnie zakończone).</div></div>
   <div class="card"><h2>Przebiegi</h2><div class="scroll"><table><thead><tr><th>przebieg</th><th>status</th><th>zbiór</th><th>czas</th><th>hosty</th><th>porty</th><th>zmiany</th><th></th></tr></thead><tbody id="s-runs"></tbody></table></div></div>
 </section>
 
@@ -352,7 +356,7 @@ async function loadAssets(){
   const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':''});
   let rows=await api('api/v1/assets?'+q);
   const want=$('a-int').value;if(want)rows=rows.filter(a=>(a.interest||'')===want);
-  $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
+  $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
   $('a-count').textContent=rows.length+' assetów';bindRows();
 }
 $('a-go').onclick=loadAssets;$('a-int').onchange=loadAssets;
@@ -375,13 +379,22 @@ async function openAsset(key){
   <h2 style="margin-top:16px">Twoje dane (zachowane przy kolejnych skanach)</h2>
   <label for="dr-tags">tagi (po przecinku)</label><input id="dr-tags" style="width:100%" value="${esc((a.user_tags||[]).join(', '))}" ${can('analyst')?'':'disabled'}>
   <label for="dr-note">notatka (szyfrowana w bazie)</label><textarea id="dr-note" ${can('analyst')?'':'disabled'}>${esc(a.user_note||'')}</textarea>
+  ${a.kind==='port'?`<h2 style="margin-top:16px">Ocena analityka</h2>
+  <div class="row"><div><label for="dr-vst">Status wyniku</label><select id="dr-vst" ${can('analyst')?'':'disabled'}>
+    <option value="">do analizy</option><option value="false_positive">fałszywy alarm</option><option value="accepted">zaakceptowane ryzyko</option></select></div>
+    <div><label for="dr-vint">Ocena</label><select id="dr-vint" ${can('analyst')?'':'disabled'}><option value="">automatyczna</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></div></div>
+  <label for="dr-vre">Uzasadnienie</label><input id="dr-vre" style="width:100%" maxlength="500" ${can('analyst')?'':'disabled'}>
+  <p class="muted" style="font-size:12.5px;margin:6px 0 0">Ocena zostaje na assecie przy kolejnych skanach. Fałszywy alarm i zaakceptowane ryzyko znikają z „Najważniejszych znalezisk” i trafiają do DefectDojo jako <i>false positive</i> / <i>risk accepted</i>.</p>`:''}
   ${can('analyst')?'<div style="margin-top:10px"><button class="btn" id="dr-save">Zapisz</button> <span id="dr-msg" class="msg"></span></div>':'<p class="muted">Rola viewer: tylko odczyt.</p>'}
   <h2 style="margin-top:18px">Historia</h2><table>${ev.map(e=>`<tr><td>${badge(e.type)}</td><td>${fmtT(e.at)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">brak</td></tr>'}</table>`;
   $('dr-x').onclick=()=>dr.classList.add('hidden');
   if(a.kind==='port')api('api/v1/asset/observations?key='+encodeURIComponent(key)).then(renderWeb).catch(()=>{});
+  const ov=a.user_overrides||{};if($('dr-vst')){$('dr-vst').value=ov.status||'';$('dr-vint').value=ov.interest||'';$('dr-vre').value=ov.reason||''}
   if($('dr-save'))$('dr-save').onclick=async()=>{
     const t=$('dr-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
-    try{await api('api/v1/asset?key='+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify({user_tags:t,user_note:$('dr-note').value})});$('dr-msg').className='msg ok';$('dr-msg').textContent='zapisano'}
+    const body={user_tags:t,user_note:$('dr-note').value};
+    if($('dr-vst'))body.user_overrides={status:$('dr-vst').value,interest:$('dr-vint').value,reason:$('dr-vre').value.trim()};
+    try{await api('api/v1/asset?key='+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify(body)});$('dr-msg').className='msg ok';$('dr-msg').textContent='zapisano'}
     catch(e){$('dr-msg').className='msg err';$('dr-msg').textContent=e.message}};
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('drawer').classList.add('hidden')});
@@ -464,12 +477,23 @@ async function loadScans(){
     <td>${s.duration_s?Math.round(s.duration_s)+' s':'–'}</td><td>${s.hosts_up??'–'}/${s.targets??'–'}</td><td>${s.open??'–'}</td><td><button class="link">zmiany →</button></td>
     <td>${canResume?`<button class="btn sec r-res" data-id="${esc(r.id)}">Wznów (${r.pending})</button>`:''}</td></tr>`}).join('')||'<tr><td class="empty" colspan="8">Brak przebiegów.</td></tr>';
   document.querySelectorAll('tr[data-run]').forEach(tr=>tr.onclick=()=>showRun(tr.dataset.run));
+  const opts=runs.map(r=>`<option value="${esc(r.id)}">${esc(r.id)} · ${esc(PL[r.status]||r.status)} · ${esc(r.set_name)}</option>`).join('');
+  const done=runs.filter(r=>r.status==='completed');
+  if(!$('df-a').options.length){$('df-a').innerHTML=opts;$('df-b').innerHTML=opts;if(done.length>1){$('df-a').value=done[1].id;$('df-b').value=done[0].id}}
   document.querySelectorAll('.r-res').forEach(b=>b.onclick=async e=>{e.stopPropagation();
     try{await api('api/v1/runs/'+encodeURIComponent(b.dataset.id)+'/resume',{method:'POST',body:JSON.stringify(scanParams())});$('s-msg').className='msg ok';$('s-msg').textContent='Wznawiam '+b.dataset.id;setTimeout(()=>loadScanStatus(true),1500)}
     catch(err){$('s-msg').className='msg err';$('s-msg').textContent=err.message}});
   loadSchedules();
   loadScanStatus(true);
 }
+$('df-go').onclick=async()=>{const o=$('df-out');
+  try{const d=await api('api/v1/diff?from='+encodeURIComponent($('df-a').value)+'&to='+encodeURIComponent($('df-b').value));const ch=d.changes||[];
+    const cnt=k=>ch.filter(c=>c.kind===k).length;
+    const fp=x=>x?esc([x.service,x.product,x.version].filter(Boolean).join(' ')):'–';
+    o.className='';o.innerHTML=`<p><span class="badge t-new">nowe ${cnt('new')}</span> <span class="badge t-gone">zniknęły ${cnt('gone')}</span> <span class="badge t-changed">zmienione ${cnt('changed')}</span> · bez zmian ${d.unchanged}
+      · hosty nowe: ${(d.hosts_new||[]).map(esc).join(', ')||'–'} · hosty znikłe: ${(d.hosts_gone||[]).map(esc).join(', ')||'–'}</p>`+
+      (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.map(c=>`<tr><td><span class="badge t-${c.kind==='gone'?'gone':c.kind}">${c.kind==='new'?'nowa':c.kind==='gone'?'zniknęła':'zmiana'}</span></td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
+  catch(e){o.className='msg err';o.textContent=e.message}};
 async function showRun(id){
   const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');const dr=$('drawer');dr.classList.remove('hidden');
   dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(id)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
@@ -518,7 +542,12 @@ async function loadSchedules(){
     <td>${x.enabled?fmtT(x.next_run_at):'<span class="muted">wyłączony</span>'}</td>
     <td>${x.last_run_at?fmtT(x.last_run_at):'–'}${x.last_run_id?`<br><span class="mono muted">${esc(x.last_run_id)}</span>`:''}${x.last_error?`<br><span class="msg err">${esc(x.last_error)}</span>`:''}</td>
     <td><input type="checkbox" class="sc-en" data-id="${x.id}" ${x.enabled?'checked':''} ${op?'':'disabled'} aria-label="aktywny ${esc(x.name)}"></td>
-    <td>${op?`<button class="link sc-del" data-id="${x.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Brak harmonogramów.</td></tr>';
+    <td>${op?`<button class="link sc-ed" data-id="${x.id}">edytuj</button> · <button class="link sc-del" data-id="${x.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Brak harmonogramów.</td></tr>';
+  document.querySelectorAll('.sc-ed').forEach(b=>b.onclick=()=>{const x=d.schedules.find(s=>s.id==b.dataset.id);editSched=x;
+    $('sc-name').value=x.name;$('sc-set').value=x.set;$('sc-cron').value=x.cron;$('sc-preset').value=[...$('sc-preset').options].some(o=>o.value===x.cron)?x.cron:'';$('sc-win').value=x.window_minutes;
+    const p=x.params||{};if(p.parallel)$('s-par').value=p.parallel;if(p.rate)$('s-rate').value=p.rate;if(p.upload)$('s-upload').value=p.upload;
+    if(p.ports==='top100'||p.ports==='top1000'){$('s-ports').value=p.ports}else if(p.ports){$('s-ports').value='custom';$('s-custom').value=p.ports;$('s-custom-w').classList.remove('hidden')}
+    $('sc-add').textContent='Zapisz zmiany';$('sc-cancel').classList.remove('hidden');$('sc-msg').className='msg';$('sc-msg').textContent='Edytujesz „'+x.name+'”. Parametry skanu są w formularzu „Nowy skan” wyżej.';previewCron();$('sc-name').scrollIntoView({block:'center'})});
   document.querySelectorAll('.sc-en').forEach(cb=>cb.onchange=async()=>{const x=d.schedules.find(s=>s.id==cb.dataset.id);x.enabled=cb.checked;
     try{await api('api/v1/schedules/'+x.id,{method:'PUT',body:JSON.stringify(x)});loadSchedules()}catch(e){alert(e.message)}});
   document.querySelectorAll('.sc-del').forEach(b=>b.onclick=async()=>{if(!confirm('Usunąć harmonogram?'))return;await api('api/v1/schedules/'+b.dataset.id,{method:'DELETE'});loadSchedules()});
@@ -531,9 +560,13 @@ async function previewCron(){
 }
 $('sc-preset').onchange=()=>{if($('sc-preset').value){$('sc-cron').value=$('sc-preset').value}else{$('sc-cron').focus()}previewCron()};
 $('sc-cron').oninput=()=>{clearTimeout(window._cp);window._cp=setTimeout(previewCron,400)};
+let editSched=null;
+function endEdit(){editSched=null;$('sc-add').textContent='Zapisz';$('sc-cancel').classList.add('hidden');$('sc-name').value=''}
+$('sc-cancel').onclick=()=>{endEdit();$('sc-msg').textContent=''};
 $('sc-add').onclick=async()=>{const p=scanParams();delete p.window;delete p.set;
-  try{await api('api/v1/schedules',{method:'POST',body:JSON.stringify({name:$('sc-name').value,set:$('sc-set').value,cron:$('sc-cron').value,window_minutes:+$('sc-win').value,enabled:true,params:p})});
-    $('sc-msg').className='msg ok';$('sc-msg').textContent='Zapisano.';$('sc-name').value='';loadSchedules()}
+  const body={name:$('sc-name').value,set:$('sc-set').value,cron:$('sc-cron').value,window_minutes:+$('sc-win').value,enabled:editSched?editSched.enabled:true,params:p};
+  try{await api(editSched?'api/v1/schedules/'+editSched.id:'api/v1/schedules',{method:editSched?'PUT':'POST',body:JSON.stringify(body)});
+    $('sc-msg').className='msg ok';$('sc-msg').textContent=editSched?'Zmieniono.':'Zapisano.';endEdit();loadSchedules()}
   catch(e){$('sc-msg').className='msg err';$('sc-msg').textContent=e.message}};
 
 // ---------- admin

@@ -30,6 +30,45 @@ type Service struct {
 	Tags      []string `json:"tags,omitempty"`
 	Interest  string   `json:"interest"` // high | medium | low
 	Reason    string   `json:"interest_reason,omitempty"`
+	Verdict   string   `json:"verdict,omitempty"` // analyst: false_positive | accepted ("" = none)
+}
+
+// Verdict is the analyst's decision stored on the asset (assets.user_overrides, DEV-9).
+// It survives every later scan and is applied to the dashboard and the DefectDojo export.
+type Verdict struct {
+	Status   string `json:"status,omitempty"`   // false_positive | accepted | "" (none)
+	Interest string `json:"interest,omitempty"` // high | medium | low | "" (automatic)
+	Reason   string `json:"reason,omitempty"`
+}
+
+func (v Verdict) Valid() bool {
+	okS := v.Status == "" || v.Status == "false_positive" || v.Status == "accepted"
+	okI := v.Interest == "" || v.Interest == "high" || v.Interest == "medium" || v.Interest == "low"
+	return okS && okI && len(v.Reason) <= 500
+}
+
+// Dismissed: the analyst said this is not a problem (hidden from "most important").
+func (v Verdict) Dismissed() bool { return v.Status == "false_positive" || v.Status == "accepted" }
+
+// Apply sets the verdict and an analyst-overridden interest on a service.
+func (v Verdict) Apply(s *Service) {
+	s.Verdict = v.Status
+	if v.Interest != "" {
+		s.Interest = v.Interest
+		s.Reason = "ocena analityka"
+		if v.Reason != "" {
+			s.Reason += ": " + v.Reason
+		}
+	}
+}
+
+// ApplyVerdicts applies verdicts keyed by asset key (ip/proto/port).
+func ApplyVerdicts(svcs []Service, m map[string]Verdict) {
+	for i := range svcs {
+		if v, ok := m[obs.PortKey(svcs[i].IP, svcs[i].Proto, svcs[i].Port)]; ok {
+			v.Apply(&svcs[i])
+		}
+	}
 }
 
 func (s Service) Key() string { return fmt.Sprintf("%s:%d/%s", s.IP, s.Port, s.Proto) }
@@ -208,6 +247,13 @@ func setDiff(a, b []string) []string {
 
 // ---- DefectDojo packaging ----
 
+func justification(s Service) string {
+	if strings.HasPrefix(s.Reason, "ocena analityka") {
+		return s.Reason
+	}
+	return ""
+}
+
 type ddEndpoint struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port,omitempty"`
@@ -224,6 +270,9 @@ type ddFinding struct {
 	Service          string       `json:"service,omitempty"`
 	Endpoints        []ddEndpoint `json:"endpoints"`
 	Tags             []string     `json:"tags,omitempty"`
+	FalseP           bool         `json:"false_p,omitempty"`
+	RiskAccepted     bool         `json:"risk_accepted,omitempty"`
+	Justification    string       `json:"severity_justification,omitempty"`
 	Active           bool         `json:"active"`
 	Verified         bool         `json:"verified"`
 	StaticFinding    bool         `json:"static_finding"`
@@ -285,7 +334,6 @@ func GenericJSON(svcs []Service) []byte {
 		}
 		row("asset", strings.Join(s.Assets, ", "))
 		row("domains", strings.Join(s.Domains, ", "))
-		row("interest", s.Interest+" "+s.Reason)
 		tags := append([]string{"asi", "interest-" + s.Interest}, s.Tags...)
 		if s.Name != "" {
 			tags = append(tags, "svc-"+s.Name)
@@ -298,6 +346,8 @@ func GenericJSON(svcs []Service) []byte {
 			Title: title, Description: desc.String(), Severity: severity[s.Interest],
 			UniqueID: "asi:" + s.Key(), Component: s.Product, ComponentVersion: s.Version,
 			Endpoints: eps, Tags: tags, Active: true, DynamicFinding: true,
+			FalseP: s.Verdict == "false_positive", RiskAccepted: s.Verdict == "accepted",
+			Justification: justification(s),
 		})
 	}
 	b, _ := json.MarshalIndent(out, "", "  ")

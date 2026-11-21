@@ -10,7 +10,7 @@ M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)█████████░  90%  🔨  DEV-0/1 ✅, SEC-1 ✅, SEC-3 lab ✅; brak: SEC-2 materiały od organizatorów
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
-M4 Web GUI                ████████░░  85%  🔨  DEV-4 ✅, DEV-8 ✅, HTTP/sygnatury w assecie ✅; brak: porównanie 2 przebiegów i edycja wyników/harmonogramu w GUI (DEV-9)
+M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅, DEV-9 ✅ (porównanie przebiegów, ocena analityka, edycja harmonogramu), HTTP/sygnatury w assecie ✅
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur (DEV-7 osobno)
 M6 Ochrona danych i role  █████████░  95%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅; brak: tokeny API w GUI (DEV-3)
 M7 Harmonogram i eksport  █████████░  90%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 ✅ (eksport + import)
@@ -52,17 +52,17 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | 5. HTTP: tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania | ✅ | – |
 | 6. CMS, framework, serwer aplikacyjny, **urządzenia IoT** | 🟡 | brak sygnatur IoT (kamery, routery, drukarki) → **SEC-10** |
 | 7. staging, panel administracyjny | ✅ | – |
-| 8–9. porównanie przebiegów; nowe / znikające / zmienione | 🟡 | zmiana treści HTTP (tytuł, certyfikat, technologie) nie daje zdarzenia `changed`; w GUI nie da się porównać **dwóch dowolnych** przebiegów → **DEV-7, DEV-9** |
+| 8–9. porównanie przebiegów; nowe / znikające / zmienione | 🟡 | porównanie dwóch dowolnych przebiegów w GUI ✅ (DEV-9); zmiana treści HTTP (tytuł, certyfikat, technologie) nie daje jeszcze zdarzenia `changed` → **DEV-7** |
 | 10. własne sygnatury | ✅ | (opcja) wgrywanie sygnatur z GUI |
 | 11. formularz celów, ręcznie + CSV/JSON | ✅ | – |
 | 12–13. RBAC, 4 role | ✅ | tokeny API w GUI (DEV-3, mała) |
-| 14. edycja wartości niezależnie od skanu, trwała | 🟡 | edycja tagów i notatek jest; brak w GUI: oznaczenia wyniku (fałszywy alarm, zaakceptowane ryzyko, nadpisanie oceny) i edycji harmonogramu → **DEV-9** |
+| 14. edycja wartości niezależnie od skanu, trwała | ✅ | tagi, notatki, ocena analityka (FP / zaakceptowane / ocena) eksportowana do DD, edycja harmonogramu (DEV-9) |
 | 15. czytelny interfejs, dashboard | ✅ | – |
 | 16. szyfrowanie w spoczynku | ✅ | – |
 | min.: import wyników skanów JSON/CSV | ✅ | DEV-6: nmap XML, CSV, JSON, JSONL; GUI i CLI |
 | min.: obsługa >10 000 IP | 🟡 | architektura gotowa, **nigdy nie przetestowana na 10k** (wydajność skanu, bazy, przeliczania stanów, dashboardu) → **DEV-10** |
-| min.: porównanie dwóch skanów | 🟡 | CLI ✅ (`asi diff -db`), GUI ❌ → **DEV-9** |
-| min.: edycja danych istniejących skanów, wyników i konfiguracji | 🟡 | → **DEV-9** |
+| min.: porównanie dwóch skanów | ✅ | GUI i CLI (DEV-9) |
+| min.: edycja danych istniejących skanów, wyników i konfiguracji | ✅ | wyniki: ocena analityka, tagi, notatki; konfiguracja: cele, harmonogramy (DEV-9) |
 | mile widziane: pora dnia, ocena ciekawości, grupowanie usług | 🟡 | `hours_seen` zbierane, ale nieanalizowane; ocena tylko z portów i sygnatur osobno; brak grupowania → **DEV-7** |
 | mile widziane: eksport wybranych obserwacji do DD | 🟡 | eksport jest całościowy; natywne parsery httpx/nuclei → **SEC-7** |
 | formalne: repozytorium, dokumentacja, prezentacja ≤10 slajdów + demo | 🟡 | publiczne repo (**SEC-9**), prezentacja (**ALL-1**), uruchomienie od zera (**ALL-2**) |
@@ -72,8 +72,8 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | zadanie | etap | co konkretnie | kto | waga |
 |---|---|---|---|---|
 | **DEV-6** | M7 | import wyników skanów (nmap XML, JSON/CSV) z GUI i CLI do bazy jako przebieg, z przeliczeniem stanów | ✅ agent blackarch | minimum PDF, test jury „import” |
-| **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | 🔨 agent blackarch | minimum PDF, test jury „edycja znalezisk” |
-| **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ⏳ agent blackarch | 30% („w dużej infrastrukturze”) |
+| **DEV-9** | M4 | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane, nadpisana ocena), honorowane przez dashboard i eksport; edycja harmonogramu | ✅ agent blackarch | minimum PDF, test jury „edycja znalezisk” |
+| **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | 🔨 agent blackarch | 30% („w dużej infrastrukturze”) |
 | **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ⏳ agent blackarch | 10–15% + „mile widziane” |
 | **SEC-10** | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | wolne (SEC) | pkt 6 PDF |
 | **SEC-7** | M7 | natywne parsery httpx/nuclei do DD | wolne (SEC) | 20% (integracja DD) |
@@ -88,6 +88,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~18:10 | DEV-9: porównanie dwóch przebiegów w GUI, ocena analityka (FP / zaakceptowane / ocena) trwała i eksportowana do DD jako false_p / risk_accepted, edycja harmonogramu; ocena usunięta z opisu znaleziska DD (stabilny hash) |
 | 21.11 ~17:50 | DEV-6: import wyników (nmap XML, CSV, JSON, JSONL httpx/nuclei) w GUI i `asi import`, pokrycie auto/none, import historyczny; mniej szczegółowa obserwacja usługi nie jest już „zmianą” |
 | 21.11 ~17:30 | przegląd wymagań PDF vs kod: M4 85% (brak porównania przebiegów i edycji wyników w GUI), brak importu wyników, brak testu 10k, brak sygnatur IoT; nowe zadania DEV-9, DEV-10, SEC-10 |
 | 21.11 ~17:10 | M5: SEC-4 httpx (etap `http`), SEC-5 nuclei + 14 sygnatur (etap `signatures`), porty wysokiego ryzyka spoza top 1000 (Redis wykryty), szuflada „HTTP i sygnatury” i sygnatury na dashboardzie; blokery: `make env-sync`, restart nginx, import scala tagi |

@@ -49,3 +49,26 @@ Wszystko, co robi GUI, jest dostępne pod `/api/v1` (sesja albo `Authorization: 
 `login`, `logout`, `me`, `dashboard`, `assets`, `asset` (PATCH), `asset/events`, `runs`, `runs/{id}/events`,
 `target-sets`, `targets` (GET/POST/PUT/DELETE), `targets/import`, `scans`, `scans/current`,
 `scans/current/stop`, `export/assets.csv|json`, `users`, `audit`, a postęp skanu pod `/live/`.
+
+## Ocena analityka (DEV-9)
+
+W szufladzie portu: **Status wyniku** (do analizy / fałszywy alarm / zaakceptowane ryzyko), **Ocena** (automatyczna
+albo high/medium/low) i **uzasadnienie**. Decyzja jest zapisana na assecie (`user_overrides`), więc:
+
+- przetrwa każdy kolejny skan,
+- fałszywy alarm i zaakceptowane ryzyko znikają z „Najważniejszych znalezisk”, a nadpisana ocena dotyczy też trafień sygnatur na tym porcie,
+- w eksporcie do DefectDojo znalezisko ma `false_p` / `risk_accepted`, a uzasadnienie trafia do `severity_justification`.
+  Ocena nie jest częścią opisu, więc jej zmiana nie zamyka i nie tworzy znaleziska w DD na nowo.
+
+Walidacja: tylko znane wartości statusu i oceny, uzasadnienie do 500 znaków. Każda zmiana jest w dzienniku audytu.
+
+## Porównanie dwóch przebiegów (DEV-9)
+
+Skany → **Porównanie dwóch przebiegów**: dowolne dwa przebiegi z bazy (domyślnie dwa ostatnie zakończone):
+usługi nowe, zniknięte i zmienione (przed i po) oraz hosty nowe i znikłe. API: `GET /api/v1/diff?from=A&to=B`,
+CLI: `asi diff -db A B`.
+
+## Edycja harmonogramu
+
+Przy harmonogramie: **edytuj** wypełnia formularz (nazwa, zbiór, cron, okno oraz parametry skanu z formularza
+„Nowy skan”), a **Zapisz zmiany** wysyła `PUT /api/v1/schedules/{id}`. Następny start przelicza się od razu.

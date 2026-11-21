@@ -88,8 +88,8 @@ i `make sync`.
 
 | ID | kto | zadanie |
 |---|---|---|
-| DEV-9 | DEV 🔨 *w toku: agent blackarch* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
-| DEV-10 | DEV ⏳ *następne: agent blackarch* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
+| DEV-9 | DEV ✅ *zrobione (agent blackarch)* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
+| DEV-10 | DEV 🔨 *w toku: agent blackarch* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
 | SEC-10 | SEC | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
 | SEC-9 | SEC | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
 | ALL-1 | oboje | Prezentacja do 10 slajdów: problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
