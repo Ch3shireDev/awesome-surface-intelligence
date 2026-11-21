@@ -28,6 +28,18 @@ Brakuje (wymagania „musi” z PDF):
 - harmonogram ze wznawianiem w kolejnym oknie,
 - eksport CSV, import cudzych wyników.
 
+## Priorytety po konsultacji z mentorem (21.11, 14:44)
+
+Szczegóły: [`MENTOR.md`](MENTOR.md). Wpływ na zadania:
+
+- **DEV-4 (Web GUI: formularz celów, assety, dashboard) w górę**: GUI to „całe mięso” oceny. GUI może wołać
+  komendy CLI `asi` i czytać bazę (wzorzec MISP).
+- **DEV-3 (RBAC) w dół**: najpierw jedno konto admina z `.env` i logowanie. 4 role tylko, jeśli starczy czasu.
+  Żadnej synchronizacji użytkowników z DefectDojo.
+- **SEC-6 + szyfrowanie Postgresa**: encryption at rest to „darmowe” 5%. Oprócz pól AES-GCM zaszyfrować dane
+  bazy (wolumen LUKS albo `pg_tde`) i opisać to w dokumentacji.
+- Eksport do DD zostaje obowiązkowy: ASI to feed dla DefectDojo.
+
 ## Kto co bierze (na bieżąco)
 
 Oznaczenie przy ID: 🔨 *w toku: kto*, ✅ *zrobione: commit*. Bierz wolne zadanie, oznacz je commitem w tym pliku,

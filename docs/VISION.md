@@ -25,8 +25,10 @@ DefectDojo to **system koncowy, do ktorego eksportujemy**. Nie jest naszym
 UI ani magazynem danych. CBI AGH juz go uzywa, ale skanowanie duzych sieci
 "z poziomu DD" jest niewygodne. Nasz system to brakujacy "detektor" przed DD.
 
-Na teraz **bez web UI**: REST API + CLI. Web UI powstanie pozniej na tym
-samym API.
+~~Na teraz bez web UI~~ **Zmienione 21.11 po konsultacji z mentorem
+([`MENTOR.md`](MENTOR.md))**: Web GUI jest wymagane i najwyzej punktowane.
+Budujemy je jako nakladke na CLI `asi` i baze (wzorzec MISP). RBAC: wystarczy
+jedno konto admina, role tylko lokalne. Encryption at rest w Postgresie = 5%.
 
 ## 2. Zasady projektowe
 

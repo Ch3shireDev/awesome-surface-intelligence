@@ -10,7 +10,18 @@ discovery scanu duzych sieci (powyzej 10 000 IP):
 - postep na zywo, historia i diff, RBAC, szyfrowanie wrazliwych pol,
 - eksport do DefectDojo. DD to system koncowy CBI AGH: eksportujemy do niego, nie budujemy na nim.
 
+## WAZNE: ustalenia z mentorem CBI AGH (21.11, 14:44), wiazace
+
+Pelny zapis: `docs/MENTOR.md` (decyzja 11 w `docs/DECISIONS.md`). Maja pierwszenstwo przed starszymi zapisami w repo.
+1. ASI to **feed dla DefectDojo** (skanery -> wyniki -> DD), nie konkurencja dla DD.
+2. **Web GUI jest wymagane** i najwyzej punktowane (formularze, role, szyfrowanie). Nie "pozniej".
+3. Architektura jak w MISP: **Web GUI = nakladka na komendy CLI** (`asi`, nmap, httpx...) i na baze. Mentor to zaleca.
+4. **PostgreSQL + encryption at rest = darmowe 5%**. Szyfrowanie ma byc wlaczone i pokazane w demo/dokumentacji.
+5. **RBAC to tylko 10%**: jedno konto admina wystarczy. RBAC tylko lokalny, **bez synchronizacji z kontami DD**.
+6. Skanery CLI (nmap, httpx, Wappalyzer, wykrywanie uslug) zaakceptowane; im bardziej modularne, tym lepiej.
+
 Przeczytaj PRZED wieksza zmiana:
+- `docs/MENTOR.md`: ustalenia z mentorem (wiazace),
 - `docs/VISION.md`: architektura docelowa, model danych, rdzen (zrodlo prawdy dla projektu),
 - `docs/status.md`: co z wymagan PDF jest zrobione, a co nie (aktualizuj po kazdym kroku),
 - `docs/DECISIONS.md`: log decyzji z uzasadnieniami,

@@ -110,6 +110,20 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     implementacja planera/skanera/eksportu z VISION; baza, RBAC, API i
     szyfrowanie dochodza na nim (patrz `docs/TASKS.md`).
 
+11. **Wytyczne mentora CBI AGH, konsultacje 21.11 14:44 (WIAZACE)**.
+    Pelny zapis i transkrypcja: [`MENTOR.md`](MENTOR.md). Skrot:
+    - ASI to zrodlo danych (feed) dla DefectDojo, nie jego zamiennik. Potwierdza decyzje 8.
+    - **Web GUI jest wymagane** ("tam jest cale mieso": formularze, role, enkrypcja).
+      Zastepuje fragment decyzji 8 "na razie API + CLI, web UI pozniej".
+    - Zalecana architektura jak w MISP: Web GUI jako wrapper na komendy CLI w Linuksie
+      i na baze danych. Nasz `asi` CLI + skanery jako komendy pasuja do tego wprost.
+    - PostgreSQL; **encryption at rest = darmowe 5%**. Rozszerza decyzje 9: oprocz pol
+      AES-GCM wlaczamy szyfrowanie danych Postgresa (szyfrowany wolumen albo `pg_tde`)
+      i opisujemy to w dokumentacji. Zwykly Postgres nie ma TDE, mimo slow mentora.
+    - **RBAC = tylko 10%**, jedno konto admina jest akceptowalne. RBAC wylacznie lokalny,
+      bez synchronizacji z uzytkownikami DD. 4 role (DEV-3) obnizone do "jesli starczy czasu".
+    - Skanery: nmap, httpx, Wappalyzer i inne narzedzia CLI zaakceptowane.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
