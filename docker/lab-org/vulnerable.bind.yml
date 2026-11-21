@@ -1,0 +1,6 @@
+# Nakladka na docker-compose-vulnerable.yml organizatorow (WordPress 4.7, DVWA, FTP test/test123!).
+services:
+  wordpress: {ports: !override ["${LAB_BIND:-127.0.0.1}:8088:80"]}
+  adminer:   {ports: !override ["${LAB_BIND:-127.0.0.1}:8089:8080"]}
+  ftp:       {ports: !override ["${LAB_BIND:-127.0.0.1}:21:21", "${LAB_BIND:-127.0.0.1}:21000-21010:21000-21010"]}
+  dvwa:      {ports: !override ["${LAB_BIND:-127.0.0.1}:8090:80"]}

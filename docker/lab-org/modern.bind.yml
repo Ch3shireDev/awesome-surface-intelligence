@@ -1,0 +1,6 @@
+# Nakladka na docker-compose-modern.yml organizatorow (Redis bez hasla!): porty tylko na LAB_BIND.
+services:
+  wordpress:           {ports: !override ["${LAB_BIND:-127.0.0.1}:8080:80"]}
+  phpmyadmin:          {ports: !override ["${LAB_BIND:-127.0.0.1}:8081:80"]}
+  redis:               {ports: !override ["${LAB_BIND:-127.0.0.1}:6379:6379"]}
+  nginx-proxy-manager: {ports: !override ["${LAB_BIND:-127.0.0.1}:80:80", "${LAB_BIND:-127.0.0.1}:81:81", "${LAB_BIND:-127.0.0.1}:443:443"]}

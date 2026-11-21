@@ -1,0 +1,8 @@
+# Nakladka na docker-compose-custom-network.yml organizatorow: porty tylko na LAB_BIND (domyslnie 127.0.0.1),
+# zamiast 0.0.0.0. Uzycie i powod: docs/guide/lab-organizers.md, "Testy rownolegle na kilku VM".
+services:
+  custom-api: {ports: !override ["${LAB_BIND:-127.0.0.1}:8888:80"]}
+  postgres:   {ports: !override ["${LAB_BIND:-127.0.0.1}:15432:5432"]}
+  rabbitmq:   {ports: !override ["${LAB_BIND:-127.0.0.1}:5673:5672", "${LAB_BIND:-127.0.0.1}:15673:15672"]}
+  gitea:      {ports: !override ["${LAB_BIND:-127.0.0.1}:3001:3000", "${LAB_BIND:-127.0.0.1}:2223:22"]}
+  flask-app:  {ports: !override ["${LAB_BIND:-127.0.0.1}:8787:80"]}

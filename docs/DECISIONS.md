@@ -215,9 +215,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       httpx `closed 1 / created 2 / untouched 5`, nuclei `created 2 / untouched 16` w przebiegu 2.
 
 19. **Sandbox = compose stawiany sami; jeden stack na maszyne, cele przez tailnet** (21.11, ustalenia zespolu).
-    - `lab.zip` -> `~/lab-org` (poza repo). Cztery stacki, **jeden naraz na jednej maszynie** (stale porty
-      8080/8090/80/443/6379 koliduja miedzy stackami i z DD/ASI). Start: `docker compose -f
-      docker-compose-<stack>.yml up -d`, dla `custom-network` scenariusz `./quickstart.sh up|change|up`.
+    - `lab.zip` -> `~/lab-org` (poza repo). Cztery stacki, **jeden naraz na jednej maszynie**. Powod (poprawka
+      21.11 22:00): stacki NIE koliduja portami miedzy soba; koliduja tylko z naszym stackiem (`modern` 8080 = DD,
+      `vulnerable` 8090 = panel ASI). "Jeden naraz" chroni przed mieszaniem wynikow (skan 127.0.0.1 widzi wszystko
+      na hoscie) i przed brakiem RAM. Start: `docker compose -f docker-compose-<stack>.yml up -d`, dla
+      `custom-network` scenariusz `./quickstart.sh up|change|up`.
+    - **Testy LAB-* rownolegle na kilku VM** (21.11 22:00): kopia `~/lab` na kazda VM z dockerem, na kazdej
+      wlasny stack ASI+DD i jeden stack labu. Nie czekamy na "wolny lab" na jednej maszynie. Rezerwacja w
+      TASKS jako `stack@VM`. LAB-6 (fatusia-1) szedl rownolegle z LAB-5 (fatusia-2), wyniki czyste.
     - Cel skanu zalezy od tego, gdzie stoi skaner: ta sama VM -> `127.0.0.1`; inna maszyna w tailnecie ->
       `<tailscale-ip>` tej VM. **Nie skanujemy adresow mostkow dockera (172.x) z innej maszyny** - tailscale
       ich nie routuje, z zewnatrz widoczne sa tylko porty opublikowane (`ports:` = DNAT na hoscie). Skaner w
@@ -228,8 +233,9 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       CLI: `asi scan -targets targets/lab-org-<host>.csv`.
     - Bezpieczenstwo: stacki maja domyslne hasla (WordPress, DVWA, FTP `test/test123`, RabbitMQ `guest`) i
       publikuja na `0.0.0.0`, czyli w tailnecie sa widoczne dla **calego tailnetu** (na maszynie bez firewalla
-      takze w LAN). Stawiac tylko na maszynie testowej, po testach `docker compose down`; na maszynie z
-      publicznym IP tylko za firewallem albo z bindem `127.0.0.1:<port>:<port>` (skan wtedy tylko lokalny).
+      takze w LAN). Stawiac tylko na maszynie testowej, po testach `docker compose down`. **Domyslnie nakladka
+      `docker/lab-org/<stack>.bind.yml`**: porty labu na `LAB_BIND` (domyslnie `127.0.0.1`; adres tailnetu, gdy
+      skaner jest na innej VM), nigdy `0.0.0.0`. Docker omija firewall hosta, a fatusia-1 ma port forwarding.
 
 20. **Wykryty firewall = "nie da sie sprawdzic", nigdy "brak uslug"** (21.11, zespol; dotyczy zalozenia o
     plaskim intranecie z sekcji pytan).

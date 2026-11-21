@@ -6,7 +6,9 @@ opis, analiza względem ASI i plan testów (zadania `LAB-*` w [TASKS](../TASKS.m
 
 ## Co zawiera
 
-Cztery niezależne stacki docker compose. Organizatorzy zaznaczają: **uruchamiać jeden naraz**. Wszystkie
+Cztery niezależne stacki docker compose. Organizatorzy zaznaczają: **uruchamiać jeden naraz**. Dotyczy to jednej
+maszyny: stacki nie kolidują portami między sobą, a na kilku VM testujemy równolegle
+([Testy równolegle](#testy-rownolegle-na-kilku-vm)). Wszystkie
 publikują porty na **jednym hoście** (`0.0.0.0` na VM), więc testują rozpoznawanie usług, fingerprint i
 wykrywanie zmian, a nie discovery wielu hostów.
 
@@ -251,8 +253,8 @@ Oczekiwane wyniki i kryteria zaliczenia: zadania `LAB-1` … `LAB-7` w [TASKS](.
 
 ## Kilka maszyn w tailnecie (decyzja 19)
 
-Zespół ma kilka VM w Tailscale i stawia stack na tej maszynie, która jest akurat wolna - **jeden stack naraz na
-maszynę** (porty `8080/8090/80/443/6379` kolidują między stackami i z DefectDojo/ASI).
+Zespół ma kilka VM w Tailscale. **Jeden stack naraz na maszynę**, ale na wielu maszynach jednocześnie. Stacki
+nie kolidują portami między sobą, tylko z naszym stackiem (`modern` 8080 = DefectDojo, `vulnerable` 8090 = panel ASI).
 
 | gdzie stoi skaner | cel w pliku celów | co widać |
 |---|---|---|
@@ -276,8 +278,39 @@ Uwagi:
 
 - **Zmiana stacku = celowe masowe `missing`** (LAB-6). Aktualizuj `note` w pliku celów, żeby nie czytać tego jako
   awarii; `gone` po progu i `reappeared` po powrocie to poprawne zachowanie.
-- **Ekspozycja:** stacki mają domyślne hasła i publikują na `0.0.0.0` - w tailnecie widzi je cały tailnet, a na
-  maszynie bez firewalla także LAN. Stawiać tylko na maszynie testowej, po testach `docker compose down`;
-  na maszynie z publicznym IP bind `127.0.0.1:<port>:<port>` (skan wtedy wyłącznie lokalny).
+- **Ekspozycja:** stacki mają domyślne hasła i publikują na `0.0.0.0`, a Docker omija firewall hosta: widzi je
+  cały tailnet, LAN i port forwarding. **Zawsze z nakładką** `docker/lab-org/<stack>.bind.yml` (niżej), po testach
+  `docker compose down`.
+
+## Testy równolegle na kilku VM
+
+Nie czekamy na „wolny lab” na jednej maszynie. Każda VM z dockerem może prowadzić inny test LAB-* w tym samym
+czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyste).
+
+1. **Rezerwacja** w `docs/TASKS.md`: przy zadaniu `🔨 w toku: <kto>, <stack>@<VM>`. Na jednej VM tylko jeden stack labu.
+2. **Kopia labu** (materiał organizatorów, poza repo, bez `.env` z cudzej maszyny):
+   `rsync -a --exclude .env fh:lab/ ~/lab/` (albo z dowolnej VM, która go ma).
+3. **Własny stack ASI + DefectDojo** na tej VM (`make env && make up`, z klonu `~/asi`). Skan idzie na `127.0.0.1`.
+4. **Porty naszego stacku** przed stackiem, który z nim koliduje (w `.env`, potem `make up`):
+
+   | stack labu | koliduje z | w `.env` |
+   |---|---|---|
+   | `modern` | DefectDojo 8080 | `DD_PORT=18080`, `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` na 18080 |
+   | `vulnerable` | panel ASI 8090 | `ASI_WEB_ADDR=127.0.0.1:18090` |
+   | `custom-network`, `modern-proxy` | — | — |
+
+   Wykluczenie własnych portów ze skanu (LAB-T2) samo idzie za nowymi wartościami.
+5. **Start z nakładką** (porty labu tylko na `LAB_BIND`, domyślnie `127.0.0.1`):
+
+   ```bash
+   cd ~/lab
+   docker compose -f docker-compose-vulnerable.yml -f ~/asi/docker/lab-org/vulnerable.bind.yml up -d
+   # skaner na innej VM: porty tylko w tailnecie, nie w LAN
+   LAB_BIND=$(tailscale ip -4) docker compose -f docker-compose-modern.yml -f ~/asi/docker/lab-org/modern.bind.yml up -d
+   ```
+
+   Sprawdzone `docker compose config`: bez nakładki 31 portów czterech stacków na `0.0.0.0`, z nakładką wszystkie na `127.0.0.1`.
+6. **Wynik** w tabeli zadania i w sekcji „Wyniki LAB-n” niżej, z nazwą VM (różne VM = różny szum własnych usług
+   i inne DefectDojo).
 - **Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM),
   ASI ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.

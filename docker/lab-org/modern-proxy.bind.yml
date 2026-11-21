@@ -1,0 +1,4 @@
+# Nakladka na docker-compose-modern-proxy.yml organizatorow (dashboard Traefika i API Toxiproxy bez hasla).
+services:
+  traefik:   {ports: !override ["${LAB_BIND:-127.0.0.1}:8085:80", "${LAB_BIND:-127.0.0.1}:8086:8080"]}
+  toxiproxy: {ports: !override ["${LAB_BIND:-127.0.0.1}:8474:8474"]}
