@@ -61,13 +61,19 @@ func main() {
 		cmdServe(args)
 	case "db":
 		cmdDB(args)
+	case "changes":
+		cmdChanges(args)
+	case "assets":
+		cmdAssets(args)
+	case "asset":
+		cmdAsset(args)
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <convert|plan|scan|upload|diff|serve|db> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <convert|plan|scan|upload|diff|serve|db|changes|assets|asset> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 
@@ -189,6 +195,7 @@ func cmdScan(args []string) {
 	outRoot := fs.String("out", "results", "results directory")
 	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
+	recCfg := reconcileFlags(fs)
 	upload := fs.String("upload", "off", "DefectDojo: off | end (one reimport) | live (per chunk + final)")
 	product := fs.String("product", envOr("DD_PRODUCT", "ASI PoC"), "DefectDojo product (env DD_PRODUCT)")
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
@@ -430,6 +437,7 @@ func cmdScan(args []string) {
 	}
 	rec.finish(dbStatus, map[string]any{"duration_s": snap.Elapsed, "targets": len(ips), "skipped": len(plan.Skipped),
 		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL})
+	rec.reconcile(*recCfg)
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)
 	time.Sleep(300 * time.Millisecond)

@@ -155,6 +155,44 @@ func (s *Store) FinishChunk(ctx context.Context, runID, stage string, id int, st
 	return err
 }
 
+// SetChunkPorts records the port set a chunk actually scanned (nmap ranges, per protocol tcp).
+func (s *Store) SetChunkPorts(ctx context.Context, runID, stage string, id int, ports string) error {
+	_, err := s.DB.Exec(ctx, `UPDATE chunks SET ports=$4 WHERE run_id=$1 AND stage=$2 AND id=$3`, runID, stage, id, ports)
+	return err
+}
+
+// PortSet is a parsed nmap port list ("22,80,1000-1010"). Empty set = unknown, covers everything.
+type PortSet [][2]int
+
+func ParsePorts(s string) PortSet {
+	var ps PortSet
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		var a, b int
+		if n, _ := fmt.Sscanf(part, "%d-%d", &a, &b); n == 2 {
+			ps = append(ps, [2]int{a, b})
+		} else if n, _ := fmt.Sscanf(part, "%d", &a); n == 1 {
+			ps = append(ps, [2]int{a, a})
+		}
+	}
+	return ps
+}
+
+func (ps PortSet) Has(p int) bool {
+	if len(ps) == 0 {
+		return true
+	}
+	for _, r := range ps {
+		if p >= r[0] && p <= r[1] {
+			return true
+		}
+	}
+	return false
+}
+
 // ChunkStats: count of chunks per stage and status, for progress from the database (VISION 4.6).
 func (s *Store) ChunkStats(ctx context.Context, runID string) (map[string]map[string]int, error) {
 	rows, err := s.DB.Query(ctx, `SELECT stage, status, count(*) FROM chunks WHERE run_id=$1 GROUP BY 1,2`, runID)

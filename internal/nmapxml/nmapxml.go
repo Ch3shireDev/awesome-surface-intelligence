@@ -8,7 +8,25 @@ import (
 )
 
 type Run struct {
-	Hosts []Host `xml:"host"`
+	ScanInfo []ScanInfo `xml:"scaninfo"`
+	Hosts    []Host     `xml:"host"`
+}
+
+// ScanInfo: which ports nmap actually probed, e.g. services="22,80,443,1000-1010".
+type ScanInfo struct {
+	Type     string `xml:"type,attr"`
+	Protocol string `xml:"protocol,attr"`
+	Services string `xml:"services,attr"`
+}
+
+// Ports returns the scanned port ranges for a protocol ("" if not a port scan).
+func (r Run) Ports(proto string) string {
+	for _, si := range r.ScanInfo {
+		if si.Protocol == proto {
+			return si.Services
+		}
+	}
+	return ""
 }
 
 type Host struct {
@@ -86,6 +104,13 @@ func Parse(rd io.Reader) (Run, error) {
 		tok, err := d.Token()
 		if err != nil {
 			return r, nil // EOF or truncated file: keep what we have
+		}
+		if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "scaninfo" {
+			var si ScanInfo
+			if d.DecodeElement(&si, &se) == nil {
+				r.ScanInfo = append(r.ScanInfo, si)
+			}
+			continue
 		}
 		if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "host" {
 			var h Host

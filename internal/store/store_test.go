@@ -13,7 +13,8 @@ import (
 )
 
 // Integration test: runs only with ASI_TEST_DATABASE_URL (e.g. the dev asi-db).
-//   ASI_TEST_DATABASE_URL=$ASI_DATABASE_URL go test ./internal/store/
+//
+//	ASI_TEST_DATABASE_URL=$ASI_DATABASE_URL go test ./internal/store/
 func testStore(t *testing.T, s Sealer) *Store {
 	url := os.Getenv("ASI_TEST_DATABASE_URL")
 	if url == "" {

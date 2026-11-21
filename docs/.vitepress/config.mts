@@ -27,6 +27,7 @@ export default defineConfig({
         { text: 'Postęp: CLI i panel web', link: '/guide/progress' },
         { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },
         { text: 'Porównanie przebiegów', link: '/guide/diff' },
+        { text: 'Historia i stany assetów', link: '/guide/history' },
         { text: 'Bezpieczeństwo skanowania', link: '/guide/safety' },
       ]},
       { text: 'Referencja', items: [

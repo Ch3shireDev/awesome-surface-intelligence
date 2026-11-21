@@ -22,14 +22,14 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 10 | własne sygnatury | ❌ | plan: YAML (nagłówek, cookie, regex HTML, ścieżka GET, favicon mmh3) — po module HTTP |
 | 11 | formularz: ręcznie + CSV/JSON | 🟡 | import plików jest; **brak formularza w UI** |
 | 12–13 | RBAC, 4 role | ❌ | ❓ decyzja architektoniczna (niżej) |
-| 14 | edycja wartości niezależnie od skanu, trwała | 🟡 | baza ✅ ([Baza danych](/guide/database)): cele w `targets` z upsertem, przebiegi/paczki/obserwacje w Postgresie; brak edycji assetów (DEV-2) i UI (DEV-4) |
+| 14 | edycja wartości niezależnie od skanu, trwała | 🟡 | ✅ w bazie i CLI: tagi, notatka (szyfrowana), nadpisania na assecie, audit log (`asi asset edit`); ❌ w GUI (DEV-4) |
 | 15 | czytelny interfejs + dashboard | 🟡 | panel postępu + historia + diff; brak dashboardu „najważniejsze znaleziska” |
 | 16 | szyfrowanie at-rest | ❌ | ❓ decyzja (niżej) |
 | — | harmonogram, okna czasowe | 🟡 | `-window` przerywa ✅; brak harmonogramu i wznawiania w kolejnym oknie |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, `-parallel`, timeouty |
 | — | eksport JSON/CSV | 🟡 | JSON ✅ (`services.json`, `findings_defectdojo.json`); CSV ❌ |
 | — | import wyników skanów JSON/CSV | ❌ | baza jest; brak importera cudzych wyników (DEV-6) |
-| — | hosty / usługi niestabilne | 🟡 | ✅ usługi: skan potwierdzający przed `gone`, tag `unstable`; ❌ hosty: licznik nieudanych przebiegów + próg |
+| — | hosty / usługi niestabilne | ✅ | stany `new/active/missing/gone`, `reappeared`, `flapping`, progi braków, zasady pokrycia i hierarchii ([Historia](/guide/history)); skan potwierdzający |
 | — | integracja DefectDojo | ✅ | Generic Findings, reimport do stałego testu, upload na żywo; [DefectDojo](/guide/defectdojo) |
 | — | ocena „ciekawości” | ✅ | `high/medium/low` + powód; mapowanie na severity w DefectDojo |
 | — | tagi | 🟡 | z pliku celów → findings/endpointy; brak edycji w UI |
