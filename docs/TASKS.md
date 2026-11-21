@@ -25,7 +25,7 @@ skanery i sygnatury, bezpieczeństwo, szyfrowanie, DefectDojo, demo).
 
 Rdzeń systemu (M0–M7, 16 wymagań „musi” z PDF) jest zaimplementowany i przetestowany — szczegóły w
 [`ROADMAP.md`](ROADMAP.md) i [`status.md`](status.md). Zostały zadania domykające na finisz:
-- poprawki RBAC z audytu jury (`DEV-11`, `DEV-12`) i weryfikacja widoku postępu na żywo (`DEV-13`),
+- weryfikacja widoku postępu na żywo (`DEV-13`) — poprawki RBAC (`DEV-11`, `DEV-12`) są już zrobione,
 - dopasowanie do labu organizatorów (`LAB-T1`, `LAB-T2`, `LAB-T4`) i przejście testów `LAB-0`…`LAB-6`,
 - prezentacja ≤10 slajdów + wideo demo (`ALL-1`), dokumentacja 100% + ścieżka testowania + czysty start z Dockerem (`ALL-2`), porządki (`OPS-1`).
 
