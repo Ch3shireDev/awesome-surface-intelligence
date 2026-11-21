@@ -68,10 +68,16 @@ Istniejąca instalacja (`.env` sprzed SEC-6):
 ```bash
 make env-keys     # dopisuje COMPOSE_FILE (TDE) i ASI_ENCRYPTION_KEYS do .env
 make up           # nowa, zaszyfrowana baza asi-db (wolumen asi_db_tde_data)
+asi db reseal     # zaszyfruj wartości _enc zapisane wcześniej jawnie (idempotentne)
 ```
 
 Baza z TDE to **nowy wolumen**. Przebiegi ze starego `asi_db_data` (zwykły `postgres:18`) nie są
 przenoszone, a stary wolumen zostaje nietknięty (`docker volume rm asi_asi_db_data`, gdy niepotrzebny).
+
+Dane przeniesione z jawnej bazy (`pg_dump`/`pg_restore`) mają w kolumnach `_enc` wartości bez prefiksu
+`ASI1`, więc `make crypto-check` pokaże je jako jawne. `asi db reseal` (Store.Reseal) przepisuje je przez
+aktywny klucz w jednej transakcji; rekordy już zaszyfrowane pomija, więc można go uruchamiać wielokrotnie.
+`asi db reseal -dry-run` tylko liczy. Bez `ASI_ENCRYPTION_KEYS` komenda odmawia pracy.
 
 ## Weryfikacja (do demo): `make crypto-check`
 

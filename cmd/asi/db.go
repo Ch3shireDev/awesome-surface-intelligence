@@ -225,7 +225,7 @@ func (d *dbRecorder) finish(status string, stats any) {
 
 func cmdDB(args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: asi db <migrate|import-targets|targets|runs|reconcile RUN> [flags]")
+		fmt.Fprintln(os.Stderr, "usage: asi db <migrate|import-targets|targets|runs|reconcile RUN|reseal> [flags]")
 		os.Exit(2)
 	}
 	sub, args := args[0], args[1:]
@@ -233,6 +233,7 @@ func cmdDB(args []string) {
 	url := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL (env ASI_DATABASE_URL)")
 	set := fs.String("set", "default", "target set name")
 	file := fs.String("targets", "targets/targets.csv", "targets file (.csv/.json/.txt) for import-targets")
+	dry := fs.Bool("dry-run", false, "reseal: only count plaintext values, change nothing")
 	rc := reconcileFlags(fs)
 	fs.Parse(args)
 	if *url == "" {
@@ -269,6 +270,25 @@ func cmdDB(args []string) {
 			r, err := st.Reconcile(ctx, id, *rc)
 			must(err)
 			log.Printf("reconcile %s: %d covered, %d live, events %v", id, r.CoveredHosts, r.LiveHosts, r.Counts)
+		}
+	case "reseal": // encrypt legacy plaintext *_enc values written before ASI_ENCRYPTION_KEYS
+		counts, err := st.Reseal(ctx, *dry)
+		must(err)
+		total := 0
+		for _, c := range []string{
+			"targets.note_enc", "observations.data_enc", "raw_outputs.data_enc",
+			"assets.current_enc", "assets.user_note_enc", "assets.http_enc",
+			"asset_events.before_enc", "asset_events.after_enc",
+		} {
+			if counts[c] > 0 {
+				fmt.Printf("%-26s %d\n", c, counts[c])
+			}
+			total += counts[c]
+		}
+		if *dry {
+			log.Printf("db: %d plaintext values in *_enc (dry run, nothing written)", total)
+		} else {
+			log.Printf("db: %d values sealed with AES-256-GCM", total)
 		}
 	default:
 		log.Fatalf("unknown: asi db %s", sub)
