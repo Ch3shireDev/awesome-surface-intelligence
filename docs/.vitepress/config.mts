@@ -12,6 +12,7 @@ export default defineConfig({
       { text: 'Status projektu', link: '/status' },
       { text: 'Wizja', link: '/VISION' },
       { text: 'Zadania', link: '/TASKS' },
+      { text: 'Ustalenia z mentorem', link: '/MENTOR' },
     ],
     sidebar: [
       { text: 'Wprowadzenie', items: [
@@ -29,11 +30,13 @@ export default defineConfig({
       ]},
       { text: 'Referencja', items: [
         { text: 'Komendy CLI', link: '/guide/cli' },
+        { text: 'Adaptery skanerów', link: '/guide/adapters' },
         { text: 'Pliki wynikowe', link: '/guide/outputs' },
       ]},
       { text: 'Projekt', items: [
         { text: 'Wizja i architektura docelowa', link: '/VISION' },
         { text: 'Zadania i podział pracy', link: '/TASKS' },
+        { text: 'Ustalenia z mentorem (wiążące)', link: '/MENTOR' },
         { text: 'Decyzje', link: '/DECISIONS' },
         { text: 'Roadmapa i mapa wymagań', link: '/ROADMAP' },
         { text: 'Status: zrobione / do zrobienia / decyzje', link: '/status' },

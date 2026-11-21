@@ -13,17 +13,18 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"asi/internal/nmapxml"
+	"asi/internal/obs"
 	"asi/internal/progress"
 )
 
@@ -82,29 +83,30 @@ func (z *Sizer) Next(remaining, parallel int) int {
 }
 
 type PhaseConfig struct {
-	Name         string
-	Args         []string
+	Name         string // progress phase name (= stage)
+	RunID        string
+	Adapter      obs.Scanner     // which tool runs the chunks
+	Stage        obs.StageConfig // rate, ports, extra args for the adapter
 	Parallel     int
 	Sizer        *Sizer
 	ChunkTimeout time.Duration
 	OutDir       string
+	// OnStart is called when a chunk starts (e.g. to record it in the database).
+	OnStart func(id int, targets []string)
 }
 
 type ChunkResult struct {
-	ID       int            `json:"id"`
-	Hosts    []string       `json:"hosts"`
-	Duration time.Duration  `json:"duration_ns"`
-	XML      string         `json:"xml"`
-	Error    string         `json:"error,omitempty"`
-	Parsed   []nmapxml.Host `json:"-"`
+	ID           int               `json:"id"`
+	Hosts        []string          `json:"hosts"`
+	Started      time.Time         `json:"started"`
+	Duration     time.Duration     `json:"duration_ns"`
+	Output       string            `json:"output"` // raw tool output file (evidence)
+	Error        string            `json:"error,omitempty"`
+	State        string            `json:"state"` // done | failed | killed
+	Observations []obs.Observation `json:"-"`
 }
 
-var (
-	reCompleted = regexp.MustCompile(`(\d+) hosts? completed \((\d+) up\)`)
-	reAbout     = regexp.MustCompile(`About ([\d.]+)% done`)
-)
-
-// RunPhase scans ips with a pool of cfg.Parallel nmap processes.
+// RunPhase scans targets with a pool of cfg.Parallel tool processes.
 // onDone is called (from worker goroutines) after each chunk finishes.
 func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.Tracker, onDone func(ChunkResult)) []ChunkResult {
 	os.MkdirAll(cfg.OutDir, 0o755)
@@ -118,6 +120,7 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 		next    int
 		results []ChunkResult
 		wg      sync.WaitGroup
+		seq     int
 	)
 	take := func() (int, []string) {
 		mu.Lock()
@@ -128,23 +131,22 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 		n := cfg.Sizer.Next(len(ips)-next, cfg.Parallel)
 		batch := ips[next : next+n]
 		next += n
-		return next, batch
+		id := seq
+		seq++
+		return id, batch
 	}
-	var chunkSeq int
-	var seqMu sync.Mutex
 	for w := 0; w < max(1, cfg.Parallel); w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for {
-				_, batch := take()
+				id, batch := take()
 				if batch == nil {
 					return
 				}
-				seqMu.Lock()
-				id := chunkSeq
-				chunkSeq++
-				seqMu.Unlock()
+				if cfg.OnStart != nil {
+					cfg.OnStart(id, batch)
+				}
 				r := runChunk(ctx, cfg, id, batch, tr)
 				cfg.Sizer.Observe(len(batch), r.Duration)
 				mu.Lock()
@@ -174,9 +176,29 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 	return results
 }
 
+// Unscanned returns targets that no finished (done) chunk covered - for resuming
+// in the next window and for the coverage rule in reconcile.
+func Unscanned(all []string, rs []ChunkResult) []string {
+	done := map[string]bool{}
+	for _, r := range rs {
+		if r.State == "done" {
+			for _, h := range r.Hosts {
+				done[h] = true
+			}
+		}
+	}
+	var out []string
+	for _, ip := range all {
+		if !done[ip] {
+			out = append(out, ip)
+		}
+	}
+	return out
+}
+
 func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *progress.Tracker) ChunkResult {
 	name := fmt.Sprintf("chunk_%04d", id)
-	r := ChunkResult{ID: id, Hosts: hosts, XML: filepath.Join(cfg.OutDir, name+".xml")}
+	r := ChunkResult{ID: id, Hosts: hosts, Started: time.Now()}
 	ch := &progress.Chunk{ID: id, Phase: cfg.Name, Hosts: len(hosts), State: "running", Started: time.Now()}
 	tr.Update(func(s *progress.State) {
 		s.Chunks = append(s.Chunks, ch)
@@ -189,29 +211,44 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 		cctx, cancel = context.WithTimeout(ctx, cfg.ChunkTimeout)
 		defer cancel()
 	}
-	in := filepath.Join(cfg.OutDir, name+".targets")
-	os.WriteFile(in, []byte(strings.Join(hosts, "\n")+"\n"), 0o644)
-	args := append(append([]string{}, cfg.Args...), "--stats-every", "2s", "-oX", r.XML, "-iL", in)
-	cmd := exec.CommandContext(cctx, "nmap", args...)
+	c := obs.Chunk{ID: id, RunID: cfg.RunID, Stage: cfg.Adapter.Stage(), Targets: hosts, Dir: cfg.OutDir, Name: name,
+		TargetsFile: filepath.Join(cfg.OutDir, name+".targets")}
+	os.WriteFile(c.TargetsFile, []byte(strings.Join(hosts, "\n")+"\n"), 0o644)
+	cmd, spec := cfg.Adapter.Command(cctx, c, cfg.Stage)
+	r.Output = spec.Path
 	logf, _ := os.Create(filepath.Join(cfg.OutDir, name+".log"))
 	defer logf.Close()
-	fmt.Fprintf(logf, "$ nmap %s\n", strings.Join(args, " "))
+	fmt.Fprintf(logf, "$ %s\n", strings.Join(cmd.Args, " "))
 	cmd.Stderr = logf
 	stdout, _ := cmd.StdoutPipe()
+	var stdoutBuf strings.Builder // tools that report on stdout (spec.Path == "")
+	pp, hasProgress := cfg.Adapter.(obs.ProgressParser)
 
 	t0 := time.Now()
 	err := cmd.Start()
 	if err == nil {
 		sc := bufio.NewScanner(stdout)
+		sc.Buffer(make([]byte, 1<<20), 16<<20)
 		completed, pct := 0, 0.0
 		for sc.Scan() {
 			line := sc.Text()
-			fmt.Fprintln(logf, line)
-			if m := reCompleted.FindStringSubmatch(line); m != nil {
-				completed, _ = strconv.Atoi(m[1])
+			if spec.Path == "" {
+				stdoutBuf.WriteString(line + "\n")
+				continue
 			}
-			if m := reAbout.FindStringSubmatch(line); m != nil {
-				pct, _ = strconv.ParseFloat(m[1], 64)
+			fmt.Fprintln(logf, line)
+			if !hasProgress {
+				continue
+			}
+			cpl, pc, ok := pp.ParseProgress(line)
+			if !ok {
+				continue
+			}
+			if cpl >= 0 {
+				completed = cpl
+			}
+			if pc >= 0 {
+				pct = pc
 			}
 			n := float64(len(hosts))
 			p := (float64(completed) + pct/100*(n-float64(completed))*0.95) / n
@@ -226,34 +263,38 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 		err = cmd.Wait()
 	}
 	r.Duration = time.Since(t0)
-	final := "done"
+	r.State = "done"
 	if err != nil {
-		r.Error, final = err.Error(), "failed"
+		r.Error, r.State = err.Error(), "failed"
 		if cctx.Err() != nil {
-			r.Error, final = "killed: "+cctx.Err().Error(), "killed"
+			r.Error, r.State = "killed: "+cctx.Err().Error(), "killed"
 		}
 	}
-	run, _ := nmapxml.ParseFile(r.XML)
-	r.Parsed = run.Hosts
-	up, open := 0, 0
-	for _, h := range run.Hosts {
-		if h.Up() {
-			up++
+	var raw io.Reader = strings.NewReader(stdoutBuf.String())
+	if spec.Path != "" {
+		if f, ferr := os.Open(spec.Path); ferr == nil {
+			defer f.Close()
+			raw = f
 		}
-		for _, p := range h.Ports {
-			if p.State.State == "open" {
-				open++
-			}
+	}
+	r.Observations, _ = cfg.Adapter.Parse(raw)
+	up, open := 0, 0
+	for _, o := range r.Observations {
+		switch o.Kind {
+		case obs.KindHost:
+			up++
+		case obs.KindPort:
+			open++
 		}
 	}
 	tr.Update(func(s *progress.State) {
-		ch.State, ch.Percent, ch.HostsDone, ch.Up, ch.Open = final, 100, len(hosts), up, open
+		ch.State, ch.Percent, ch.HostsDone, ch.Up, ch.Open = r.State, 100, len(hosts), up, open
 		ch.Seconds, ch.Error = r.Duration.Seconds(), r.Error
 		p := tr.Phase(cfg.Name)
 		p.HostsDone += len(hosts)
 		recomputePartial(s, tr, cfg.Name)
 	})
-	tr.Logf("%s %s: %d hosts, %d up, %d open, %.1fs %s", cfg.Name, name, len(hosts), up, open, r.Duration.Seconds(), r.Error)
+	tr.Logf("%s %s: %d targets, %d up, %d open, %.1fs %s", cfg.Name, name, len(hosts), up, open, r.Duration.Seconds(), r.Error)
 	return r
 }
 

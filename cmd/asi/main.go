@@ -27,15 +27,17 @@ import (
 	"asi/internal/cli"
 	"asi/internal/dojo"
 	"asi/internal/findings"
+	"asi/internal/obs"
 	"asi/internal/progress"
 	"asi/internal/scanner"
+	nmapad "asi/internal/scanner/nmap"
 	"asi/internal/targets"
 	"asi/internal/web"
 )
 
 const (
-	defaultDiscovery = "-sn -n -PS21,22,25,80,443,3389,8080,8443 -T4 --max-retries 1"
-	defaultServices  = "-sT -sV --version-light -Pn --top-ports 1000 -T4 --max-retries 2 --host-timeout 10m --open"
+	defaultDiscovery = nmapad.DefaultDiscoveryArgs
+	defaultServices  = nmapad.DefaultServicesArgs
 )
 
 func main() {
@@ -227,8 +229,14 @@ func cmdScan(args []string) {
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
 	tune := loadTuning(tunePath)
-	perProc := fmt.Sprint(max(1, *rate / *parallel))
-	withRate := func(a string) []string { return append(strings.Fields(a), "--max-rate", perProc) }
+	perProcN := max(1, *rate / *parallel)
+	perProc := fmt.Sprint(perProcN)
+	stageCfg := obs.StageConfig{RatePPS: perProcN}
+	var (
+		obsMu  sync.Mutex
+		allObs []obs.Observation // every observation of this run (-> observations.json, database)
+	)
+	keep := func(o []obs.Observation) { obsMu.Lock(); allObs = append(allObs, o...); obsMu.Unlock() }
 
 	// --- dojo (live uploads go through one goroutine so scanning never waits on HTTP)
 	var dd *dojo.Client
@@ -261,14 +269,16 @@ func cmdScan(args []string) {
 	} else {
 		z := &scanner.Sizer{Fixed: *dChunk, Target: 20 * time.Second, Min: 16, Max: 1024, Start: 64}
 		z.Seed(tune["discovery"])
-		scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", Args: withRate(*discArgs), Parallel: *parallel,
-			Sizer: z, ChunkTimeout: *chunkTimeout, OutDir: filepath.Join(dir, "discovery")}, ips, tr,
+		scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", RunID: runID, Adapter: nmapad.Discovery(*discArgs),
+			Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
+			OutDir: filepath.Join(dir, "discovery")}, ips, tr,
 			func(r scanner.ChunkResult) {
+				keep(r.Observations)
 				n := 0
 				upMu.Lock()
-				for _, h := range r.Parsed {
-					if h.Up() {
-						up = append(up, h.IP())
+				for _, o := range r.Observations {
+					if o.Kind == obs.KindHost {
+						up = append(up, o.AssetKey)
 						n++
 					}
 				}
@@ -289,10 +299,12 @@ func cmdScan(args []string) {
 	)
 	z := &scanner.Sizer{Fixed: *chunk, Target: *target, Min: 1, Max: 64, Start: 4}
 	z.Seed(tune["services"])
-	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", Args: withRate(*svcArgs), Parallel: *parallel,
-		Sizer: z, ChunkTimeout: *chunkTimeout, OutDir: filepath.Join(dir, "services")}, up, tr,
+	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", RunID: runID, Adapter: nmapad.Services(*svcArgs),
+		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
+		OutDir: filepath.Join(dir, "services")}, up, tr,
 		func(r scanner.ChunkResult) {
-			got := findings.FromHosts(r.Parsed, meta)
+			keep(r.Observations)
+			got := findings.FromObservations(r.Observations, meta)
 			svcMu.Lock()
 			svcs = append(svcs, got...)
 			svcMu.Unlock()
@@ -334,7 +346,9 @@ func cmdScan(args []string) {
 			tr.Logf("confirm: %d services vanished since %s on live hosts - re-checking", n, prev)
 			args := append(strings.Fields("-sT -sV --version-light -Pn -T3 --max-retries 4"), "--max-rate", perProc)
 			hosts := scanner.Confirm(ctx, recheck, args, *parallel, filepath.Join(dir, "confirm"))
-			back := findings.FromHosts(hosts, meta)
+			confirmed := nmapad.FromHosts(hosts)
+			keep(confirmed)
+			back := findings.FromObservations(confirmed, meta)
 			for i := range back {
 				back[i].Tags = append(back[i].Tags, "unstable")
 				tr.Logf("confirm: %s still open (missed by first pass) - kept, tagged unstable", back[i].Key())
@@ -354,9 +368,11 @@ func cmdScan(args []string) {
 	findings.Sort(svcs)
 	must(findings.Save(filepath.Join(dir, "services.json"), svcs))
 	must(os.WriteFile(filepath.Join(dir, "findings_defectdojo.json"), findings.GenericJSON(svcs), 0o644))
+	obs.Sort(allObs)
+	writeJSON(filepath.Join(dir, "observations.json"), allObs)
 	var xmls []string
 	for _, r := range svcRes {
-		xmls = append(xmls, r.XML)
+		xmls = append(xmls, r.Output)
 	}
 	domains := map[string][]string{}
 	for ip, h := range meta {

@@ -3,6 +3,7 @@ package nmapxml
 
 import (
 	"encoding/xml"
+	"io"
 	"os"
 )
 
@@ -68,13 +69,18 @@ func (h Host) Up() bool { return h.Status.State == "up" }
 // ParseFile reads an nmap XML file. A partially written file (nmap killed)
 // yields whatever hosts were complete; the error is returned alongside.
 func ParseFile(path string) (Run, error) {
-	var r Run
 	f, err := os.Open(path)
 	if err != nil {
-		return r, err
+		return Run{}, err
 	}
 	defer f.Close()
-	d := xml.NewDecoder(f)
+	return Parse(f)
+}
+
+// Parse reads nmap XML from r (see ParseFile).
+func Parse(rd io.Reader) (Run, error) {
+	var r Run
+	d := xml.NewDecoder(rd)
 	d.Strict = false
 	for {
 		tok, err := d.Token()
@@ -84,7 +90,7 @@ func ParseFile(path string) (Run, error) {
 		if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "host" {
 			var h Host
 			if err := d.DecodeElement(&h, &se); err != nil {
-				return r, err
+				return r, nil // truncated last host (nmap killed): keep complete ones
 			}
 			r.Hosts = append(r.Hosts, h)
 		}

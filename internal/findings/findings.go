@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"asi/internal/nmapxml"
+	"asi/internal/obs"
 	"asi/internal/targets"
 )
 
@@ -301,4 +302,37 @@ func GenericJSON(svcs []Service) []byte {
 	}
 	b, _ := json.MarshalIndent(out, "", "  ")
 	return b
+}
+
+// FromObservations builds services from port/service observations (any adapter),
+// enriched with plan metadata. A port without a service observation still counts.
+func FromObservations(os []obs.Observation, meta map[string]targets.Host) []Service {
+	byKey := map[string]*Service{}
+	var order []string
+	for _, o := range os {
+		if o.Kind != obs.KindPort && o.Kind != obs.KindService {
+			continue
+		}
+		s := byKey[o.AssetKey]
+		if s == nil {
+			ip, proto, port := obs.SplitKey(o.AssetKey)
+			m := meta[ip]
+			s = &Service{IP: ip, Port: port, Proto: proto, Domains: m.Domains, Assets: m.Assets, Tags: m.Tags}
+			byKey[o.AssetKey] = s
+			order = append(order, o.AssetKey)
+		}
+		if o.Kind == obs.KindService {
+			var d obs.ServiceData
+			o.Decode(&d)
+			s.Name, s.Product, s.Version, s.ExtraInfo, s.TLS = d.Name, d.Product, d.Version, d.ExtraInfo, d.TLS
+		}
+	}
+	out := make([]Service, 0, len(order))
+	for _, k := range order {
+		s := *byKey[k]
+		s.Interest, s.Reason = score(s)
+		out = append(out, s)
+	}
+	Sort(out)
+	return out
 }
