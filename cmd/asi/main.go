@@ -69,13 +69,17 @@ func main() {
 		cmdAssets(args)
 	case "asset":
 		cmdAsset(args)
+	case "targets-extract":
+		cmdTargetsExtract(args)
+	case "mcp":
+		cmdMCP(args)
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <server|convert|plan|scan|upload|diff|serve|db|changes|assets|asset> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <server|convert|plan|scan|upload|diff|serve|db|changes|assets|asset|targets-extract|mcp> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 

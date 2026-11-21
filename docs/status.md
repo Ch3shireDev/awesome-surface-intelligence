@@ -20,7 +20,7 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 8 | porównanie przebiegów | ✅ | `asi diff`, panel, automatycznie po skanie; [Porównanie](/guide/diff) |
 | 9 | nowe / znikające / zmienione usługi | ✅ | `new / gone / changed`, plus `created/closed/reactivated` w DefectDojo |
 | 10 | własne sygnatury | ❌ | plan: YAML (nagłówek, cookie, regex HTML, ścieżka GET, favicon mmh3) — po module HTTP |
-| 11 | formularz: ręcznie + CSV/JSON | ✅ | GUI: formularz ręczny + import CSV/JSON/TXT do bazy, walidacja wejścia ([Panel web](/guide/gui)) |
+| 11 | formularz: ręcznie + CSV/JSON | ✅ | GUI: formularz ręczny + import CSV/JSON/TXT do bazy, walidacja wejścia ([Panel web](/guide/gui)); **cele z dowolnego tekstu** (inwentarz, notatki) przez DeepSeek lub regex, z podglądem przed zapisem, CLI `asi targets-extract`, serwer MCP `asi mcp` ([Cele z tekstu](/guide/targets-ai)) |
 | 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, audit log |
 | 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI: tagi, notatka, nadpisania na assecie (trwałe), edycja celów; audit log |
 | 15 | czytelny interfejs + dashboard | ✅ | dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, wykres zmian w czasie; postęp skanu na żywo |

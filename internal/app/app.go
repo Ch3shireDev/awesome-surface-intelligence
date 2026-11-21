@@ -73,6 +73,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/targets", a.need("viewer", a.listTargets))
 	m.Handle("POST /api/v1/targets", a.need("operator", a.addTargets))
 	m.Handle("POST /api/v1/targets/import", a.need("operator", a.importTargets))
+	m.Handle("POST /api/v1/targets/extract", a.need("operator", a.extractTargets))
 	m.Handle("PUT /api/v1/targets/{id}", a.need("operator", a.updateTarget))
 	m.Handle("DELETE /api/v1/targets/{id}", a.need("operator", a.deleteTarget))
 	m.Handle("GET /api/v1/scans/current", a.need("viewer", a.currentScan))
