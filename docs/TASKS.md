@@ -3,6 +3,21 @@
 Stan na 21.11.2026, ok. 15:40. Źródła: PDF zadania, `VISION.md` (architektura docelowa), `status.md` (co działa),
 rozmowy z agentami na blackarch i fatusia-hacknation-2.
 
+## Zgłoszenie (HackTribe)
+
+| pole | wartość |
+|---|---|
+| nazwa projektu | **Asia - Attack Surface Intelligence Aggregator** |
+| repozytorium | https://github.com/Ch3shireDev/awesome-surface-intelligence |
+| zadanie | Attack Surface Intelligence (CBI AGH) |
+| terminy | **21.11 20:00 DRAFT** (projekt + repo + opis + stolik), **22.11 11:00 FINALNE** (wszystkie pola + prezentacja i materiały) |
+| uwaga | zgłoszenie utworzone przed 20:00 można edytować po 20:00; nie da się już zmienić zadania |
+
+Kod jest rozwijany dalej w repo roboczym (bare `daniel@blackarch:~/repos/asi.git`, klony `~/asi` na blackarch,
+fatusia-hacknation-1 i fatusia-hacknation-2). **GitHub (`github`) to drugi remote** — push po każdym `make sync`
+i przed 11:00 jutro. Historia jest czysta (bez `.env`, `.dd_token`, `targets/targets.csv`, `results/`), więc
+publiczne repo nie wymaga przepisywania historii. Zadanie SEC-9 pilnuje tego linku.
+
 **Role:** **DEV** to Daniel (kod rdzenia, API, UI). **SEC** to fatusia (DevSecOps: stack, środowisko testowe,
 skanery i sygnatury, bezpieczeństwo, szyfrowanie, DefectDojo, demo).
 
