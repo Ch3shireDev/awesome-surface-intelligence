@@ -12,6 +12,9 @@ ASI wczytuje listę celów, dzieli ją na paczki dobierane do prędkości skanow
 zmienione i niestabilne. Wyniki trafiają do **DefectDojo**: ASI jest źródłem danych (feedem) dla DD, nie
 jego zamiennikiem. Całość obsługuje się z **panelu web z rolami**, a dane są **szyfrowane w spoczynku**.
 
+Repozytorium publiczne (link ze zgłoszenia): **https://github.com/Ch3shireDev/awesome-surface-intelligence**
+Klon: `git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git && cd awesome-surface-intelligence`.
+
 ## Uruchomienie
 
 Wymagania: Linux z dockerem i pluginem compose, `make`, `openssl`. Wszystko inne (nmap, httpx, nuclei,

@@ -6,7 +6,7 @@ Na hoście tylko docker + compose, `make`, `openssl`. nmap i `asi` są w kontene
 (`network_mode: host`, `NET_RAW`).
 
 ```bash
-git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git asi && cd asi
+git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git ~/asi && cd ~/asi
 make env                                # .env: sekrety + hasło admina DefectDojo
 make up                                 # DefectDojo 3.5.202 :8080 + nmap-scanner
 cp targets/example.csv targets/targets.csv
@@ -15,6 +15,28 @@ make asi-scan                           # pasek w terminalu + panel http://127.0
 make asi ARGS=diff                      # zmiany względem poprzedniego przebiegu
 make asi-serve                          # panel z historią bez skanowania
 ```
+
+## Repozytorium
+
+- **Publiczne (dla jury):** https://github.com/Ch3shireDev/awesome-surface-intelligence — to jest link ze zgłoszenia.
+- Wewnętrznie zespół pracuje na bare repo `daniel@blackarch:repos/asi.git` (klony `~/asi` na blackarch,
+  fatusia-hacknation-1 i -2), a `main` jest wypychany na GitHuba po każdym `make sync`. Historia jest czysta:
+  `.env`, `.dd_token`, `targets/targets.csv`, `results/` i `scans/results/` nigdy nie były commitowane
+  (sprawdzone `git log --all --name-only` + szukanie wartości sekretów z `.env` w plikach).
+
+## Czysty start od zera (SEC-9, sprawdzony)
+
+Test na osobnym klonie z GitHuba, bez `.env` i bez katalogu `results/` (21.11, blackarch):
+
+```bash
+git clone --depth 1 https://github.com/Ch3shireDev/awesome-surface-intelligence.git /tmp/jury-clone
+cd /tmp/jury-clone && make env && make build && make test
+```
+
+Wynik: `make env` tworzy `.env` z wygenerowanymi hasłami, `make build` buduje `asi` (Go 1.27, bez zależności
+poza `pgx`), `make test` przechodzi (`go vet` + wszystkie testy pakietów). `make up` (DefectDojo + skaner)
+był sprawdzony wcześniej na blackarch i fatusia-2 (amd64/arm64); wymaga dockera na hoście — na maszynie
+bez prawa do `docker.sock` zostaje `make build` + `./asi` (bez bazy i DD).
 
 `asi` czyta z `.env` dane DefectDojo (`DD_PORT`, `DD_ADMIN_USER`, `DD_ADMIN_PASSWORD`, `DD_PRODUCT*`)
 i sam pobiera token API. Nie trzeba ręcznie kopiować tokenu.
@@ -42,7 +64,7 @@ set -a; . ./.env; set +a                # DD_* dla uploadu
 ./asi scan -parallel 10 -rate 1000                # więcej workerów, globalny limit 1000 pps
 ./asi scan -chunk 8                               # stała paczka zamiast adaptacyjnej
 ./asi scan -skip-discovery                        # sieć tnie sondy discovery -> skanuj wszystko
-./asi upload -format nmap                         # surowy XML nmapa do DefectDojo (stały test asi-nmap)
+./asi upload -format nmap                         # surowy XML nmapa do DefectDojo (bez historii)
 ```
 
 ## Dokumentacja lokalnie
