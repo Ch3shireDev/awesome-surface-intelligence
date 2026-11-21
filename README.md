@@ -1,11 +1,7 @@
-<<<<<<< Updated upstream
 # Asia - Attack Surface Intelligence Aggregator
 
 **HackNation 2026, zadanie CBI AGH: Attack Surface Intelligence.** Nazwa projektu w zgłoszeniu: *Asia -
 Attack Surface Intelligence Aggregator*. W kodzie i dokumentacji skrót **ASI**.
-=======
-# ASI: Attack Surface Intelligence
->>>>>>> Stashed changes
 
 Prototyp systemu do **cyklicznego discovery scanu dużych sieci (10 000+ adresów IP)**, przygotowany na
 HackNation 2026 dla Centrum Bezpieczeństwa Informacji AGH (wyzwanie *Attack Surface Intelligence*).

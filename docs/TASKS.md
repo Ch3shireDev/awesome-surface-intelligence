@@ -105,17 +105,11 @@ i `make sync`.
 |---|---|---|
 | DEV-9 | DEV ✅ *zrobione (agent blackarch)* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
 | DEV-10 | DEV ✅ *zrobione (agent blackarch): docs/guide/scale.md* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
-<<<<<<< Updated upstream
 | SEC-10 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
-| SEC-9 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
-| ALL-1 | oboje | Prezentacja do 10 slajdów: problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
-=======
-| SEC-10 | SEC | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
 | DEV-11 | DEV | **Zarządzanie kontami (pkt 12–13 PDF, „Administracja”).** Dziś admin może w API/GUI tylko tworzyć konta (`POST /api/v1/users`); w CLI jest `asi user list/passwd/add` (4772620). Brak zmiany roli, blokady (`disabled`) i usunięcia, więc nie da się odebrać dostępu. Do zrobienia: `PATCH /api/v1/users/{id}` (rola, `disabled`, nowe hasło) + unieważnienie sesji/tokenów zablokowanego konta, ochrona przed odebraniem sobie ostatniego admina, widok w GUI (Administracja), wpisy w audit logu. Test: zablokowany użytkownik dostaje 401 na istniejącej sesji. |
 | DEV-12 | DEV | **Wyrównanie ról z treścią zadania (pkt 13).** Brief: *Dodawanie, usuwanie, modyfikacja* (`operator`) vs *Modyfikacja i odczyt* (`analyst`). Dziś `analyst` edytuje tylko assety (`PATCH /asset`); edycja istniejących celów i harmonogramów (`PUT /targets/{id}`, `PUT /schedules/{id}`) wymaga `operator`. Do zrobienia: `analyst` = modyfikacja istniejących wartości (cele, harmonogramy, wyniki, konfiguracja skanu) bez tworzenia i usuwania; `operator` = + dodawanie/usuwanie/uruchamianie. Tabela ról w `docs/guide/gui.md` 1:1 z nazwami z PDF + test API per rola (sprawdzone 21.11: viewer 403 na zapis, CSRF działa). |
-| SEC-9 | SEC | Publiczne repo dla jury: https://github.com/Ch3shireDev/awesome-surface-intelligence (drugi remote, origin zespołu zostaje na blackarch). Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
+| SEC-9 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Publiczne repo dla jury: https://github.com/Ch3shireDev/awesome-surface-intelligence (drugi remote, origin zespołu zostaje na blackarch). Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
 | ALL-1 | oboje | Prezentacja do 10 slajdów (szablon Beamer: `docs/presentation/asi.tex`, `make slides`): problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
->>>>>>> Stashed changes
 | ALL-2 | oboje | Dokumentacja: `status.md` na 100%, quickstart przetestowany przez drugą osobę na czystej VM. |
 
 ## Blokery (na bieżąco)
