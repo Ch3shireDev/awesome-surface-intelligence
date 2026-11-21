@@ -82,6 +82,7 @@ i `make sync`.
 | SEC-7 | SEC | Eksport do DD po nowemu: natywne parsery (Nmap, httpx, Nuclei) plus test `asi-changes` (Generic: gone, changed, flapping), bez `close_old` dla przebiegów częściowych. Test na instancji DD organizatorów. |
 | SEC-8 | SEC 🔨 *w toku: agent fatusia (fatusia-hacknation-1)* | Bezpieczeństwo skanera: kontrola zakresu i wykluczeń także w workerze, lista dozwolonych portów, sztywny górny limit pps, profil z `NET_RAW` (`-sS`, ICMP) i bez roota (`-sT`). Decyzja co do UDP (DNS, SNMP, NTP). Strona „Bezpieczeństwo” zaktualizowana. |
 | DEV-7 | DEV | Ocena „ciekawości” rozszerzona o dane HTTP i sygnatury, grupowanie podobnych usług, wizualizacja zmian w czasie na dashboardzie. |
+| DEV-8 | DEV 🔨 *w toku: sesja koordynująca (worktree `~/asi-llm`)* | Cele z dowolnego tekstu: wklejony inwentarz/notatki → lista celów w naszym formacie (DeepSeek `deepseek-flash`, bez klucza fallback regex). Walidacja: tylko cele obecne w tekście, adresy wewnętrzne/Tailscale `enabled=false`. Pole tekstowe w panelu (podgląd przed zapisem), `POST /api/v1/targets/extract`, `asi targets-extract`, serwer MCP `asi mcp`. Pliki: `internal/targetsai/`, `internal/app/extract.go`, `cmd/asi/{extract,mcp}.go`, karta w `ui.html`. |
 
 ## P3: finisz (formalności, ostatnie godziny)
 
