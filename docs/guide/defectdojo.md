@@ -35,7 +35,9 @@ Dlatego `asi` pakuje wyniki jako **Generic Findings Import** (`findings_defectdo
 | `endpoints` | IP + każda domena wskazująca na to IP, z portem i schematem (`https`, `ssh`, `rdp`…) |
 | `tags` | `asi`, `interest-high/medium/low`, `svc-<usługa>`, tagi z pliku celów |
 
-Surowy XML nadal można wysłać: `./asi upload -format nmap` (osobny test, bez historii).
+Surowy XML nadal można wysłać natywnym parserem: `./asi upload -format nmap`. Trafia do stałego testu
+`asi-nmap` przez reimport, więc DefectDojo śledzi też w nim nowe i zamknięte porty (z tą samą zasadą
+`close_old` co niżej).
 
 ## Historia zmian po stronie DefectDojo
 
@@ -51,7 +53,51 @@ Wszystkie przebiegi trafiają do **jednego testu** `ASI discovery` (produkt `ASI
   zostałyby błędnie oznaczone jako naprawione.
 
 `-upload end` wysyła tylko końcowy reimport, `-upload off` (domyślnie) — nic;
-`./asi upload` wysyła istniejący przebieg ręcznie.
+`./asi upload` wysyła istniejący przebieg ręcznie. Dla przebiegu przerwanego (`status: interrupted` w
+`run.json`) `asi upload` sam ustawia `close_old=false`; wymusić można `-close-old=true`.
+
+## Test `asi-changes`: zmiany w czasie (SEC-7)
+
+Test `ASI discovery` pokazuje **stan** usług, a DefectDojo zamyka w nim usługę już po jednym
+przebiegu, w którym jej nie było. ASI wie więcej (reconcile, [Historia i stany](/guide/history)): odróżnia
+chwilowy brak od potwierdzonego zniknięcia, wykrywa hosty niestabilne i zmiany wersji. To trafia
+do osobnego testu **`asi-changes`** (Generic Findings) w tym samym engagemencie, po każdym przebiegu
+`asi scan` z uploadem i przy `asi upload` (wyłączenie: `-changes=false`). Raport jest też zapisywany
+w `results/<przebieg>/findings_changes.json`.
+
+| warunek w ASI | finding w DD | severity | zamyka się w DD, gdy |
+|---|---|---|---|
+| `missing`: nie odpowiada, poniżej progu | `Usługa 192.0.2.14:80/tcp (http): nie odpowiada (do potwierdzenia)` | Info | wróci albo przejdzie w `gone` |
+| `gone`: zniknięcie potwierdzone po N brakach | `…: zniknęła (potwierdzone)` / `Host …: zniknął (potwierdzone)` | Info | wróci |
+| `flapping`: wielokrotnie znika i wraca | `…: niestabilna (flapping)` | Low | przestanie migać |
+| ostatnia zmiana usługi (`changed`) | `…: zmiana`, w opisie tabela przed → po, zmienione pola oznaczone `≠` | Low | dojdzie nowsza zmiana albo usługa zniknie |
+
+Zasady:
+
+- **Stan, nie log.** Finding jest w raporcie, dopóki warunek trwa, więc reimport z `close_old` zamyka
+  go dokładnie wtedy, gdy warunek się kończy („closed” w DD = „problem minął”). Pełna historia zdarzeń
+  zostaje w ASI (`asi changes`, panel).
+- **Stabilny opis.** DD dopasowuje Generic findings po hashu tytułu i opisu, więc opis zawiera tylko
+  wartości stałe, dopóki warunek trwa (bez liczników braków i „teraz”). Inaczej każdy przebieg
+  zamykałby i otwierał finding od nowa (test `TestChangesStableWhileConditionLasts`).
+- **Bez pola `service`** (reimport zamyka tylko findingi z tym samym `service`) i bez `protocol` w endpointach.
+- **Przebieg częściowy** wysyła `asi-changes` z `close_old=false`: dodaje nowe warunki, niczego nie zamyka.
+- **Tagi** `asi`, `asi-change`, `change-<warunek>` plus tagi użytkownika z ASI: edycja assetu w ASI trafia
+  do DefectDojo.
+- Natywne parsery httpx i Nuclei dojdą z etapami `http` (SEC-4) i `signatures` (SEC-5).
+
+Przykład z labu (`make demo` + 2 przebiegi bez zmian; `legacy` .14 wyłączony po przebiegu 1,
+próg braków hosta = 3):
+
+| przebieg | główny test `ASI discovery` | `asi-changes` |
+|---|---|---|
+| 1 | 9 usług | 0 warunków |
+| 2 | `closed 3` (porty .14 zamknięte od razu), `created 2` | `created 2`: `Host 192.0.2.14: nie odpowiada (do potwierdzenia)`, `Usługa 192.0.2.15:80/tcp: zmiana` (nginx 1.27.5 → nowy serwer) |
+| 3 | bez zmian | `untouched 2` (hash stabilny) |
+| 4 | `closed 1` | `closed 1` (do potwierdzenia), `created 2`: `Host 192.0.2.14: zniknął (potwierdzone)` i brak „migającej” usługi .17, `untouched 1` |
+
+DefectDojo zamienia tytuły na Title Case („Nie Odpowiada (Do Potwierdzenia)”); to kosmetyka po jego
+stronie, dopasowanie przy reimporcie działa.
 
 ## Znane ograniczenia
 

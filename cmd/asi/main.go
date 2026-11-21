@@ -492,6 +492,10 @@ func cmdScan(args []string) {
 		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL})
 	rec.pending(pending)
 	rec.reconcile(*recCfg)
+	if rec != nil {
+		// SEC-7: conditions from reconcile (missing/gone/flapping/changed) -> test asi-changes
+		exportChanges(dd, rec.st, ddTarget, !interrupted, dir, tr.Logf)
+	}
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)
 	time.Sleep(300 * time.Millisecond)
@@ -589,20 +593,29 @@ func cmdUpload(args []string) {
 	format := fs.String("format", "generic", "generic (one finding per IP:port, change tracking) | nmap (raw merged.xml)")
 	product := fs.String("product", envOr("DD_PRODUCT", "ASI PoC"), "DefectDojo product (env DD_PRODUCT)")
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
-	closeOld := fs.Bool("close-old", true, "close findings missing from this run (generic only)")
+	closeOld := fs.Bool("close-old", true, "close findings missing from this run (default: false for an interrupted run)")
+	changes := fs.Bool("changes", true, "also send the asi-changes test (missing/gone/flapping/changed) from the database")
 	fs.Parse(args)
 	c, err := ddClient()
 	must(err)
 	if *run == "" {
 		*run = latestRun("results")
 	}
+	closeSet := false
+	fs.Visit(func(f *flag.Flag) { closeSet = closeSet || f.Name == "close-old" })
+	if runIsPartial(*run) && !closeSet {
+		// coverage rule: a partial run must not close findings of hosts it never reached
+		*closeOld = false
+		log.Printf("%s is a partial (interrupted) run - close_old=false (override with -close-old=true)", *run)
+	}
 	t := dojo.Target{ProductType: envOr("DD_PRODUCT_TYPE", "Research and Development"), Product: *product, Engagement: *eng, Tags: []string{"asi"}}
 	var res dojo.Result
 	if *format == "nmap" {
 		b, e := os.ReadFile(filepath.Join(*run, "merged.xml"))
 		must(e)
-		t.ScanType, t.TestTitle = "Nmap Scan", "nmap "+filepath.Base(*run)
-		res, err = c.Import("merged.xml", b, t)
+		// stable test + reimport: DefectDojo tracks new/closed between runs (native Nmap parser)
+		t.ScanType, t.TestTitle = "Nmap Scan", "asi-nmap"
+		res, err = c.Reimport("merged.xml", b, t, *closeOld)
 	} else {
 		svcs, e := findings.Load(filepath.Join(*run, "services.json"))
 		must(e)
@@ -613,6 +626,16 @@ func cmdUpload(args []string) {
 		log.Fatal(err)
 	}
 	log.Printf("%s -> %s/test/%d  delta=%v", *run, c.URL, res.Test, res.Delta)
+	if *changes {
+		if url := os.Getenv("ASI_DATABASE_URL"); url == "" {
+			log.Printf("asi-changes skipped: no ASI_DATABASE_URL")
+		} else if st, err := openStore(context.Background(), url); err != nil {
+			log.Printf("asi-changes skipped: %v", err)
+		} else {
+			exportChanges(c, st, t, *closeOld, "", log.Printf)
+			st.Close()
+		}
+	}
 }
 
 func cmdDiff(args []string) {

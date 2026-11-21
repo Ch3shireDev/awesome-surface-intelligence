@@ -178,6 +178,17 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Zweryfikowane: testy jednostkowe (`internal/safety`, worker w `internal/scanner`), skan 127.0.0.1 bez roota
       na blackarch (amd64) i oba profile w obrazie `nmap-scanner` na fatusia-2 (arm64: `syn` vs `connect`).
 
+16. **Zmiany w czasie trafiaja do DD jako test `asi-changes` oparty o STAN, nie o log zdarzen** (21.11, SEC-7).
+    - Finding (Generic) istnieje, dopoki warunek trwa: `missing`, `gone`, `flapping`, ostatnia zmiana uslugi.
+      Reimport z `close_old` zamyka go, gdy warunek mija - "closed" w DD znaczy "problem minal".
+      Log zdarzen zostaje w ASI (`asset_events`, `asi changes`, panel); w DD bylby szumem.
+    - Opis stabilny, dopoki warunek trwa (DD hashuje tytul+opis Generic findings), bez `service`
+      (reimporter zamyka tylko findingi z tym samym `service`) i bez `protocol` w endpointach.
+    - Przebieg czesciowy nigdy nie zamyka (`close_old=false`) - tez w `asi upload`, ktory czyta status z `run.json`.
+    - Budowanie raportu w `internal/dojo/changes.go` (czysta funkcja, testy), wywolanie w `cmd/asi/changes_export.go`.
+    - Zweryfikowane na labie (4 przebiegi): missing -> (3 braki) gone zamyka "do potwierdzenia" i otwiera
+      "zniknal"; w przebiegu bez zmian oba findingi `untouched` (hash stabilny na prawdziwym DD 3.5.202).
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
