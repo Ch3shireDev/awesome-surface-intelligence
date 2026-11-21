@@ -1,0 +1,113 @@
+# Attack Surface Intelligence - HackNation 2026 (AGH/CBI AGH)
+#
+# Stos: DefectDojo (obrazy oficjalne z Docker Hub, bez lokalnego builda - szybszy start
+# na hackathonie) + wlasny maly kontener ze skanerem nmap, sterowany z Makefile.
+#
+# Celowo NIE uzywamy SecureCodeBox - jest naciwnie Kubernetes'owy (operator + CRD-y),
+# co nie pasuje do 24h budzetu na postawienie srodowiska w czystym Dockerze. Patrz
+# docs/DECISIONS.md.
+#
+# UWAGA: nie uruchamiano/nie testowano tego pliku w tej rozmowie - przed uzyciem
+# zweryfikuj zmienne srodowiskowe DefectDojo wzgledem aktualnej dokumentacji projektu
+# (nazwy zmiennych bywaja aktualizowane miedzy wersjami).
+
+x-dd-env: &dd-env
+  env_file:
+    - .env
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DD_DATABASE_NAME:-defectdojo}
+      POSTGRES_USER: ${DD_DATABASE_USER:-defectdojo}
+      POSTGRES_PASSWORD: ${DD_DATABASE_PASSWORD:-defectdojo}
+    volumes:
+      - dd_postgres_data:/var/lib/postgresql/data
+    networks: [defectdojo]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [defectdojo]
+
+  initializer:
+    image: defectdojo/defectdojo-django:latest
+    <<: *dd-env
+    command: ["/entrypoint-initializer.sh"]
+    environment:
+      DD_INITIALIZE: "true"
+    depends_on: [postgres, redis]
+    networks: [defectdojo]
+
+  uwsgi:
+    image: defectdojo/defectdojo-django:latest
+    <<: *dd-env
+    command: ["/entrypoint-uwsgi.sh"]
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    volumes:
+      - dd_media:/app/media
+    networks: [defectdojo]
+    restart: unless-stopped
+
+  celerybeat:
+    image: defectdojo/defectdojo-django:latest
+    <<: *dd-env
+    command: ["/entrypoint-celery-beat.sh"]
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    networks: [defectdojo]
+    restart: unless-stopped
+
+  celeryworker:
+    image: defectdojo/defectdojo-django:latest
+    <<: *dd-env
+    command: ["/entrypoint-celery-worker.sh"]
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+    volumes:
+      - dd_media:/app/media
+    networks: [defectdojo]
+    restart: unless-stopped
+
+  nginx:
+    image: defectdojo/defectdojo-nginx:latest
+    <<: *dd-env
+    depends_on: [uwsgi]
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - dd_media:/usr/share/nginx/html/media
+    networks: [defectdojo]
+    restart: unless-stopped
+
+  # --- nasz skaner ---
+  nmap-scanner:
+    build: ./docker/nmap
+    # cap_add wystarcza dla skanow SYN/wersji z poziomu bridge network.
+    # Jesli skan nie widzi hostow w sieci VM (np. docker NAT blokuje trase do
+    # intranetu), odkomentuj ponizej network_mode: host (dziala tylko na Linuksie)
+    # i usun ten serwis z sieci "defectdojo" (host-mode ignoruje networks:).
+    # network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./scans:/scans
+    networks: [defectdojo]
+    tty: true
+    stdin_open: true
+    entrypoint: ["sleep", "infinity"]  # wchodzimy przez `make nmap-shell` / make scan-*
+
+networks:
+  defectdojo:
+
+volumes:
+  dd_postgres_data:
+  dd_media:

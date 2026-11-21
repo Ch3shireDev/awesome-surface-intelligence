@@ -1,0 +1,8 @@
+# Skopiuj do scans/targets.txt i uzupelnij PO potwierdzeniu zakresu z CBI AGH.
+# Jedna pozycja na linie: adres IP, zakres CIDR lub hostname.
+# NIE commituj scans/targets.txt z prawdziwymi celami (jest w .gitignore) -
+# to repo moze trafic na publiczne demo/repo zgloszeniowe.
+#
+# przyklad:
+# 10.10.0.0/24
+# scan-target.sandbox.internal
