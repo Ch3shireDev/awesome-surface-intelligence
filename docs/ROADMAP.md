@@ -28,7 +28,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 | **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | ✅ |
 | **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4, SEC-5, DEV-7 | ⬜ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6, DEV-3 | ⬜ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5, DEV-6, SEC-7, SEC-8 | ⬜ |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 🟡, SEC-7, SEC-8 | 🔨 |
 | **M8** Finisz | publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | SEC-9, ALL-1, ALL-2 | ⬜ |
 
 ## Ścieżka krytyczna
