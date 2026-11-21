@@ -143,8 +143,8 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
       <div><label><input type="checkbox" id="a-flap"> tylko flapping</label></div>
       <div><label><input type="checkbox" id="a-slow"> tylko wolne HTTP</label></div>
       <div><button class="btn sec" id="a-go">Filtruj</button></div>
-      <div style="margin-left:auto"><a href="api/v1/export/assets.csv" class="btn sec" style="text-decoration:none;display:inline-block;padding:8px 14px;border-radius:6px;background:var(--soft);color:var(--ink)">Eksport CSV</a>
-        <a href="api/v1/export/assets.json" style="margin-left:6px">JSON</a></div>
+      <div style="margin-left:auto"><a href="/api/v1/export/assets.csv" class="btn sec" style="text-decoration:none;display:inline-block;padding:8px 14px;border-radius:6px;background:var(--soft);color:var(--ink)">Eksport CSV</a>
+        <a href="/api/v1/export/assets.json" style="margin-left:6px">JSON</a></div>
     </div>
   </div>
   <div class="card"><div class="scroll" style="max-height:none"><table><thead><tr><th>asset</th><th>usługa</th><th>HTTP ms</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
@@ -298,6 +298,8 @@ const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',missing:'brak',gone:'
 let me=null, curSet='default', timer=null;
 
 async function api(path,opt={}){
+  // ścieżki bezwzględne: panel żyje pod /assets/<klucz> i /scans/<id>, więc "api/..." rozwiązałoby się pod widokiem
+  if(!/^(?:https?:)?\//.test(path))path='/'+path;
   opt.headers=Object.assign({'X-ASI':'1'},opt.body&&!(opt.body instanceof FormData)?{'Content-Type':'application/json'}:{},opt.headers||{});
   opt.credentials='same-origin';
   const r=await fetch(path,opt);
@@ -326,17 +328,98 @@ async function start(){
   $('v-login').classList.add('hidden');$('v-app').classList.remove('hidden');
   $('who').textContent=me.username;$('role').textContent=me.role;
   document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',!can(el.dataset.role)));
-  go('dash');
+  applyRoute(); // adres z paska: /, /assets/<klucz>, /scans/<id> (DEV-14)
 }
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
-function go(p){
+
+// ---------- router: adres w pasku = widok + otwarty obiekt (DEV-14)
+// /                 dashboard
+// /assets?…         assety (filtry w query: q, state, kind, flapping, slow, int, svc, run, events)
+// /assets/<klucz>   assety + szuflada assetu (klucz URL-encoded, np. 192.0.2.15%2Ftcp%2F80)
+// /scans/<id>       skany + szuflada przebiegu
+// Dzięki temu działa wstecz/dalej i można wysłać komuś link do widoku albo do konkretnego assetu.
+const VIEWS=['dash','assets','targets','scans','account','admin'];
+const VIEW_PATH={dash:'/',assets:'/assets',targets:'/targets',scans:'/scans',account:'/account',admin:'/admin'};
+const PATH_VIEW={'/':'dash','/assets':'assets','/targets':'targets','/scans':'scans','/account':'account','/admin':'admin'};
+const TITLES={dash:'Dashboard',assets:'Assety',targets:'Cele',scans:'Skany',account:'Konto',admin:'Administracja'};
+let curView='dash';
+const dec=s=>{try{return decodeURIComponent(s)}catch{return s}};
+function parseURL(){
+  const seg=location.pathname.split('/').filter(Boolean);
+  const v=PATH_VIEW['/'+(seg[0]||'')]||'dash';
+  return {v,key:v==='assets'&&seg[1]?dec(seg[1]):'',run:v==='scans'&&seg[1]?dec(seg[1]):'',search:location.search};
+}
+// filtry zakładki Assety <-> query string (te same nazwy pól co API)
+function filterQS(){
+  const q=new URLSearchParams(),set=(k,v)=>{if(v)q.set(k,v)};
+  set('q',$('a-q').value.trim());set('state',$('a-state').value);set('kind',$('a-kind').value);
+  set('int',$('a-int').value);set('svc',assetSvc);set('run',assetRun);
+  if($('a-flap').checked)q.set('flapping','1');
+  if($('a-slow').checked)q.set('slow','1');
+  if(assetRun)set('events',assetEvents);
+  const s=q.toString();return s?'?'+s:'';
+}
+// id = klucz assetu (dla /assets) albo id przebiegu (dla /scans)
+function urlFor(v,id){
+  if(v==='assets')return VIEW_PATH.assets+(id?'/'+encodeURIComponent(id):'')+filterQS();
+  if(v==='scans')return VIEW_PATH.scans+(id?'/'+encodeURIComponent(id):'');
+  return VIEW_PATH[v]||'/';
+}
+function applyFilterQS(search){
+  const q=new URLSearchParams(search||'');
+  $('a-q').value=q.get('q')||'';$('a-state').value=q.get('state')||'';
+  $('a-kind').value=q.get('kind')||'';$('a-int').value=q.get('int')||'';
+  $('a-flap').checked=q.get('flapping')==='1';$('a-slow').checked=q.get('slow')==='1';
+  assetSvc=q.get('svc')||'';assetRun=q.get('run')||'';assetEvents=q.get('events')||'';
+}
+function resetAssetFilters(){$('a-q').value='';$('a-state').value='';$('a-kind').value='';$('a-int').value='';
+  $('a-flap').checked=false;$('a-slow').checked=false;assetSvc='';assetRun='';assetEvents='';}
+// po każdym odświeżeniu listy: adres = widok + filtry + otwarty asset (bez dokładania wpisów w historii)
+function syncAssetURL(){
+  if(!me||curView!=='assets')return;
+  const dr=$('drawer');const key=dr.classList.contains('hidden')?'':(dr.dataset.key||'');
+  const u=urlFor('assets',key);
+  if(u!==location.pathname+location.search)history.replaceState(history.state||{},'',u);
+}
+function showView(p){
+  curView=p;document.title=(TITLES[p]||'ASI')+' · ASI';
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
-  ['dash','assets','targets','scans','account','admin'].forEach(x=>$('p-'+x).classList.toggle('hidden',x!==p));
+  VIEWS.forEach(x=>$('p-'+x).classList.toggle('hidden',x!==p));
   clearInterval(timer);
   ({dash:loadDash,assets:loadAssets,targets:loadTargets,scans:loadScans,account:loadAccount,admin:loadAdmin})[p]();
   if(p==='dash')timer=setInterval(loadDash,10000);
   if(p==='scans')timer=setInterval(()=>loadScanStatus(),3000);
 }
+// zmiana widoku z menu/klikalnych elementów: nowy wpis w historii (replace dla przekierowań)
+function go(p,opt={}){
+  if(!me)return;
+  if(p==='admin'&&!can('admin'))p='dash';
+  const u=urlFor(p);
+  if(!opt.silent&&u!==location.pathname+location.search){
+    opt.replace?history.replaceState({},'',u):history.pushState({},'',u);
+  }
+  showView(p);
+}
+function closeDrawer(nav){
+  const dr=$('drawer'),open=!dr.classList.contains('hidden');
+  dr.classList.add('hidden');dr.dataset.key='';dr.dataset.run='';
+  if(!open||!nav)return;
+  // szuflada otwarta kliknięciem = własny wpis w historii, więc „zamknij” to krok wstecz;
+  // przy wejściu z linku (bez wpisu) tylko czyścimy adres
+  if((history.state||{}).obj)history.back();
+  else history.replaceState({},'',urlFor(curView));
+}
+function applyRoute(){
+  if(!me)return;
+  const r=parseURL();let v=r.v;
+  if(v==='admin'&&!can('admin')){v='dash';history.replaceState({},'',urlFor('dash'))}
+  if(!r.key&&!r.run)closeDrawer(false);
+  if(v==='assets')applyFilterQS(r.search);
+  showView(v);
+  if(r.key)openAsset(r.key,{fromRoute:true});
+  if(r.run)showRun(r.run,{fromRoute:true});
+}
+window.addEventListener('popstate',()=>applyRoute());
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
 
 // ---------- dashboard
 let slowHTTPMs=500;
@@ -402,7 +485,7 @@ async function loadAssets(){
   $('a-count').innerHTML=rows.length+' assetów'+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'')
     +(assetRun?` · zmiany z przebiegu <b>${esc(assetRun)}</b> (${esc(PL_EV[assetEvents]||assetEvents)}) <button class="link" id="a-run-x">wyczyść</button>`:'');
   if($('a-run-x'))$('a-run-x').onclick=()=>{assetRun='';assetEvents='';loadAssets()};
-  if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();
+  if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();syncAssetURL();
 }
 $('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;$('a-slow').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
@@ -412,11 +495,16 @@ function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kin
   $('a-flap').checked=!!f.flap;$('a-slow').checked=!!f.slow;$('a-int').value=f.interest||'';
   assetRun=f.run||'';assetEvents=f.events||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
 
-async function openAsset(key){
+async function openAsset(key,opt={}){
   const [rows,ev]=await Promise.all([api('api/v1/assets?q='+encodeURIComponent(key)),api('api/v1/asset/events?key='+encodeURIComponent(key))]);
-  const a=rows.find(x=>x.key===key);if(!a)return;
+  const a=rows.find(x=>x.key===key);
+  if(!a){if(opt.fromRoute)history.replaceState({},'',urlFor('assets'));return}
+  if(curView!=='assets'){ // asset z innego widoku (np. z szuflady przebiegu) otwiera zakładkę Assety
+    if(!opt.fromRoute)resetAssetFilters();
+    showView('assets');
+  }
   const hrs=[...Array(24)].map((_,h)=>`<i class="${a.hours_seen&(1<<h)?'on':''}" title="${h}:00 UTC"></i>`).join('');
-  const dr=$('drawer');dr.classList.remove('hidden');
+  const dr=$('drawer');dr.classList.remove('hidden');dr.dataset.key=key;dr.dataset.run='';
   dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(a.key)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
   <p>${badge(a.state,'s')} ${a.flapping?badge('flapping'):''} ${a.interest?`<span class="i-${a.interest}">ocena ${a.interest}</span> <span class="muted">${esc(a.reason||'')}</span>`:''}</p>
   <table><tr><th>pierwszy raz</th><td>${fmtT(a.first_seen)}</td></tr><tr><th>ostatnio</th><td>${fmtT(a.last_seen)} (${esc(a.last_seen_run)})</td></tr>
@@ -435,7 +523,11 @@ async function openAsset(key){
   <p class="muted" style="font-size:12.5px;margin:6px 0 0">Ocena zostaje na assecie przy kolejnych skanach. Fałszywy alarm i zaakceptowane ryzyko znikają z „Najważniejszych znalezisk” i trafiają do DefectDojo jako <i>false positive</i> / <i>risk accepted</i>.</p>`:''}
   ${can('analyst')?'<div style="margin-top:10px"><button class="btn" id="dr-save">Zapisz</button> <span id="dr-msg" class="msg"></span></div>':'<p class="muted">Rola viewer: tylko odczyt.</p>'}
   <h2 style="margin-top:18px">Historia</h2><table>${ev.map(e=>`<tr><td>${badge(e.type)}</td><td>${fmtT(e.at)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">brak</td></tr>'}</table>`;
-  $('dr-x').onclick=()=>dr.classList.add('hidden');
+  $('dr-x').onclick=()=>closeDrawer(true);
+  // adres = /assets/<klucz> (+ filtry); z linku tylko uzupełniamy, po kliknięciu dokładamy wpis w historii
+  const u=urlFor('assets',key);
+  if(opt.fromRoute||u===location.pathname+location.search)history.replaceState({},'',u);
+  else history.pushState({obj:1},'',u);
   if(a.kind==='port')api('api/v1/asset/observations?key='+encodeURIComponent(key)).then(renderWeb).catch(()=>{});
   const ov=a.user_overrides||{};if($('dr-vst')){$('dr-vst').value=ov.status||'';$('dr-vint').value=ov.interest||'';$('dr-vre').value=ov.reason||''}
   if($('dr-save'))$('dr-save').onclick=async()=>{
@@ -445,7 +537,7 @@ async function openAsset(key){
     try{await api('api/v1/asset?key='+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify(body)});$('dr-msg').className='msg ok';$('dr-msg').textContent='zapisano'}
     catch(e){$('dr-msg').className='msg err';$('dr-msg').textContent=e.message}};
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')$('drawer').classList.add('hidden')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer(true)});
 const SEV={critical:'i-high',high:'i-high',medium:'i-medium',low:'i-medium',info:'i-low'};
 function renderWeb(os){
   const box=$('dr-web');if(!box||!os.length)return;
@@ -546,11 +638,16 @@ $('df-go').onclick=async()=>{const o=$('df-out');
       (ch.length>500?`<p class="muted">Pokazuję pierwsze 500 z ${ch.length} różnic. Pełna lista: <span class="mono">asi diff -db ${esc(d.from)} ${esc(d.to)} -json</span>.</p>`:'')+
       (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.slice(0,500).map(c=>`<tr><td><span class="badge t-${c.kind==='gone'?'gone':c.kind}">${c.kind==='new'?'nowa':c.kind==='gone'?'zniknęła':'zmiana'}</span></td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
   catch(e){o.className='msg err';o.textContent=e.message}};
-async function showRun(id){
-  const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');const dr=$('drawer');dr.classList.remove('hidden');
+async function showRun(id,opt={}){
+  const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');
+  if(curView!=='scans')showView('scans');
+  const dr=$('drawer');dr.classList.remove('hidden');dr.dataset.key='';dr.dataset.run=id;
   dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(id)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
   <p class="muted">${ev.length} zmian</p><table>${ev.map(e=>`<tr class="click" data-k="${esc(e.key)}"><td>${badge(e.type)}</td><td class="mono">${esc(e.key)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">Bez zmian.</td></tr>'}</table>`;
-  $('dr-x').onclick=()=>dr.classList.add('hidden');bindRows();
+  $('dr-x').onclick=()=>closeDrawer(true);bindRows();
+  const u=urlFor('scans',id);
+  if(opt.fromRoute||u===location.pathname+location.search)history.replaceState({},'',u);
+  else history.pushState({obj:1},'',u);
 }
 let wasRunning=false;
 async function loadScanStatus(force){
@@ -559,7 +656,7 @@ async function loadScanStatus(force){
   $('s-status').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b>, od ${fmtT(s.started)}, uruchomił ${esc(s.by)}</p>`
     :s.started?`<p>Ostatni skan zakończony ${fmtT(s.finished)}${s.exit_error?` <span class="msg err">(${esc(s.exit_error)})</span>`:''}</p>`:'<p class="muted">Brak skanu w tej sesji serwera.</p>';
   $('s-log').textContent=(s.log_tail||[]).join('\n');
-  if(s.running&&(!wasRunning||force)) $('s-live').src='live/';
+  if(s.running&&(!wasRunning||force)) $('s-live').src='/live/';
   if(!s.running&&wasRunning){loadScans()}
   if(!s.running&&force&&!$('s-live').src) $('s-live').srcdoc='<p style="font:14px system-ui;color:#888;padding:16px">Brak aktywnego skanu.</p>';
   wasRunning=s.running;

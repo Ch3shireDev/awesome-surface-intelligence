@@ -55,11 +55,18 @@ type ctxUser struct{}
 
 func (a *App) Handler() http.Handler {
 	m := http.NewServeMux()
-	m.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+	ui := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'self'")
 		w.Write(uiHTML)
-	})
+	}
+	m.HandleFunc("GET /{$}", ui)
+	// Ścieżki widoków panelu też zwracają SPA (DEV-14): klient sam rozpoznaje adres, dzięki czemu
+	// /assets, /assets/<klucz> i /scans/<id> da się wysłać komuś linkiem i działa wstecz/dalej.
+	// Rejestrujemy tylko znane widoki (nie „/{path...}”, bo to koliduje z /live/ i /api/).
+	for _, p := range []string{"/assets", "/assets/", "/targets", "/scans", "/scans/", "/account", "/admin"} {
+		m.HandleFunc("GET "+p, ui)
+	}
 	m.HandleFunc("POST /api/v1/login", a.login)
 	m.HandleFunc("POST /api/v1/logout", a.logout)
 

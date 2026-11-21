@@ -16,16 +16,53 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 |---|---|---|
 | **Dashboard** | kafelki (aktywne hosty, usługi, nowe, braki, zniknięte, niestabilne, krytyczne ekspozycje), najważniejsze znaleziska wg oceny ciekawości, zmiany w ostatnim przebiegu, lista niestabilnych i zniknięte, wykres zmian w kolejnych przebiegach, stan skanu | pkt 15, „wizualizacja zmian w czasie”, „ocena ciekawości” |
 
-Każdy kafelek otwiera zakładkę **Assety** z filtrem odpowiadającym swojej liczbie. „Nowe w ostatnim skanie”
-liczy **zmiany z ostatniego przebiegu** (zdarzenia `new` i `reappeared`), a nie stan assetu — taki asset ma
-zwykle stan `active`, więc filtr `state=new` pokazywał 0. Kafelek przekazuje `run=<id przebiegu>&events=new,reappeared`,
-czyli pokazuje dokładnie te assety, które w tym przebiegu się pojawiły; filtr można wyczyścić linkiem
-„wyczyść” przy liczbie assetów. API: `GET /api/v1/assets?run=<id>&events=new,reappeared`.
 | **Assety** | filtry (stan, rodzaj, flapping, szukaj), tabela, panel szczegółów: ostatnia obserwacja, godziny odpowiedzi (24 h), historia zdarzeń, **edycja tagów i notatki** zachowanych przy kolejnych skanach; eksport CSV/JSON | pkt 14, 8–9, eksport |
 | **Cele** | zbiory celów, **formularz ręczny** (IP/CIDR/domena, tagi, właściciel, notatka szyfrowana), **import CSV/JSON/TXT**, włącz/wyłącz, usuń | pkt 1, 11 |
 | **Skany** | start z parametrami (zbiór, równoległość, globalny limit pps, porty, okno czasowe, eksport do DefectDojo), zatrzymanie (przebieg `partial`), **postęp na żywo** (panel skanu przez proxy), lista przebiegów i ich zmian | pkt 2, harmonogram/okno, ograniczanie tempa |
 | **Konto** | **tokeny API** zalogowanego użytkownika: lista (nazwa, data utworzenia, ostatnie użycie, ważność), utworzenie z nazwą i terminem ważności, unieważnienie; wartość tokenu pokazywana **raz** | pkt 12–13, integracja z DD/automatyzacja |
 | **Administracja** | użytkownicy z rolami, dziennik audytu | pkt 12–13 |
+
+Każdy kafelek otwiera zakładkę **Assety** z filtrem odpowiadającym swojej liczbie. „Nowe w ostatnim skanie”
+liczy **zmiany z ostatniego przebiegu** (zdarzenia `new` i `reappeared`), a nie stan assetu — taki asset ma
+zwykle stan `active`, więc filtr `state=new` pokazywał 0. Kafelek przekazuje `run=<id przebiegu>&events=new,reappeared`,
+czyli pokazuje dokładnie te assety, które w tym przebiegu się pojawiły; filtr można wyczyścić linkiem
+„wyczyść” przy liczbie assetów. API: `GET /api/v1/assets?run=<id>&events=new,reappeared`.
+
+## Adresy widoków, wstecz i linki do zasobu (DEV-14)
+
+Pasek adresu pokazuje, gdzie jesteś, więc działa **wstecz/dalej** przeglądarki i można wysłać komuś link
+do widoku, assetu albo przebiegu (pkt 15 PDF — czytelny interfejs, integracja z codzienną pracą).
+
+| adres | co pokazuje |
+|---|---|
+| `/` | Dashboard |
+| `/assets` | Assety; filtry w query stringu: `q`, `state`, `kind`, `flapping`, `slow`, `int`, `svc`, `run`, `events` |
+| `/assets/<klucz>` | Assety + panel szczegółów assetu (klucz URL-encoded; port ma `/` jako `%2F`, np. `/assets/192.0.2.15%2Ftcp%2F80`) |
+| `/targets` | Cele |
+| `/scans` | Skany |
+| `/scans/<id przebiegu>` | Skany + panel zmian tego przebiegu, np. `/scans/20261121-193230` |
+| `/account` | Konto (tokeny API) |
+| `/admin` | Administracja (tylko rola `admin`) |
+
+Zachowanie:
+
+- kliknięcie wiersza assetu/przebiegu **dopisuje wpis w historii**, a „zamknij ✕” i `Esc` robią krok wstecz —
+  wstecz zamyka panel szczegółów i wraca do listy z tymi samymi filtrami;
+- filtry zakładki Assety są w adresie, więc `/assets?state=live&kind=host` można zapisać w zakładkach
+  albo wysłać koledze;
+- wejście z linku przy wygasłej sesji: najpierw logowanie, a po nim panel otwiera dokładnie ten widok/asset;
+- `/admin` bez roli `admin` przekierowuje na `/` (poprawiamy adres, nie tylko ukrywamy widok);
+- SPA serwują też same ścieżki (`GET /assets`, `/scans/<id>`, …), więc F5 i bezpośredni link działają;
+  `/api/` i `/live/` nie są przechwytywane (`go test ./internal/app -run TestSPARoutes`);
+- wszystkie wywołania API w panelu są bezwzględne (`/api/v1/…`), bo dokument żyje też pod `/assets/<klucz>`
+  (wcześniej relatywne `api/…` trafiałoby pod ścieżkę widoku).
+
+Test w prawdziwej przeglądarce (dev machine: `node` + Chrome; panel może działać w kontenerze):
+
+```bash
+make test-router        # 49/49: menu, kafelki KPI, szuflady, wstecz/dalej, F5, deep linki, %2F, role
+BASE=http://127.0.0.1:8090 NODE_PATH=/tmp/node_modules node scripts/ui-router-test.js
+```
 
 ## Role
 

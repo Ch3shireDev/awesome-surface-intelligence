@@ -16,7 +16,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
 .PHONY: help env env-sync up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
-        build test test-tokens test-users test-roles asi asi-scan asi-serve docs sync \
+        build test test-tokens test-users test-roles test-router asi asi-scan asi-serve docs sync \
         lab-up lab-down lab-ps demo env-keys crypto-check schema-check slides
 
 help:
@@ -52,6 +52,7 @@ help:
 	@echo "  make test-tokens      - test tokenow API w GUI (DEV-3, wymaga dzialajacego panelu)"
 	@echo "  make test-users       - test zarzadzania kontami w GUI (DEV-11, wymaga dzialajacego panelu)"
 	@echo "  make test-roles       - test macierzy rol viewer/analyst/operator/admin (DEV-12, wymaga panelu)"
+	@echo "  make test-router      - test adresow widokow/deep linkow w przegladarce (DEV-14: node + Chrome + panel)"
 	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
 	@echo "  make slides           - prezentacja Beamer -> docs/presentation/asi.pdf (pdflatex w kontenerze)"
 	@echo "  make sync             - git pull --rebase + push do origin (repo blackarch przez ssh)"
@@ -212,6 +213,11 @@ test-users:
 
 test-roles:
 	bash scripts/test-roles.sh
+
+# Test routera panelu w prawdziwej przegladarce (DEV-14). Wymaga node + Chrome/Chromium i dzialajacego panelu.
+test-router:
+	@command -v node >/dev/null || { echo "brak node (test opcjonalny, tylko dev machine)"; exit 1; }
+	node scripts/ui-router-test.js
 
 docs:
 	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
