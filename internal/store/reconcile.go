@@ -253,7 +253,13 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				a.state = "active"
 			}
 			if a.fp != "" && a.fp != o.fp {
-				emit(a, "changed", open(a.current), o.current)
+				if old := open(a.current); lessDetailed(old, o.current) {
+					// same service seen with less detail (no version this time, an import
+					// without product...): not a change - keep the richer fingerprint
+					o.fp, sealed = a.fp, a.current
+				} else {
+					emit(a, "changed", old, o.current)
+				}
 			}
 			a.fp, a.current = o.fp, sealed
 			a.lastSeen, a.lastRun = runStart, runID
@@ -384,4 +390,17 @@ func sealOrNil(s Sealer, b []byte) ([]byte, error) {
 		return nil, nil
 	}
 	return s.Seal(b)
+}
+
+// lessDetailed: the new service observation only omits fields the old one had
+// (same name; product/version empty or equal). E.g. nmap failed to read the version
+// in one run, or an imported CSV has no version column.
+func lessDetailed(oldJSON, newJSON []byte) bool {
+	var o, n obs.ServiceData
+	if json.Unmarshal(oldJSON, &o) != nil || json.Unmarshal(newJSON, &n) != nil || o.Name == "" {
+		return false
+	}
+	same := func(a, b string) bool { return b == "" || a == b }
+	return n.Name == o.Name && same(o.Product, n.Product) && same(o.Version, n.Version) &&
+		(n.Product != o.Product || n.Version != o.Version)
 }

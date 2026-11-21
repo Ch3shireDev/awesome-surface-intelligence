@@ -142,3 +142,27 @@ func (s *Store) CancelRun(ctx context.Context, id string) error {
 	_, err := s.DB.Exec(ctx, `UPDATE runs SET status='cancelled', pending_targets='{}' WHERE id=$1 AND status IN ('partial','running')`, id)
 	return err
 }
+
+// SetRunStart backdates a run (imports of older scans keep their real time).
+func (s *Store) SetRunStart(ctx context.Context, id string, at time.Time) error {
+	_, err := s.DB.Exec(ctx, `UPDATE runs SET started_at=$2 WHERE id=$1`, id, at)
+	return err
+}
+
+// SaveImportRaw keeps the imported file as evidence (sealed like any raw output).
+func (s *Store) SaveImportRaw(ctx context.Context, runID, format string, data []byte) error {
+	if _, err := s.DB.Exec(ctx, `INSERT INTO chunks (run_id, stage, id, targets, size, status, started_at, finished_at)
+		VALUES ($1,'import',0,'{}',0,'done',now(),now()) ON CONFLICT DO NOTHING`, runID); err != nil {
+		return err
+	}
+	return s.SaveRaw(ctx, runID, "import", 0, "import", format, data)
+}
+
+func (s *Store) LatestReconciledStart(ctx context.Context) (time.Time, error) {
+	var t *time.Time
+	err := s.DB.QueryRow(ctx, `SELECT max(started_at) FROM runs WHERE reconciled_at IS NOT NULL`).Scan(&t)
+	if err != nil || t == nil {
+		return time.Time{}, err
+	}
+	return *t, nil
+}

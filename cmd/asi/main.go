@@ -63,6 +63,8 @@ func main() {
 		cmdDB(args)
 	case "server":
 		cmdServer(args)
+	case "import":
+		cmdImport(args)
 	case "changes":
 		cmdChanges(args)
 	case "assets":
@@ -79,7 +81,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <server|convert|plan|scan|upload|diff|serve|db|changes|assets|asset|targets-extract|mcp> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <server|import|convert|plan|scan|upload|diff|serve|db|changes|assets|asset|targets-extract|mcp> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 

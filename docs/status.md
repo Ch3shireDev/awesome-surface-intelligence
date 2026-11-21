@@ -28,7 +28,7 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | — | harmonogram, okna czasowe | ✅ | cron + okno w GUI, wznawianie niezeskanowanych celów w kolejnym oknie, wstrzymaj/wznów/anuluj ([Harmonogram](/guide/schedule)) |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, `-parallel`, timeouty |
 | — | eksport JSON/CSV | ✅ | assety CSV/JSON z GUI/API; `services.json`, `findings_defectdojo.json` |
-| — | import wyników skanów JSON/CSV | ❌ | baza jest; brak importera cudzych wyników (DEV-6) |
+| — | import wyników skanów JSON/CSV | ✅ | nmap XML, CSV, JSON, JSONL httpx/nuclei; GUI + `asi import`; pokrycie `auto`/`none`, import historyczny ([Import](/guide/import)) |
 | — | hosty / usługi niestabilne | ✅ | stany `new/active/missing/gone`, `reappeared`, `flapping`, progi braków, zasady pokrycia i hierarchii ([Historia](/guide/history)); skan potwierdzający |
 | — | integracja DefectDojo | ✅ | Generic Findings, reimport do stałego testu, upload na żywo; test `asi-changes` (missing/gone/flapping/zmiany, zamykane w DD, gdy warunek mija; bez `close_old` dla przebiegów częściowych, też w `asi upload`); nmap XML natywnie do stałego `asi-nmap`; [DefectDojo](/guide/defectdojo) |
 | — | ocena „ciekawości” | ✅ | `high/medium/low` + powód; mapowanie na severity w DefectDojo |

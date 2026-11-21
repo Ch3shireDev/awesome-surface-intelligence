@@ -163,3 +163,18 @@ func TestPortSet(t *testing.T) {
 		t.Error("empty set must cover all")
 	}
 }
+
+func TestLessDetailed(t *testing.T) {
+	full := []byte(`{"name":"http","product":"nginx","version":"1.27.5"}`)
+	for in, want := range map[string]bool{
+		`{"name":"http","product":"nginx"}`:                  true,
+		`{"name":"http"}`:                                    true,
+		`{"name":"http","product":"nginx","version":"1.28"}`: false,
+		`{"name":"https","product":"nginx"}`:                 false,
+		`{"name":"http","product":"Apache"}`:                 false,
+	} {
+		if got := lessDetailed(full, []byte(in)); got != want {
+			t.Errorf("%s: got %v want %v", in, got, want)
+		}
+	}
+}

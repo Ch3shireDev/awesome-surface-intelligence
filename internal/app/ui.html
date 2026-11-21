@@ -228,6 +228,16 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
     </div>
   </div>
   <div class="card"><h2>Postęp na żywo</h2><iframe class="live" id="s-live" title="Postęp skanu na żywo"></iframe></div>
+  <div class="card" data-role="operator"><h2>Import wyników skanów</h2>
+    <p class="muted" style="margin-top:0">Wyniki skanu wykonanego gdzie indziej trafiają do bazy jako przebieg, ze śledzeniem zmian i eksportem. Formaty (wykrywane automatycznie): <b>nmap XML</b>, <b>CSV</b> z nagłówkiem (<span class="mono">ip,port,protocol,service,product,version</span>, także nasz eksport assetów), <b>JSON</b> (tablica albo <span class="mono">{"results":[…]}</span>, nasze <span class="mono">observations.json</span>), <b>JSONL</b> z httpx i nuclei.</p>
+    <div class="row">
+      <div><label for="ri-file">Plik</label><input type="file" id="ri-file" accept=".xml,.csv,.json,.jsonl,.ndjson"></div>
+      <div><label for="ri-cov">Pokrycie</label><select id="ri-cov"><option value="auto">plik = pełny skan tych hostów (braki będą liczone)</option><option value="none">tylko dodaj obserwacje (nic nie zniknie)</option></select></div>
+      <div><label for="ri-at">Kiedy wykonano skan (opcjonalnie)</label><input type="datetime-local" id="ri-at"></div>
+      <div><button class="btn" id="ri-go">Importuj wyniki</button></div>
+    </div>
+    <div id="ri-msg" class="msg"></div>
+  </div>
   <div class="card"><h2>Przebiegi</h2><div class="scroll"><table><thead><tr><th>przebieg</th><th>status</th><th>zbiór</th><th>czas</th><th>hosty</th><th>porty</th><th>zmiany</th><th></th></tr></thead><tbody id="s-runs"></tbody></table></div></div>
 </section>
 
@@ -486,6 +496,18 @@ $('s-start').onclick=async()=>{
   catch(e){$('s-msg').className='msg err';$('s-msg').textContent=e.message}};
 $('s-pause').onclick=async()=>{if(!confirm('Wstrzymać skan? Wyniki zostaną zapisane, a niezeskanowane cele będzie można wznowić.'))return;await api('api/v1/scans/current/stop',{method:'POST'})};
 $('s-stop').onclick=async()=>{if(!confirm('Anulować skan? Wyniki zostaną zapisane, ale reszta celów nie będzie wznawiana.'))return;await api('api/v1/scans/current/stop?cancel=1',{method:'POST'})};
+
+// ---------- results import (DEV-6)
+$('ri-go').onclick=async()=>{const f=$('ri-file').files[0];const m=$('ri-msg');
+  if(!f){m.className='msg err';m.textContent='Wybierz plik.';return}
+  const fd=new FormData();fd.append('file',f);fd.append('coverage',$('ri-cov').value);if($('ri-at').value)fd.append('at',$('ri-at').value);
+  m.className='msg';m.textContent='Importuję…';
+  try{const r=await api('api/v1/results/import',{method:'POST',body:fd});
+    const ev=Object.entries(r.events||{}).map(([k,v])=>`${PL[k]||k} ${v}`).join(', ')||'brak zmian';
+    m.className='msg ok';m.innerHTML=`Zaimportowano <b>${esc(r.format)}</b>: ${r.rows} rekordów, ${r.hosts} hostów, ${r.observations} obserwacji → przebieg <span class="mono">${esc(r.run_id)}</span>. Zmiany: ${esc(ev)}.`+
+      (r.coverage!=='auto'?` <span class="muted">(${esc(r.coverage)})</span>`:'')+((r.skipped||[]).length?`<br><span class="msg err">Pominięte: ${r.skipped.map(esc).join('; ')}</span>`:'');
+    loadScans()}
+  catch(e){m.className='msg err';m.textContent=e.message}};
 
 // ---------- schedules
 async function loadSchedules(){

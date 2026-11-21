@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"asi/internal/findings"
+	"asi/internal/importer"
 	"asi/internal/obs"
 	"asi/internal/store"
 	"asi/internal/targets"
@@ -81,6 +82,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("POST /api/v1/scans", a.need("operator", a.startScan))
 	m.Handle("POST /api/v1/scans/current/stop", a.need("operator", a.stopScan))
 	m.Handle("POST /api/v1/runs/{id}/resume", a.need("operator", a.resumeRun))
+	m.Handle("POST /api/v1/results/import", a.need("operator", a.importResults))
 	m.Handle("GET /api/v1/schedules", a.need("viewer", a.listSchedules))
 	m.Handle("GET /api/v1/schedules/preview", a.need("viewer", a.cronPreview))
 	m.Handle("POST /api/v1/schedules", a.need("operator", a.saveSchedule))
@@ -483,6 +485,45 @@ func (a *App) deleteTarget(w http.ResponseWriter, r *http.Request, u store.User)
 	}
 	a.St.Audit(r.Context(), &u.ID, "target_delete", "target", v, nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// ---------------------------------------------------------------- import of scan results (DEV-6)
+
+func (a *App) importResults(w http.ResponseWriter, r *http.Request, u store.User) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
+	f, hdr, err := r.FormFile("file")
+	if err != nil {
+		fail(w, 400, "file required")
+		return
+	}
+	defer f.Close()
+	data, err := importer.ReadAll(f, 64<<20)
+	if err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
+	o := importer.Options{Coverage: r.FormValue("coverage"), By: &u.ID}
+	if v := r.FormValue("at"); v != "" {
+		if t, err := time.Parse("2006-01-02T15:04", v); err == nil {
+			o.At = t
+		} else if t, err := time.Parse(time.RFC3339, v); err == nil {
+			o.At = t
+		} else {
+			fail(w, 400, "data: RRRR-MM-DDTHH:MM")
+			return
+		}
+	}
+	if o.Coverage != "" && o.Coverage != "auto" && o.Coverage != "none" {
+		fail(w, 400, "coverage: auto albo none")
+		return
+	}
+	s, err := importer.Import(r.Context(), a.St, filepath.Base(hdr.Filename), data, o)
+	if err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
+	a.St.Audit(r.Context(), &u.ID, "results_import", "run", s.RunID, map[string]any{"file": hdr.Filename, "format": s.Format, "observations": s.Obs})
+	writeJSON(w, 200, s)
 }
 
 // ---------------------------------------------------------------- export (DEV-6 subset)

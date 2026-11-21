@@ -78,7 +78,7 @@ i `make sync`.
 | ID | kto | zadanie |
 |---|---|---|
 | DEV-5 | DEV ✅ *zrobione (blackarch)* | Harmonogram: cron, okno, wznawianie niedokończonych paczek w kolejnym oknie (`deferred`). Z panelu: start, pauza, anulowanie. |
-| DEV-6 | DEV 🔨 *w toku: agent blackarch (import wyników); eksport CSV/JSON już jest* | Eksport JSON i CSV (assety, obserwacje, zdarzenia). Import cudzych wyników (nmap XML, JSON/CSV w formacie organizatorów). |
+| DEV-6 | DEV ✅ *zrobione (agent blackarch): import nmap XML/CSV/JSON/JSONL w GUI i CLI, eksport CSV/JSON* | Eksport JSON i CSV (assety, obserwacje, zdarzenia). Import cudzych wyników (nmap XML, JSON/CSV w formacie organizatorów). |
 | SEC-7 | SEC 🟡 *agent fatusia, 21.11: test `asi-changes` ✅, brak `close_old` dla częściowych ✅ (też `asi upload`), nmap natywnie do `asi-nmap` ✅. Zostaje: parsery httpx/Nuclei (po SEC-4/SEC-5), test na DD organizatorów (SEC-2)* | Eksport do DD po nowemu: natywne parsery (Nmap, httpx, Nuclei) plus test `asi-changes` (Generic: gone, changed, flapping), bez `close_old` dla przebiegów częściowych. Test na instancji DD organizatorów. |
 | SEC-8 | SEC ✅ *zrobione (agent fatusia-1): `internal/safety`, worker, profile raw/unprivileged, UDP, `docs/guide/safety.md`* | Bezpieczeństwo skanera: kontrola zakresu i wykluczeń także w workerze, lista dozwolonych portów, sztywny górny limit pps, profil z `NET_RAW` (`-sS`, ICMP) i bez roota (`-sT`). Decyzja co do UDP (DNS, SNMP, NTP). Strona „Bezpieczeństwo” zaktualizowana. |
 | DEV-7 | DEV ⏳ *następne: agent blackarch (po DEV-9, DEV-10)* | Ocena „ciekawości” rozszerzona o dane HTTP i sygnatury, grupowanie podobnych usług, wizualizacja zmian w czasie na dashboardzie. |
@@ -88,7 +88,7 @@ i `make sync`.
 
 | ID | kto | zadanie |
 |---|---|---|
-| DEV-9 | DEV ⏳ *następne: agent blackarch* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
+| DEV-9 | DEV 🔨 *w toku: agent blackarch* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
 | DEV-10 | DEV ⏳ *następne: agent blackarch* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
 | SEC-10 | SEC | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
 | SEC-9 | SEC | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
