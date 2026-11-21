@@ -331,6 +331,13 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, self
 		}
 	}
 	r.Observations, _ = cfg.Adapter.Parse(raw)
+	if cfg.Guard != nil {
+		var dropped int
+		r.Observations, dropped = filterSelfObservations(r.Observations, cfg.Guard)
+		if dropped > 0 {
+			tr.Logf("policy: %s %s dropped %d own-stack observation(s) (ports %s)", cfg.Name, name, dropped, cfg.Guard.SelfPorts)
+		}
+	}
 	up, open := 0, 0
 	for _, o := range r.Observations {
 		switch o.Kind {
@@ -406,6 +413,25 @@ func writeTimings(path string, rs []ChunkResult) {
 	w.Flush()
 }
 
+// filterSelfObservations drops observations targeting the scanner host on our own stack
+// ports (defense in depth on top of --exclude-ports, covering all stages including httpx/nuclei).
+func filterSelfObservations(list []obs.Observation, pol *safety.Policy) ([]obs.Observation, int) {
+	if pol == nil || len(pol.SelfPorts) == 0 || len(list) == 0 {
+		return list, 0
+	}
+	out := make([]obs.Observation, 0, len(list))
+	dropped := 0
+	for _, o := range list {
+		ip, proto, port := obs.SplitKey(o.AssetKey)
+		if port > 0 && pol.IsSelfPort(ip, proto, port) {
+			dropped++
+			continue
+		}
+		out = append(out, o)
+	}
+	return out, dropped
+}
+
 // Confirm re-scans specific ports on specific hosts (one nmap per host, up to
 // parallel at once). Used to double-check services that "disappeared" while the
 // host is still up - a single lost probe must not close a finding.
@@ -454,6 +480,18 @@ func Confirm(ctx context.Context, ports map[string][]int, args []string, paralle
 			}
 			exec.CommandContext(ctx, "nmap", a...).Run()
 			r, _ := nmapxml.ParseFile(x)
+			if guard != nil {
+				for i := range r.Hosts {
+					hip := r.Hosts[i].IP()
+					kept := r.Hosts[i].Ports[:0]
+					for _, p := range r.Hosts[i].Ports {
+						if !guard.IsSelfPort(hip, p.Protocol, p.PortID) {
+							kept = append(kept, p)
+						}
+					}
+					r.Hosts[i].Ports = kept
+				}
+			}
 			mu.Lock()
 			out = append(out, r.Hosts...)
 			mu.Unlock()

@@ -129,13 +129,16 @@ type Opts struct {
 // Any token that is not a known flag or its value (e.g. a target address) is an error.
 func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 	var (
-		out           []string
-		pSpec         string
-		hasP, hasTop  bool
-		hasUDP, hasSn bool
-		hasUnpriv     bool
-		iL, oX        []string
-		rate          = -1
+		out             []string
+		pSpec           string
+		hasP, hasTop    bool
+		hasUDP, hasSn   bool
+		hasUnpriv       bool
+		exclTCP         PortSet
+		exclUDP         PortSet
+		exclUnprefixed  PortSet
+		iL, oX          []string
+		rate            = -1
 	)
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -176,7 +179,14 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 				if kind == "-PU" {
 					allow = p.UDPPorts
 				}
-				if list == "" || (allow == nil && (kind == "-PU" || o.ExcludePorts == nil)) {
+				if list == "" {
+					if kind != "-PU" && o.ExcludePorts.Contains(80) {
+						continue // bare -PS/-PA defaults to port 80
+					}
+					out = append(out, a)
+					continue
+				}
+				if allow == nil && (kind == "-PU" || o.ExcludePorts == nil) {
 					out = append(out, a)
 					continue
 				}
@@ -227,6 +237,18 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 		case "-p":
 			hasP, pSpec = true, val
 			continue // re-added below, cut to the allow-list
+		case "--exclude-ports":
+			t, u, err := parseNmapPorts(val)
+			if err != nil {
+				return nil, fmt.Errorf("nmap --exclude-ports %q: %w", val, err)
+			}
+			if u == nil && !strings.Contains(strings.ToUpper(val), "T:") {
+				exclUnprefixed = append(exclUnprefixed, t...).normalize()
+			} else {
+				exclTCP = append(exclTCP, t...).normalize()
+				exclUDP = append(exclUDP, u...).normalize()
+			}
+			continue // merged into one --exclude-ports below (nmap aborts on duplicates)
 		case "--top-ports":
 			hasTop = true
 		case "-iL":
@@ -300,9 +322,32 @@ func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 		}
 		out = append(out, "-p", spec)
 	}
-	if len(o.ExcludePorts) > 0 && !hasSn {
-		// also covers --top-ports without -p: nmap picks the top N among the remaining ports
-		out = append(out, "--exclude-ports", o.ExcludePorts.String())
+	if !hasSn {
+		// Merge user --exclude-ports with chunk o.ExcludePorts into a single flag:
+		// nmap aborts ("Only 1 --exclude-ports option allowed") if passed twice.
+		if len(exclUnprefixed) > 0 {
+			exclTCP = append(exclTCP, exclUnprefixed...).normalize()
+			if hasUDP {
+				exclUDP = append(exclUDP, exclUnprefixed...).normalize()
+			}
+		}
+		if len(o.ExcludePorts) > 0 {
+			exclTCP = append(exclTCP, o.ExcludePorts...).normalize()
+		}
+		if len(exclTCP) > 0 || len(exclUDP) > 0 {
+			var parts []string
+			if len(exclTCP) > 0 {
+				parts = append(parts, "T:"+exclTCP.String())
+			}
+			if len(exclUDP) > 0 {
+				parts = append(parts, "U:"+exclUDP.String())
+			}
+			spec := strings.Join(parts, ",")
+			if !hasUDP && len(exclUDP) == 0 {
+				spec = strings.TrimPrefix(spec, "T:")
+			}
+			out = append(out, "--exclude-ports", spec)
+		}
 	}
 	if p.Profile == ProfileUnprivileged && !hasUnpriv {
 		out = append(out, "--unprivileged")

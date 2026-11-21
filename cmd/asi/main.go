@@ -435,7 +435,7 @@ func cmdScan(args []string) {
 		}
 		recheck, n := map[string][]int{}, 0
 		for _, o := range old {
-			if !have[o.Key()] && isUp[o.IP] && o.Proto == "tcp" {
+			if !have[o.Key()] && isUp[o.IP] && o.Proto == "tcp" && !pol.IsSelfPort(o.IP, o.Proto, o.Port) {
 				recheck[o.IP] = append(recheck[o.IP], o.Port)
 				n++
 			}
@@ -462,7 +462,7 @@ func cmdScan(args []string) {
 	// --- phase 3: HTTP fingerprint (httpx) and phase 4: signatures (nuclei) on web services
 	webSvc := append([]findings.Service(nil), svcs...)
 	webObs := runWebStages(ctx, webStages{runID: runID, dir: dir, httpMode: *httpStage, sigDir: *sigDir,
-		parallel: *parallel, rate: *rate, chunkTimeout: *chunkTimeout, tune: tune}, webSvc, tr, rec)
+		parallel: *parallel, rate: *rate, chunkTimeout: *chunkTimeout, tune: tune, guard: pol}, webSvc, tr, rec)
 	keep(webObs)
 	writeJSON(tunePath, tune)
 	close(upQ)

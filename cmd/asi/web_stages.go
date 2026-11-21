@@ -11,6 +11,7 @@ import (
 	"asi/internal/findings"
 	"asi/internal/obs"
 	"asi/internal/progress"
+	"asi/internal/safety"
 	"asi/internal/scanner"
 	httpxad "asi/internal/scanner/httpx"
 	nucleiad "asi/internal/scanner/nuclei"
@@ -21,6 +22,7 @@ type webStages struct {
 	parallel, rate               int
 	chunkTimeout                 time.Duration
 	tune                         tuning
+	guard                        *safety.Policy
 }
 
 func haveTool(name string) bool { _, err := exec.LookPath(name); return err == nil }
@@ -73,7 +75,7 @@ func runWebStages(ctx context.Context, w webStages, svcs []findings.Service, tr 
 	z.Seed(w.tune["http"])
 	scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "http", RunID: w.runID, Adapter: &httpxad.Adapter{},
 		Stage: obs.StageConfig{RatePPS: perProc}, Parallel: w.parallel, Sizer: z, ChunkTimeout: w.chunkTimeout,
-		OutDir: filepath.Join(w.dir, "http"), OnStart: rec.chunkStart("http")}, urls, tr, wrap(collect("http")))
+		OutDir: filepath.Join(w.dir, "http"), OnStart: rec.chunkStart("http"), Guard: w.guard}, urls, tr, wrap(collect("http")))
 	if v := z.SecPerHost(); v > 0 {
 		w.tune["http"] = v
 	}
@@ -107,7 +109,7 @@ func runWebStages(ctx context.Context, w webStages, svcs []findings.Service, tr 
 		scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "signatures", RunID: w.runID,
 			Adapter: &nucleiad.Adapter{Templates: tdir}, Stage: obs.StageConfig{RatePPS: perProc},
 			Parallel: max(1, w.parallel/2), Sizer: zs, ChunkTimeout: w.chunkTimeout,
-			OutDir: filepath.Join(w.dir, "signatures"), OnStart: rec.chunkStart("signatures")}, targets, tr,
+			OutDir: filepath.Join(w.dir, "signatures"), OnStart: rec.chunkStart("signatures"), Guard: w.guard}, targets, tr,
 			wrap(func(r scanner.ChunkResult) {
 				collect("signatures")(r)
 				hits := make([]progress.Service, 0, len(r.Observations))

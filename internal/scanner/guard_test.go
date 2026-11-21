@@ -83,3 +83,99 @@ func TestWorkerSelfChunkExcludesOwnPorts(t *testing.T) {
 		}
 	}
 }
+
+// fixedObsAdapter returns a fixed set of observations regardless of tool output,
+// used to verify defense-in-depth post-parse filtering across nmap/httpx/nuclei.
+type fixedObsAdapter struct {
+	tool string
+	obs  []obs.Observation
+}
+
+func (f fixedObsAdapter) Stage() obs.Stage { return obs.StageHTTP }
+func (f fixedObsAdapter) Tool() string     { return f.tool }
+func (f fixedObsAdapter) Command(ctx context.Context, c obs.Chunk, cfg obs.StageConfig) (*exec.Cmd, obs.OutputSpec) {
+	return exec.CommandContext(ctx, "echo", "ok"), obs.OutputSpec{}
+}
+func (f fixedObsAdapter) Parse(io.Reader) ([]obs.Observation, error) { return f.obs, nil }
+
+func TestWorkerFiltersSelfPortObservations(t *testing.T) {
+	dir := t.TempDir()
+	tr := progress.New("t", 1, filepath.Join(dir, "events.ndjson"))
+	pol := safety.Default()
+	pol.Self = []netip.Prefix{
+		netip.MustParsePrefix("127.0.0.0/8"),
+		netip.MustParsePrefix("198.51.100.5/32"), // local interface IP
+	}
+	pol.SelfPorts, _ = safety.ParsePorts("5433,8080,8090")
+
+	in := []obs.Observation{
+		obs.New(obs.KindHost, "127.0.0.1", "nmap", obs.HostData{Up: true}, 100, "up"),
+		obs.New(obs.KindPort, "127.0.0.1/tcp/8080", "nmap", obs.PortData{State: "open"}, 100, "open"),
+		obs.New(obs.KindService, "127.0.0.1/tcp/8080", "nmap", obs.ServiceData{Name: "http"}, 100, "http"),
+		obs.New(obs.KindPort, "127.0.0.1/tcp/8787", "nmap", obs.PortData{State: "open"}, 100, "open"),
+		obs.New(obs.KindHTTP, "198.51.100.5/tcp/8090", "httpx", obs.HTTPData{URL: "http://198.51.100.5:8090"}, 100, "8090"),
+		obs.New(obs.KindHTTP, "198.51.100.5/tcp/8787", "httpx", obs.HTTPData{URL: "http://198.51.100.5:8787"}, 100, "8787"),
+		obs.New(obs.KindPort, "192.0.2.10/tcp/8080", "nmap", obs.PortData{State: "open"}, 100, "open"),
+		obs.New(obs.KindHTTP, "192.0.2.10/tcp/8090", "httpx", obs.HTTPData{URL: "http://192.0.2.10:8090"}, 100, "8090"),
+	}
+	rs := RunPhase(context.Background(), PhaseConfig{
+		Name: "http", Adapter: fixedObsAdapter{tool: "httpx", obs: in},
+		Parallel: 1, Sizer: &Sizer{Fixed: 10}, OutDir: dir, Guard: pol,
+	}, []string{"http://127.0.0.1:8787", "http://192.0.2.10:8080"}, tr, nil)
+	if len(rs) != 1 {
+		t.Fatalf("chunks: %d", len(rs))
+	}
+	got := map[string]bool{}
+	for _, o := range rs[0].Observations {
+		got[string(o.Kind)+":"+o.AssetKey] = true
+	}
+	for _, mustDrop := range []string{
+		"port:127.0.0.1/tcp/8080",
+		"service:127.0.0.1/tcp/8080",
+		"http:198.51.100.5/tcp/8090",
+	} {
+		if got[mustDrop] {
+			t.Errorf("self-port observation was NOT filtered: %s", mustDrop)
+		}
+	}
+	for _, mustKeep := range []string{
+		"host:127.0.0.1",
+		"port:127.0.0.1/tcp/8787",
+		"http:198.51.100.5/tcp/8787",
+		"port:192.0.2.10/tcp/8080",
+		"http:192.0.2.10/tcp/8090",
+	} {
+		if !got[mustKeep] {
+			t.Errorf("valid observation was wrongly dropped: %s", mustKeep)
+		}
+	}
+}
+
+func TestWorkerSelfExcludeOffAndUserExcludeMerge(t *testing.T) {
+	// SelfPorts=nil (ASI_SELF_PORTS=off): no --exclude-ports on 127.0.0.1
+	dir := t.TempDir()
+	tr := progress.New("t", 1, filepath.Join(dir, "events.ndjson"))
+	polOff := safety.Default()
+	polOff.Self = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	polOff.SelfPorts = nil
+	rs := RunPhase(context.Background(), PhaseConfig{Name: "services", Adapter: echoNmap{}, Stage: obs.StageConfig{RatePPS: 10},
+		Parallel: 1, Sizer: &Sizer{Fixed: 10}, OutDir: dir, Guard: polOff}, []string{"127.0.0.1"}, tr, nil)
+	if len(rs) != 1 || strings.Contains(rs[0].Observations[0].AssetKey, "--exclude-ports") {
+		t.Fatalf("off mode should not add --exclude-ports: %+v", rs)
+	}
+
+	// User passes --exclude-ports 9100 on 127.0.0.1: worker merges into a single --exclude-ports flag
+	pol := safety.Default()
+	pol.Self = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	pol.SelfPorts, _ = safety.ParsePorts("8080,8090")
+	rs = RunPhase(context.Background(), PhaseConfig{Name: "services",
+		Adapter: echoNmap{fakeNmap{extra: []string{"--exclude-ports", "9100"}}}, Stage: obs.StageConfig{RatePPS: 10},
+		Parallel: 1, Sizer: &Sizer{Fixed: 10}, OutDir: dir, Guard: pol}, []string{"127.0.0.1"}, tr, nil)
+	if len(rs) != 1 || rs[0].State != "done" {
+		t.Fatalf("merge run failed: %+v", rs)
+	}
+	cmd := rs[0].Observations[0].AssetKey
+	if strings.Count(cmd, "--exclude-ports") != 1 || !strings.Contains(cmd, "--exclude-ports 8080,8090,9100") {
+		t.Fatalf("expected single merged --exclude-ports, got: %q", cmd)
+	}
+}

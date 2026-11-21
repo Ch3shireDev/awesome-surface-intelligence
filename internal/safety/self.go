@@ -29,15 +29,10 @@ var defaultSelfPorts = []struct{ env, def string }{
 const extraSelfPorts = "8094,8095"
 
 func loadSelf(p *Policy) error {
-	if v := strings.ToLower(strings.TrimSpace(os.Getenv("ASI_SELF_PORTS"))); v == "off" || v == "none" || v == "0" {
+	switch v := strings.ToLower(strings.TrimSpace(os.Getenv("ASI_SELF_PORTS"))); v {
+	case "off", "none", "0", "false":
 		p.SelfPorts = nil
-	} else if v != "" {
-		ps, err := ParsePorts(v)
-		if err != nil {
-			return err
-		}
-		p.SelfPorts = ps
-	} else {
+	case "", "auto":
 		var list []string
 		for _, d := range defaultSelfPorts {
 			if port := portOf(envOr(d.env, d.def)); port != "" {
@@ -46,6 +41,12 @@ func loadSelf(p *Policy) error {
 		}
 		list = append(list, extraSelfPorts)
 		p.SelfPorts, _ = ParsePorts(strings.Join(list, ","))
+	default:
+		ps, err := ParsePorts(v)
+		if err != nil {
+			return err
+		}
+		p.SelfPorts = ps
 	}
 	p.Self = append(p.Self, localAddrs()...)
 	extra, err := parsePrefixes(splitList(os.Getenv("ASI_SELF_IPS")))
@@ -76,9 +77,19 @@ func localAddrs() []netip.Prefix {
 		return out
 	}
 	for _, a := range as {
-		if n, ok := a.(*net.IPNet); ok {
-			if ip, ok := netip.AddrFromSlice(n.IP); ok {
-				ip = ip.Unmap()
+		var raw net.IP
+		switch v := a.(type) {
+		case *net.IPNet:
+			raw = v.IP
+		case *net.IPAddr:
+			raw = v.IP
+		}
+		if raw == nil {
+			continue
+		}
+		if ip, ok := netip.AddrFromSlice(raw); ok {
+			ip = ip.Unmap()
+			if !ip.IsUnspecified() {
 				out = append(out, netip.PrefixFrom(ip, ip.BitLen()))
 			}
 		}
@@ -117,6 +128,17 @@ func (p *Policy) IsSelf(ip string) bool {
 		}
 	}
 	return false
+}
+
+// IsSelfPort reports whether (ip, proto, port) is a port of our own stack on the scanner host.
+func (p *Policy) IsSelfPort(ip, proto string, port int) bool {
+	if p == nil || len(p.SelfPorts) == 0 || port <= 0 {
+		return false
+	}
+	if proto != "" && !strings.EqualFold(proto, "tcp") {
+		return false
+	}
+	return p.IsSelf(ip) && p.SelfPorts.Contains(port)
 }
 
 // SplitSelf separates scanner-host addresses (they get their own chunk without the

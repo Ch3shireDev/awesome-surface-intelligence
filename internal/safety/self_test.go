@@ -59,9 +59,24 @@ func TestSelfPortsFromEnv(t *testing.T) {
 	if p.SelfPorts != nil {
 		t.Fatal("AddSelfPorts re-enabled self ports that were switched off")
 	}
+	t.Setenv("ASI_SELF_PORTS", "false")
+	if p, err = FromEnv(); err != nil || p.SelfPorts != nil {
+		t.Fatalf("false: %v %v", p, err)
+	}
+	t.Setenv("ASI_SELF_PORTS", "auto")
+	if p, err = FromEnv(); err != nil || p.SelfPorts.String() != "5433,8091,8094-8095,18080,18090" {
+		t.Fatalf("auto: %v %v", p, err)
+	}
 	t.Setenv("ASI_SELF_PORTS", "22,8080")
 	if p, _ = FromEnv(); p.SelfPorts.String() != "22,8080" {
 		t.Fatalf("explicit: %s", p.SelfPorts)
+	}
+	// IsSelfPort checks loopback, self-IP, proto, port, and remote IP
+	if !p.IsSelfPort("127.0.0.1", "tcp", 8080) || !p.IsSelfPort("::1", "tcp", 8080) || !p.IsSelfPort("203.0.113.10", "tcp", 8080) {
+		t.Fatal("IsSelfPort should match self IP + own TCP port")
+	}
+	if p.IsSelfPort("127.0.0.1", "tcp", 8787) || p.IsSelfPort("127.0.0.1", "udp", 8080) || p.IsSelfPort(foreign, "tcp", 8080) {
+		t.Fatal("IsSelfPort false positive")
 	}
 }
 
@@ -105,5 +120,33 @@ func TestEnforceExcludesOwnPorts(t *testing.T) {
 	// without ExcludePorts nothing changes
 	if out, _ := p.Enforce(strings.Fields(defServices), Opts{}); strings.Join(out, " ") != defServices {
 		t.Fatalf("no exclusion: %v", out)
+	}
+	// user --exclude-ports merged into a single --exclude-ports (nmap aborts if passed twice)
+	got, err = run("-sT -Pn --top-ports 1000 --exclude-ports 9100")
+	if err != nil {
+		t.Fatalf("merge --exclude-ports: %v", err)
+	}
+	if n := strings.Count(got, "--exclude-ports"); n != 1 {
+		t.Fatalf("expected exactly one --exclude-ports, got %d in %q", n, got)
+	}
+	if !strings.HasSuffix(got, "--exclude-ports 5433,8080,8090-8091,9100") {
+		t.Fatalf("merged --exclude-ports: %q", got)
+	}
+	// with -sU enabled, TCP-only self exclusions use T: prefix so UDP ports stay intact
+	pUDP := Default()
+	pUDP.AllowUDP = true
+	outUDP, err := pUDP.Enforce(strings.Fields("-sS -sU -Pn -p T:80,8080,U:53,123"), Opts{ExcludePorts: own})
+	if err != nil {
+		t.Fatalf("udp + self exclude: %v", err)
+	}
+	joinedUDP := strings.Join(outUDP, " ")
+	if !strings.Contains(joinedUDP, "-p T:80,U:53,123") || !strings.HasSuffix(joinedUDP, "--exclude-ports T:5433,8080,8090-8091") {
+		t.Fatalf("udp + self exclude args: %q", joinedUDP)
+	}
+	// bare -PS (defaults to port 80) is dropped when port 80 is excluded
+	own80, _ := ParsePorts("80")
+	outBare, err := p.Enforce(strings.Fields("-sn -n -PS"), Opts{ExcludePorts: own80})
+	if err != nil || strings.Contains(strings.Join(outBare, " "), "-PS") {
+		t.Fatalf("bare -PS with port 80 excluded: %v %v", outBare, err)
 	}
 }
