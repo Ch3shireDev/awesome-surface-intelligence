@@ -68,10 +68,10 @@ i `make sync`.
 |---|---|---|---|
 | SEC-4 | SEC | Etap `http`: adapter **httpx** (tytuł, kod, nagłówki, cookies, cert TLS, przekierowania, tech, hash favicony) na usługach http/https z fazy 2. httpx dochodzi do obrazu skanera. | fingerprint 10% + discovery 30% |
 | SEC-5 | SEC | Etap `signatures`: **nuclei** z naszymi szablonami w `signatures/` (nagłówek, cookie, favicon, fragment HTML, ścieżki `/login` `/admin` `/version` bez logowania, wersja w stopce, CMS, staging). Tagi `intrusive,dos,fuzz,brute-force` wykluczone. Krótki opis „jak dodać sygnaturę”. | sygnatury (pkt 10 PDF) |
-| DEV-2 | DEV | Reconcile w bazie: stany `new/active/missing(n)/gone`, `reappeared`, `flapping`, `hours_seen`, próg braków dla hostów. Edycje użytkownika (tagi, notatki, nadpisania) trzymane na assecie. | zmiany w czasie 15% |
+| DEV-2 | DEV 🔨 *w toku: agent blackarch* | Reconcile w bazie: stany `new/active/missing(n)/gone`, `reappeared`, `flapping`, `hours_seen`, próg braków dla hostów. Edycje użytkownika (tagi, notatki, nadpisania) trzymane na assecie. | zmiany w czasie 15% |
 | DEV-3 | DEV | API `/api/v1` i RBAC: role `admin` / `operator` (dodawanie, usuwanie, modyfikacja) / `analyst` (modyfikacja i odczyt) / `viewer` (odczyt), tokeny (w bazie tylko hash), middleware, audit log. Pierwszy admin z `.env`. | role 10% |
 | SEC-6 | SEC | `internal/crypto`: AES-256-GCM dla pól wrażliwych (surowe wyjścia, nagłówki, cookies, certyfikaty, notatki). Klucze `ASI_ENCRYPTION_KEYS` z id, żeby dało się rotować. Opis w dokumentacji, co jest szyfrowane i dlaczego. | ochrona danych (część 10%) |
-| DEV-4 | DEV | Panel web na API: logowanie, **formularz celów** (ręcznie oraz upload CSV/JSON), lista assetów z edycją, **dashboard**: najważniejsze znaleziska, zmiany z ostatniego przebiegu, niestabilne hosty. Widoki zależne od roli. | dashboard 15% |
+| DEV-4 | DEV ⏳ *następne: agent blackarch (po DEV-2)* | Panel web na API: logowanie, **formularz celów** (ręcznie oraz upload CSV/JSON), lista assetów z edycją, **dashboard**: najważniejsze znaleziska, zmiany z ostatniego przebiegu, niestabilne hosty. Widoki zależne od roli. | dashboard 15% |
 
 ## P2: jutro do południa (punkty „mile widziane” i dopięcie)
 

@@ -9,6 +9,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Start', link: '/guide/quickstart' },
+      { text: 'Roadmapa', link: '/ROADMAP' },
       { text: 'Status projektu', link: '/status' },
       { text: 'Wizja', link: '/VISION' },
       { text: 'Zadania', link: '/TASKS' },
@@ -39,7 +40,7 @@ export default defineConfig({
         { text: 'Zadania i podział pracy', link: '/TASKS' },
         { text: 'Ustalenia z mentorem (wiążące)', link: '/MENTOR' },
         { text: 'Decyzje', link: '/DECISIONS' },
-        { text: 'Roadmapa i mapa wymagań', link: '/ROADMAP' },
+        { text: 'Roadmapa: gdzie jesteśmy', link: '/ROADMAP' },
         { text: 'Status: zrobione / do zrobienia / decyzje', link: '/status' },
       ]},
     ],
