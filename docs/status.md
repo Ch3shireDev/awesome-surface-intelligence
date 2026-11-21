@@ -65,6 +65,7 @@ staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo]
 | integracja DefectDojo (SEC-7) | 4 stałe testy (`ASI discovery`, `asi-changes`, `asi-httpx`, `asi-nuclei`) + `asi-nmap`, bez zamykania przy przebiegu częściowym |
 | skala >10 000 IP (DEV-10) | `127.0.0.0/18` (16 384 IP, 49 152 assety): 86 s end-to-end, 182 MB RAM, eksport CSV 0,31 s |
 | czysty start z GitHuba i próbka importu (SEC-9, ALL-2) | klon `Ch3shireDev/awesome-surface-intelligence`, `make env && make build && make test`; test `docs/public/import/inny-skaner.csv` w `internal/importer` |
+| pełny stack i demo na aktualnym `main` (21.11, 20:35) | `make up` (DefectDojo 3.5.202 + `asi-db` z TDE + skaner), `make demo` end-to-end: 12 celów → 7 hostów, 8 usług, etapy http i signatures, **4 testy w DD** (discovery `created 2/closed 3`, `asi-httpx`, `asi-nuclei`, `asi-changes`), diff 2 przebiegów: `+host .16`, `-host .14`, `~changed .15:80`, 3× `gone`, 1× `new`, potwierdzenie zniknięcia (`unstable`); panel `:8090` pokazuje 7 aktywnych hostów, 6 znalezisk, 4 zmiany, 2 niestabilne; `make crypto-check` 9/9 (0 jawnych `_enc`) |
 
 ## Decyzje do podjęcia
 
