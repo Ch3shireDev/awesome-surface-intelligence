@@ -27,6 +27,39 @@ ETA = upłynęło / procent · (1 − procent)
 Wagi odzwierciedlają typowy rozkład czasu (discovery jest tanie). ETA jest liczone od początku
 całego runu, więc stabilizuje się po kilku paczkach.
 
+## Skąd się bierze procent
+
+Postęp całości to suma etapów z wagami: wykrywanie hostów 15%, porty i usługi 60%, HTTP 15%, sygnatury 10%.
+Postęp etapu to suma postępu jego paczek ważona liczbą hostów.
+
+| źródło | kiedy | w panelu |
+|---|---|---|
+| raport narzędzia (`nmap --stats-every 2s`: ukończone hosty + „About X% done”) | nmap, gdy już coś wypisał | zwykły pasek |
+| szacunek z czasu: `czas paczki / oczekiwany czas`, max 90% | httpx i nuclei (nie raportują postępu) oraz nmap przed pierwszą linią statystyk | „≈” przy etapie i bledsze wypełnienie paczki |
+
+Oczekiwany czas paczki to zmierzona szybkość etapu (sekundy na host, uczona między przebiegami) razy
+liczba hostów. Jeśli narzędzie podało jakikolwiek postęp, ma pierwszeństwo, nawet gdy jest niższy od
+szacunku. Przykład: pełny skan TCP (`-ports auto` przy ≤16 hostach) jest dużo wolniejszy niż top-1000,
+więc szacunek pokazywałby 90% przez kilka minut.
+
+Stan wysyłany jest do przeglądarki przez SSE co najmniej raz na sekundę, także gdy nic się nie zmienia.
+Zielona kropka „na żywo” w rogu oznacza, że ramki przychodzą. Gdy przez 3 s nic nie przyjdzie, panel
+pokazuje, od ilu sekund brak danych, i łączy się ponownie.
+
+**nmap w kontenerze:** nmap 7.95 z Alpine wypisuje `--stats-every` tylko wtedy, gdy jego stdin jest
+terminalem i nmap jest procesem pierwszoplanowym. Skaner uruchamia więc nmapa z pseudo-terminalem
+(`internal/scanner/tty_linux.go`). Bez tego paczki stały na 0% aż do końca.
+
+## Widok na żywo
+
+- **Pasek segmentowy:** szerokość segmentu to waga etapu, wypełnienie to postęp etapu, a etap w toku jest animowany.
+- **„Teraz: etap X/4”:** co robi skaner, ile procesów działa, ile hostów etapu już zrobionych.
+- **Etapy:** ✓ zrobione, numer w kółku w toku, wyszarzone czekające. Przy każdym etapie: procent, hosty,
+  bieżący rozmiar paczki, czas i sekundy na host.
+- **Paczki** pogrupowane per etap: kółko = paczka wykrywania, kwadrat = pozostałe; wypełnienie = postęp,
+  zielone = gotowa, czerwone = przerwana. Po najechaniu: hosty, czas, oczekiwany czas, wynik.
+- **Wykryte usługi** dochodzą na górę listy z krótkim podświetleniem.
+
 ## Panel web
 
 ```bash

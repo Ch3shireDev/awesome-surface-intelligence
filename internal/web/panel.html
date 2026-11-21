@@ -76,7 +76,7 @@ select{font:inherit;padding:5px;border-radius:6px;border:1px solid var(--line);b
 .live-dot.on i{background:var(--ok);box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent);animation:pulse 1.6s infinite}
 @keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .steps{display:grid;gap:10px}
-.step{display:grid;grid-template-columns:34px 210px 1fr 230px;gap:12px;align-items:center}
+.step{display:grid;grid-template-columns:34px 210px 1fr 280px;gap:12px;align-items:center}
 .step .ico{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid var(--idle);color:var(--muted)}
 .step.running .ico{border-color:var(--pc);color:var(--pc)}
 .step.done .ico{background:var(--pc);border-color:var(--pc);color:#fff}
@@ -151,6 +151,8 @@ const STEPS={discovery:['Wykrywanie hostów','nmap -sn: które adresy żyją'],s
   http:['HTTP / TLS','httpx: tytuł, nagłówki, cookies, cert'],signatures:['Sygnatury','nuclei: CMS, panele, staging']};
 const W={discovery:.15,services:.6,http:.15,signatures:.1};
 const pcol=n=>`var(--p-${n})`;
+// polska odmiana: 1 proces, 2-4 procesy, 5+ procesow (12-14 tez "procesow")
+const plural=(n,one,few,many)=>n===1?one:(n%10>=2&&n%10<=4&&(n%100<12||n%100>14))?few:many;
 let lastFrame=0,seenSvc=new Set(),firstFrame=true;
 function phasePct(p){return p.state==='done'||p.state==='skipped'?100:(p.hosts?Math.min(100,100*p.partial/p.hosts):0)}
 function render(s){
@@ -172,7 +174,7 @@ function render(s){
   if(st==='done') $('now').innerHTML=`<b>Gotowe.</b> <span class="muted">${s.hosts_up} aktywnych hostów, ${s.open} otwartych portów. Zmiany względem poprzedniego przebiegu: zakładka Historia i diff (albo w panelu: Dashboard).</span>`;
   else if(st==='interrupted') $('now').innerHTML=`<b>Przerwany</b> <span class="muted">(koniec okna albo zatrzymanie). Niezeskanowane cele można wznowić w panelu: Skany → Wznów.</span>`;
   else if(cur) $('now').innerHTML=`<b>Teraz: etap ${idx+1}/${ph.length} · ${esc(STEPS[cur.name]?.[0]||cur.name)}</b>
-    <span class="muted">${runCh.length} ${runCh.length===1?'proces':'procesów'} w toku · ${Math.round(cur.partial)}/${cur.hosts} ${cur.name==='discovery'?'adresów':'hostów'}${runCh.some(c=>c.estimated)?' · ≈ szacunek z czasu':''}</span>`;
+    <span class="muted">${runCh.length} ${plural(runCh.length,'proces','procesy','procesów')} w toku · ${Math.round(cur.partial)}/${cur.hosts} ${cur.name==='discovery'?'adresów':'hostów'}${runCh.some(c=>c.estimated)?' · ≈ szacunek z czasu':''}</span>`;
   else $('now').innerHTML='<b>Planowanie</b> <span class="muted">rozwijanie zakresów, DNS, reguły bezpieczeństwa…</span>';
   $('k-targets').textContent=s.targets;$('k-up').textContent=s.hosts_up;$('k-open').textContent=s.open;
   $('k-chunks').textContent=ch.filter(c=>c.state!=='running').length+' / '+ch.length;

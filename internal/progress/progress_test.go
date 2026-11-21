@@ -33,9 +33,13 @@ func TestSnapshotEstimatesSilentChunks(t *testing.T) {
 	if s.Percent <= 0 {
 		t.Fatalf("overall percent must move, got %.2f", s.Percent)
 	}
-	// tool-reported progress above the estimate wins and is not marked as estimated
-	tr.Update(func(s *State) { s.Chunks[0].Percent = 80 })
-	if c := tr.Snapshot().Chunks[0]; c.Estimated || c.Percent != 80 {
+	// any tool-reported progress wins over the estimate, also when it is lower
+	tr.Update(func(s *State) { s.Chunks[0].Percent = 2; s.Chunks[1].Percent = 80 })
+	s = tr.Snapshot()
+	if c := s.Chunks[0]; c.Estimated || c.Percent != 2 {
+		t.Fatalf("reported 2%% must win over ~50%% estimate: %.1f estimated=%v", c.Percent, c.Estimated)
+	}
+	if c := s.Chunks[1]; c.Estimated || c.Percent != 80 {
 		t.Fatalf("reported 80%% must win: %.1f estimated=%v", c.Percent, c.Estimated)
 	}
 }

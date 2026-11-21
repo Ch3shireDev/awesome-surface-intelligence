@@ -22,8 +22,8 @@ type Chunk struct {
 	Started   time.Time `json:"started"`
 	Seconds   float64   `json:"seconds"`
 	Error     string    `json:"error,omitempty"`
-	// Expected duration (s) from the measured speed of the phase; while the tool reports nothing,
-	// the snapshot shows elapsed/Expected (capped at 90%) and marks the chunk Estimated.
+	// Expected duration (s) from the measured speed of the phase; while the tool has reported nothing
+	// yet, the snapshot shows elapsed/Expected (capped at 90%) and marks the chunk Estimated.
 	Expected  float64 `json:"expected_s,omitempty"`
 	Estimated bool    `json:"estimated,omitempty"`
 }
@@ -157,10 +157,10 @@ func (t *Tracker) snapshotLocked() State {
 		cc := *c
 		if cc.State == "running" {
 			cc.Seconds = time.Since(cc.Started).Seconds()
-			if cc.Expected > 0 {
-				if est := min(0.9, cc.Seconds/cc.Expected) * 100; est > cc.Percent {
-					cc.Percent, cc.Estimated = est, true
-				}
+			// tool-reported progress (nmap --stats-every) always wins: e.g. a full-TCP chunk is much
+			// slower than the measured top-1000 speed and a time estimate would sit at 90% for minutes
+			if cc.Expected > 0 && cc.Percent == 0 {
+				cc.Percent, cc.Estimated = min(0.9, cc.Seconds/cc.Expected)*100, true
 			}
 		}
 		partial[cc.Phase] += float64(cc.Hosts) * cc.Percent / 100
