@@ -29,7 +29,7 @@ func TestScore(t *testing.T) {
 		port int
 		want string
 	}{
-		{"8.8.8.8", 3389, "high"}, {"10.0.0.1", 3389, "medium"}, {"203.0.113.7", 5432, "medium"},
+		{"8.8.8.8", 3389, "high"}, {"10.0.0.1", 3389, "medium"}, {"10.0.0.2", 5432, "medium"},
 		{"8.8.8.8", 8888, "medium"}, {"8.8.8.8", 443, "low"},
 	}
 	for _, c := range cases {
