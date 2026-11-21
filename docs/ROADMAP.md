@@ -13,7 +13,7 @@ M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅, DEV-9 ✅ (porównanie przebiegów, ocena analityka, edycja harmonogramu), HTTP/sygnatury w assecie ✅
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur (DEV-7 osobno)
 M6 Ochrona danych i role  █████████░  95%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅; brak: tokeny API w GUI (DEV-3)
-M7 Harmonogram i eksport  █████████░  90%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 ✅ (eksport + import)
+M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5 ✅, SEC-8 ✅, SEC-7 ✅ (asi-changes, asi-nmap/httpx/nuclei natywnie; test na DD organizatorów czeka na SEC-2), DEV-6 ✅
 M8 Finisz dla jury        ███░░░░░░░  30%  🔨  test skali ✅ (DEV-10); SEC-9, ALL-1, ALL-2 nie zaczęte
 ```
 
@@ -108,5 +108,6 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | 21.11 ~16:50 | SEC-8: polityka skanera `internal/safety` (zakres, wykluczenia wbudowane i własne, allowlista portów i flag nmapa, twardy limit pps), sprawdzana w planie i w workerze; profile `raw`/`unprivileged`, decyzja UDP |
 | 21.11 ~16:50 | SEC-6: `asi-db` na `pg_tde` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM, rotacja kluczy, `make env-keys`, `make crypto-check` 9/9 OK ([Szyfrowanie](guide/encryption.md)) |
 | 21.11 ~16:55 | panel: oś „Zmiany w czasie” z godziną i datą przebiegów, klikalne KPI (np. „otwarte usługi” → Assety z filtrem), filtr oceny; pliki celów do pobrania w dokumentacji |
+| 21.11 ~17:50 | SEC-7 dokończone: httpx i nuclei do DD natywnymi parserami (`asi-httpx`, `asi-nuclei`), `close_old` tylko przy pełnym etapie; lab: diff w DD per narzędzie |
 | 21.11 ~17:00 | SEC-7: test `asi-changes` w DD (missing/gone/flapping/zmiana, zamykane, gdy warunek mija), brak `close_old` dla przebiegów częściowych też w `asi upload`, `-format nmap` do stałego `asi-nmap`; lab: 4 przebiegi, missing → gone ([DefectDojo](guide/defectdojo.md)) |
 

@@ -481,6 +481,8 @@ func cmdScan(args []string) {
 	// otherwise hosts we never reached would be wrongly marked as mitigated.
 	if dd != nil {
 		uploadBatch(dd, ddTarget, svcs, !interrupted, tr)
+		// SEC-7: raw httpx / nuclei output -> native DD parsers, tests asi-httpx / asi-nuclei
+		exportNative(dd, ddTarget, dir, !interrupted, tr.Logf)
 	}
 
 	status := "done"
@@ -616,6 +618,7 @@ func cmdUpload(args []string) {
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
 	closeOld := fs.Bool("close-old", true, "close findings missing from this run (default: false for an interrupted run)")
 	changes := fs.Bool("changes", true, "also send the asi-changes test (missing/gone/flapping/changed) from the database")
+	native := fs.Bool("native", true, "also send raw httpx/nuclei output to the native DD parsers (tests asi-httpx, asi-nuclei)")
 	fs.Parse(args)
 	c, err := ddClient()
 	must(err)
@@ -653,6 +656,9 @@ func cmdUpload(args []string) {
 		log.Fatal(err)
 	}
 	log.Printf("%s -> %s/test/%d  delta=%v", *run, c.URL, res.Test, res.Delta)
+	if *native {
+		exportNative(c, t, *run, *closeOld, log.Printf)
+	}
 	if *changes {
 		if url := os.Getenv("ASI_DATABASE_URL"); url == "" {
 			log.Printf("asi-changes skipped: no ASI_DATABASE_URL")

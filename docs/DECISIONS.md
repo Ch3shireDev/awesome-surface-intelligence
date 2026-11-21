@@ -199,6 +199,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Etap services skanuje top-N nmapa **plus porty wysokiego ryzyka spoza top 1000** (Redis, MongoDB,
       Docker API...). Bez tego Redis z labu byl niewidoczny.
 
+18. **httpx i nuclei do DD natywnymi parserami, kazde do stalego testu** (21.11, SEC-7).
+    - `asi-httpx` (`httpx Scan`) i `asi-nuclei` (`Nuclei Scan`): surowe JSONL z `results/<run>/{http,signatures}`
+      bez przepakowania - DD liczy diff per narzedzie, a nasze dane (naglowki, cookies, TLS) zostaja w ASI.
+    - `close_old` tylko gdy przebieg pelny, etap sie wykonal (`timings.csv`) i zadna paczka nie miala bledu;
+      pusty raport z etapu niepelnego/pominietego nie jest wysylany (zamknalby wszystkie wyniki webowe).
+    - Sprawdzone: DD 3.5.202 przyjmuje pusty JSONL (201) i zamyka poprzednie wyniki; lab `make demo`:
+      httpx `closed 1 / created 2 / untouched 5`, nuclei `created 2 / untouched 16` w przebiegu 2.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

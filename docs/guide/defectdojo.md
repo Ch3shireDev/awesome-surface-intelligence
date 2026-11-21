@@ -84,7 +84,7 @@ Zasady:
 - **Przebieg częściowy** wysyła `asi-changes` z `close_old=false`: dodaje nowe warunki, niczego nie zamyka.
 - **Tagi** `asi`, `asi-change`, `change-<warunek>` plus tagi użytkownika z ASI: edycja assetu w ASI trafia
   do DefectDojo.
-- Natywne parsery httpx i Nuclei dojdą z etapami `http` (SEC-4) i `signatures` (SEC-5).
+- Wyniki httpx i nuclei idą dodatkowo natywnymi parserami DD (sekcja niżej).
 
 Przykład z labu (`make demo` + 2 przebiegi bez zmian; `legacy` .14 wyłączony po przebiegu 1,
 próg braków hosta = 3):
@@ -107,3 +107,25 @@ stronie, dopasowanie przy reimporcie działa.
 - Reimport porównuje znaleziska po hashu (tytuł + opis). Zmiana wersji usługi zmienia opis →
   DefectDojo widzi to jako zamknięcie starego i utworzenie nowego znaleziska. Dla nas to
   pożądane („zmieniona usługa”), ale w DefectDojo nie jest oznaczone wprost jako „changed”.
+
+## Natywne parsery: `asi-httpx` i `asi-nuclei` (SEC-7)
+
+Surowe wyjście etapów `http` i `signatures` trafia do DD bez przepakowywania, każde do swojego stałego
+testu przez reimport. DD śledzi wtedy nowe i zamknięte wyniki per narzędzie:
+
+| etap | pliki w przebiegu | parser DD | test | DD dopasowuje po |
+|---|---|---|---|---|
+| `http` | `http/*.jsonl` (`httpx -json`) | `httpx Scan` | `asi-httpx` | tytuł (URL + kod HTTP) + endpoint |
+| `signatures` | `signatures/*.jsonl` (`nuclei -jsonl`) | `Nuclei Scan` | `asi-nuclei` | nazwa sygnatury + cwe + severity + komponent |
+
+Wysyłane na końcu `asi scan` z uploadem i przez `asi upload` (wyłączenie: `-native=false`).
+
+**Kiedy DD może zamknąć wynik (`close_old`):** tylko gdy cały przebieg jest pełny, etap naprawdę się
+wykonał (`<etap>/timings.csv` istnieje) i żadna jego paczka nie skończyła się błędem. Etap pominięty (np.
+brak httpx w obrazie), przerwany albo z błędami niczego w DD nie zamyka. Pusty raport z takiego etapu
+nie jest wysyłany, bo inaczej zamknąłby wszystkie wyniki webowe. Pełny etap bez wyników wysyła pusty
+raport z `close_old`: sygnatura, która przestała pasować, zostaje zamknięta.
+
+Parser httpx w DD przenosi URL, kod, tytuł strony, serwer, technologie, typ treści i przekierowania.
+Nagłówki, cookies i certyfikat TLS zostają w ASI (obserwacje `http`, zaszyfrowane, panel i `asi assets`).
+
