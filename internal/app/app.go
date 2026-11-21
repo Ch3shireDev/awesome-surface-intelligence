@@ -77,7 +77,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("POST /api/v1/targets", a.need("operator", a.addTargets))
 	m.Handle("POST /api/v1/targets/import", a.need("operator", a.importTargets))
 	m.Handle("POST /api/v1/targets/extract", a.need("operator", a.extractTargets))
-	m.Handle("PUT /api/v1/targets/{id}", a.need("operator", a.updateTarget))
+	m.Handle("PUT /api/v1/targets/{id}", a.need("analyst", a.updateTarget)) // DEV-12: edycja istniejących celów
 	m.Handle("DELETE /api/v1/targets/{id}", a.need("operator", a.deleteTarget))
 	m.Handle("GET /api/v1/scans/current", a.need("viewer", a.currentScan))
 	m.Handle("POST /api/v1/scans", a.need("operator", a.startScan))
@@ -87,7 +87,7 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/schedules", a.need("viewer", a.listSchedules))
 	m.Handle("GET /api/v1/schedules/preview", a.need("viewer", a.cronPreview))
 	m.Handle("POST /api/v1/schedules", a.need("operator", a.saveSchedule))
-	m.Handle("PUT /api/v1/schedules/{id}", a.need("operator", a.saveSchedule))
+	m.Handle("PUT /api/v1/schedules/{id}", a.need("analyst", a.saveSchedule)) // DEV-12: edycja istniejącego harmonogramu
 	m.Handle("DELETE /api/v1/schedules/{id}", a.need("operator", a.deleteSchedule))
 	m.Handle("GET /api/v1/export/{file}", a.need("viewer", a.exportAssets))
 	m.Handle("GET /api/v1/audit", a.need("admin", a.audit))
@@ -577,7 +577,19 @@ func (a *App) updateTarget(w http.ResponseWriter, r *http.Request, u store.User)
 		fail(w, 400, "bad request")
 		return
 	}
-	_, err := a.St.UpsertTargets(r.Context(), setName(t.Set), []targets.Target{{Target: t.Value, Asset: t.Asset,
+	// DEV-12: PUT edytuje ISTNIEJĄCY cel (rola analyst wystarcza). Zmiana samej wartości
+	// to w praktyce usunięcie starego i dodanie nowego, więc wymaga operatora.
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	cur, err := a.St.TargetValueByID(r.Context(), id)
+	if err != nil {
+		fail(w, 404, "nie ma celu o tym id")
+		return
+	}
+	if cur != t.Value {
+		fail(w, 400, "zmiana wartości celu = usunięcie i dodanie (rola operator); edytuj tagi, notatkę, właściciela")
+		return
+	}
+	_, err = a.St.UpsertTargets(r.Context(), setName(t.Set), []targets.Target{{Target: t.Value, Asset: t.Asset,
 		Owner: t.Owner, Tags: t.Tags, Enabled: t.Enabled, Note: t.Note}})
 	if err != nil {
 		fail(w, 500, err.Error())

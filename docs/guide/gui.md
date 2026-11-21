@@ -23,12 +23,15 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 
 ## Role
 
-| rola | może |
-|---|---|
-| `viewer` | czytać wszystko poza administracją |
-| `analyst` | + edytować assety (tagi, notatki) |
-| `operator` | + cele (dodawanie, import, usuwanie), start/stop skanów |
-| `admin` | + użytkownicy i konta (role, blokada, reset hasła, usuwanie), dziennik audytu |
+Nazwy ról w kodzie odpowiadają wprost czterem rolom z pkt 13 treści zadania. Każda rola widzi tylko te
+elementy interfejsu, do których ma uprawnienia (pkt 15), a API sprawdza to samo jeszcze raz po stronie serwera.
+
+| rola w PDF | w ASI | może |
+|---|---|---|
+| **Odczyt** | `viewer` | czytać wszystko poza administracją: dashboard, assety i historię zmian, przebiegi, postęp skanu |
+| **Modyfikacja i odczyt** | `analyst` | + edytować istniejące wartości niezależnie od stanu skanu: tagi, notatki i właściciel assetu, tagi/notatka/właściciel celu, parametry istniejącego harmonogramu. Nie dodaje ani nie usuwa celów i nie uruchamia skanów |
+| **Dodawanie, usuwanie, modyfikacja** | `operator` | + dodawać i usuwać cele (formularz, CSV/JSON, import), dodawać i usuwać harmonogramy, uruchamiać i zatrzymywać skany |
+| **Administracja** | `admin` | + użytkownicy i konta (role, blokada, reset hasła, usuwanie), dziennik audytu |
 
 Pierwszy admin powstaje przy starcie z `ASI_ADMIN_USER` / `ASI_ADMIN_PASSWORD`, gdy w bazie nie ma
 użytkowników. Kolejnych dodaje admin w GUI. RBAC jest lokalny, bez synchronizacji z DefectDojo (ustalenie z mentorem).
