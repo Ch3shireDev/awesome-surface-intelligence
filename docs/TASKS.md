@@ -140,10 +140,10 @@ Zadania kodu wynikające z analizy (przed LAB-1…5):
 
 | ID | kto | zadanie |
 |---|---|---|
-| LAB-T1 | DEV | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
+| LAB-T1 | DEV 🔨 *w toku: agy/blackarch* | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
 | LAB-T2 | SEC | Nie skanować samego siebie: wykluczenie portów ASI/DD przy celu = host skanera (wykluczenia per port albo automatyczne). |
 | LAB-T3 | SEC | Sygnatury detekcyjne (`signatures/`): phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, Nginx Proxy Manager, Traefik dashboard (`api.insecure`), API Toxiproxy, httpbin. Tylko detekcja, bez logowania. Łączy się z SEC-10 (IoT). |
-| LAB-T4 | DEV | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
+| LAB-T4 | DEV 🔨 *w toku: agy/blackarch* | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
 
 ## Ryzyka
 
