@@ -8,10 +8,10 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 ```
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
-M2 Fundament (kontrakt+DB)████████░░  80%  🔨  brak: SEC-1 arm64, SEC-2 materiały, SEC-3 lab
+M2 Fundament (kontrakt+DB)█████████░  90%  🔨  SEC-1 ✅; brak: SEC-2 materiały, SEC-3 lab (w toku)
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                █████████░  90%  ✅  DEV-4 (brak: przegląd wizualny w przeglądarce, tokeny API w GUI)
-M5 Fingerprint i sygnatury░░░░░░░░░░   0%  ⬜  SEC-4, SEC-5
+M5 Fingerprint i sygnatury░░░░░░░░░░   0%  🔨  SEC-4 (zarezerwowane), SEC-5
 M6 Ochrona danych i role  █████░░░░░  50%  🔨  role+audit ✅ (DEV-4); brak SEC-6: AES-GCM + szyfrowanie PG
 M7 Harmonogram i eksport  ████░░░░░░  40%  ⬜  DEV-5, DEV-6 (eksport CSV/JSON ✅), SEC-7, SEC-8
 M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 (dokumentacja w VitePress jest)
@@ -23,7 +23,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 |---|---|---|---|
 | **M0** Stack + PoC | DefectDojo 3.5.202 w compose, pierwszy import nmapa, pętla reimportu | Etap 0–1 PoC fatusi | ✅ |
 | **M1** Silnik skanowania | `asi scan`: plan celów (CSV/JSON/TXT, CIDR, domeny, reguły zakresu), 2 fazy nmapa, adaptacyjne paczki, globalny limit pps, okno czasowe, pasek CLI + panel SSE, diff, skan potwierdzający, reimport Generic Findings (`created/closed/reactivated`) | silnik z `~/asi-poc` | ✅ |
-| **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1, SEC-2, SEC-3 | 🔨 |
+| **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1 ✅, SEC-2, SEC-3 🔨 | 🔨 |
 | **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 | ✅ |
 | **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | ✅ |
 | **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4, SEC-5, DEV-7 | ⬜ |
