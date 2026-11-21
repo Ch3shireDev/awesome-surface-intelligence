@@ -28,6 +28,11 @@ Brakuje (wymagania „musi” z PDF):
 - harmonogram ze wznawianiem w kolejnym oknie,
 - eksport CSV, import cudzych wyników.
 
+## Kto co bierze (na bieżąco)
+
+Oznaczenie przy ID: 🔨 *w toku: kto*, ✅ *zrobione: commit*. Bierz wolne zadanie, oznacz je commitem w tym pliku,
+dopiero potem pisz kod. Podział DEV/SEC jest orientacyjny.
+
 ## Zasada, żeby się nie blokować
 
 Na start **DEV-0** ustala kontrakt `Observation` i interfejs adaptera skanera (`VISION.md` 4.3).
@@ -42,8 +47,8 @@ i `make sync`.
 | SEC-1 | SEC | Migracja fatusia-2 na `~/asi` (instrukcja w `~/sync/komunikacja/asi_blackarch.md`). `make up` buduje obraz `nmap-scanner` z `asi` na arm64. Potem `make asi-scan` na 127.0.0.1 i usunięcie `~/sync/hacknation-asi`. | panel :8090 i findingi w DD z kontenera |
 | SEC-2 | SEC | Materiały od organizatorów (Discord albo stanowisko AGH): kontenery labu, dozwolone porty, limity ruchu, wyniki referencyjne, przykładowe sygnatury, format JSON/CSV, testowe DD. Wpisać do `DECISIONS.md` „Otwarte pytania”. | zakres labu w `targets/`, limity w profilu |
 | SEC-3 | SEC | Własny mini-lab w compose (profil `lab`): nginx, WordPress, panel `/admin`, nagłówek `X-Environment: staging`, ciekawe cookie, usługa „migająca” (cron on/off). Do tego `make demo`: 2 przebiegi ze zmianą pomiędzy. | `make demo` pokazuje new/gone/changed/unstable |
-| DEV-0 | DEV | Kontrakt: `Observation` (kind, asset_key, data, fp_hash, confidence), interfejs `Scanner` i adapter nmap przepięty na niego. | SEC może pisać adaptery |
-| DEV-1 | DEV | Baza `asi-postgres` (osobna od DD) z migracjami SQL w binarce. Tabele: targets, runs, chunks, observations, assets, asset_events, users, api_tokens, audit_log. Zapis przebiegu do bazy zamiast `results/*.json` (pliki zostają jako eksport). | 2 przebiegi w bazie, diff z bazy |
+| DEV-0 | DEV 🔨 *w toku: agent blackarch* | Kontrakt: `Observation` (kind, asset_key, data, fp_hash, confidence), interfejs `Scanner` i adapter nmap przepięty na niego. | SEC może pisać adaptery |
+| DEV-1 | DEV 🔨 *w toku: agent blackarch* | Baza `asi-postgres` (osobna od DD) z migracjami SQL w binarce. Tabele: targets, runs, chunks, observations, assets, asset_events, users, api_tokens, audit_log. Zapis przebiegu do bazy zamiast `results/*.json` (pliki zostają jako eksport). | 2 przebiegi w bazie, diff z bazy |
 
 ## P1: jutro rano (wymagania „musi” i największe wagi)
 
