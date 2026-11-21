@@ -16,6 +16,8 @@ scans/results/*.json
 !/targets/example.csv
 !/targets/example.json
 !/targets/lab.csv
+!/targets/scope.example.txt
+!/targets/exclude.example.txt
 
 # dokumentacja
 /docs/node_modules

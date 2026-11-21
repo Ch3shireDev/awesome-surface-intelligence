@@ -147,7 +147,7 @@ func addPlanFlags(fs *flag.FlagSet) planFlags {
 func (p planFlags) build() targets.Plan {
 	ts, err := targets.Load(*p.targets)
 	must(err)
-	return targets.BuildPlan(ts, targets.PlanOptions{SkipCDN: *p.skipCDN, OnlyInventory: *p.onlyInv})
+	return policyPlan(policy(), targets.BuildPlan(ts, targets.PlanOptions{SkipCDN: *p.skipCDN, OnlyInventory: *p.onlyInv}))
 }
 
 func cmdPlan(args []string) {
@@ -207,6 +207,13 @@ func cmdScan(args []string) {
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
 	fs.Parse(args)
 
+	// SEC-8: hard limits from .env win over flags; profile args must pass the nmap allow-list
+	pol := policy()
+	var limitNotes []string
+	*rate, *parallel, limitNotes = pol.Limits(*rate, *parallel)
+	checkNmapArgs(pol, "-discovery-args", *discArgs)
+	checkNmapArgs(pol, "-nmap", *svcArgs)
+
 	runID := time.Now().Format("20060102-150405")
 	dir := filepath.Join(*outRoot, runID)
 	must(os.MkdirAll(dir, 0o755))
@@ -229,6 +236,10 @@ func cmdScan(args []string) {
 	}
 	bar := cli.NewBar(tr)
 	bar.Start()
+	tr.Logf("policy: %s", pol)
+	for _, n := range limitNotes {
+		tr.Logf("policy: %s", n)
+	}
 
 	var rec *dbRecorder
 	if st, err := openStore(context.Background(), *dbURL); err != nil {
@@ -249,6 +260,7 @@ func cmdScan(args []string) {
 			bar.Stop()
 			log.Fatalf("resume %s: %v", *resume, err)
 		}
+		plan = policyPlan(pol, plan)
 		setLabel = "resume:" + *resume
 		tr.Logf("resume: %d targets left over from %s", len(plan.Hosts), *resume)
 	} else {
@@ -265,7 +277,8 @@ func cmdScan(args []string) {
 	})
 	tr.Logf("plan: %d IPs, %d targets skipped (see plan.json)", len(ips), len(plan.Skipped))
 	rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
-		"discovery_args": *discArgs, "nmap_args": *svcArgs, "window": window.String(), "targets": len(ips)})
+		"discovery_args": *discArgs, "nmap_args": *svcArgs, "window": window.String(), "targets": len(ips),
+		"policy": pol.Summary()})
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
 	tune := loadTuning(tunePath)
@@ -312,7 +325,7 @@ func cmdScan(args []string) {
 		z.Seed(tune["discovery"])
 		discRes = scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", RunID: runID, Adapter: nmapad.Discovery(*discArgs),
 			Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
-			OutDir: filepath.Join(dir, "discovery"), OnStart: rec.chunkStart("discovery")}, ips, tr,
+			OutDir: filepath.Join(dir, "discovery"), OnStart: rec.chunkStart("discovery"), Guard: pol}, ips, tr,
 			func(r scanner.ChunkResult) {
 				keep(r.Observations)
 				if r.State == "killed" && ctx.Err() != nil {
@@ -346,7 +359,7 @@ func cmdScan(args []string) {
 	z.Seed(tune["services"])
 	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", RunID: runID, Adapter: nmapad.Services(*svcArgs),
 		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
-		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services")}, up, tr,
+		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services"), Guard: pol}, up, tr,
 		func(r scanner.ChunkResult) {
 			keep(r.Observations)
 			if r.State == "killed" && ctx.Err() != nil {
@@ -394,7 +407,7 @@ func cmdScan(args []string) {
 		if n > 0 {
 			tr.Logf("confirm: %d services vanished since %s on live hosts - re-checking", n, prev)
 			args := append(strings.Fields("-sT -sV --version-light -Pn -T3 --max-retries 4"), "--max-rate", perProc)
-			hosts := scanner.Confirm(ctx, recheck, args, *parallel, filepath.Join(dir, "confirm"))
+			hosts := scanner.Confirm(ctx, recheck, args, *parallel, filepath.Join(dir, "confirm"), pol, perProcN, tr.Logf)
 			confirmed := nmapad.FromHosts(hosts)
 			keep(confirmed)
 			rec.observations("confirm", confirmed)
@@ -465,6 +478,7 @@ func cmdScan(args []string) {
 		"interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL,
 		"phases": snap.Phases, "parallel": *parallel, "rate_pps": *rate,
 		"discovery_args": *discArgs, "nmap_args": *svcArgs, "pending": pending, "resume_of": *resume,
+		"policy": pol.Summary(),
 	})
 	dbStatus := "completed"
 	if interrupted {

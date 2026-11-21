@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 21.11.2026, 16:30** (agent blackarch). Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 21.11.2026, 16:50** (agent fatusia-1). Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -13,7 +13,7 @@ M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                █████████░  90%  ✅  DEV-4 (brak: przegląd wizualny w przeglądarce, tokeny API w GUI)
 M5 Fingerprint i sygnatury░░░░░░░░░░   0%  🔨  SEC-4 (zarezerwowane), SEC-5
 M6 Ochrona danych i role  ██████████ 100%  ✅  role+audit ✅ (DEV-4), SEC-6 ✅: pg_tde + pola AES-GCM, make crypto-check
-M7 Harmonogram i eksport  ███████░░░  70%  🔨  DEV-5 ✅, DEV-6 (eksport ✅, import ❌), SEC-7, SEC-8
+M7 Harmonogram i eksport  ████████░░  80%  🔨  DEV-5 ✅, DEV-6 (eksport ✅, import ❌), SEC-7, SEC-8 ✅
 M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 (dokumentacja w VitePress jest)
 ```
 
@@ -28,7 +28,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 | **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | ✅ |
 | **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4, SEC-5, DEV-7 | ⬜ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6, DEV-3 | ✅ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 🟡, SEC-7, SEC-8 | 🔨 |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 🟡, SEC-7, SEC-8 ✅ | 🔨 |
 | **M8** Finisz | publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | SEC-9, ALL-1, ALL-2 | ⬜ |
 
 ## Ścieżka krytyczna
@@ -46,6 +46,7 @@ i DefectDojo; RBAC zostaje jednym kontem admina (mentor to akceptuje).
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~16:50 | SEC-8: polityka skanera `internal/safety` (zakres, wykluczenia wbudowane i własne, allowlista portów i flag nmapa, twardy limit pps), sprawdzana w planie i w workerze; profile `raw`/`unprivileged`, decyzja UDP |
 | 21.11 ~13:00 | PoC: chunkowany nmap → DefectDojo (`~/asi-poc`) |
 | 21.11 ~14:00 | 2 fazy, adaptacyjne paczki, postęp CLI + web, diff, potwierdzanie zniknięć, Generic Findings |
 | 21.11 14:44 | konsultacja z mentorem: GUI wymagane, Postgres + szyfrowanie, RBAC 10% ([MENTOR](MENTOR.md)) |

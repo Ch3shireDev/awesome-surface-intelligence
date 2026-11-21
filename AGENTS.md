@@ -76,6 +76,7 @@ Przeczytaj PRZED wieksza zmiana:
 | `internal/store` | Postgres `asi-db` (pgx), migracje SQL w binarce, `Sealer` dla pol `_enc`; `docs/guide/database.md` |
 | `internal/targets` | wejscie CSV/JSON/TXT, plan, CIDR, DNS, reguly bezpieczenstwa |
 | `internal/scanner` | pula workerow, adaptacyjny Sizer, nmap `--stats-every`, skan potwierdzajacy |
+| `internal/safety` | polityka skanera (SEC-8): zakres, wykluczenia, allowlista portow i flag nmapa, twarde limity z `.env`, profile raw/unprivileged; `docs/guide/safety.md` |
 | `internal/nmapxml` | parser XML nmapa |
 | `internal/findings` | model uslug, ocena "ciekawosci", diff, Generic Findings dla DD |
 | `internal/progress`, `internal/cli`, `internal/web` | stan na zywo, pasek CLI, panel web (SSE) |

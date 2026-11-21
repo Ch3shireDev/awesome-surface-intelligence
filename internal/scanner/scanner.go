@@ -26,6 +26,7 @@ import (
 	"asi/internal/nmapxml"
 	"asi/internal/obs"
 	"asi/internal/progress"
+	"asi/internal/safety"
 )
 
 // Sizer decides how many hosts go into the next nmap process.
@@ -93,6 +94,9 @@ type PhaseConfig struct {
 	OutDir       string
 	// OnStart is called when a chunk starts (e.g. to record it in the database).
 	OnStart func(id int, targets []string)
+	// Guard (SEC-8): checked again in the worker right before the tool starts - excluded or
+	// out-of-scope IPs are dropped from the chunk and the final nmap command line is validated.
+	Guard *safety.Policy
 }
 
 type ChunkResult struct {
@@ -205,6 +209,20 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 		tr.Phase(cfg.Name).ChunkSize = len(hosts)
 	})
 
+	if cfg.Guard != nil && cfg.Adapter.Tool() == "nmap" {
+		allowed, blocked := cfg.Guard.Filter(hosts)
+		for _, b := range blocked {
+			tr.Logf("POLICY %s %s: %s blocked in worker - %s", cfg.Name, name, b.IP, b.Reason)
+		}
+		if len(blocked) > 0 {
+			hosts, r.Hosts = allowed, allowed // blocked IPs are not covered by this chunk
+			tr.Update(func(s *progress.State) { tr.Phase(cfg.Name).HostsDone += len(blocked); ch.Hosts = len(allowed) })
+		}
+		if len(hosts) == 0 {
+			return blockedChunk(cfg, r, ch, "policy: every target of the chunk is blocked", tr)
+		}
+	}
+
 	cctx := ctx
 	if cfg.ChunkTimeout > 0 {
 		var cancel context.CancelFunc
@@ -215,6 +233,13 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 		TargetsFile: filepath.Join(cfg.OutDir, name+".targets")}
 	os.WriteFile(c.TargetsFile, []byte(strings.Join(hosts, "\n")+"\n"), 0o644)
 	cmd, spec := cfg.Adapter.Command(cctx, c, cfg.Stage)
+	if cfg.Guard != nil && cfg.Adapter.Tool() == "nmap" {
+		args, err := cfg.Guard.Enforce(cmd.Args[1:], safety.Opts{Final: true, TargetsFile: c.TargetsFile, MaxProcRate: cfg.Stage.RatePPS})
+		if err != nil {
+			return blockedChunk(cfg, r, ch, "policy: "+err.Error(), tr)
+		}
+		cmd.Args = append(cmd.Args[:1], args...)
+	}
 	r.Output = spec.Path
 	logf, _ := os.Create(filepath.Join(cfg.OutDir, name+".log"))
 	defer logf.Close()
@@ -298,6 +323,17 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 	return r
 }
 
+// blockedChunk finishes a chunk the safety policy did not let run.
+func blockedChunk(cfg PhaseConfig, r ChunkResult, ch *progress.Chunk, why string, tr *progress.Tracker) ChunkResult {
+	r.State, r.Error = "failed", why // chunks.status has no "blocked"; the error says "policy: ..."
+	tr.Update(func(s *progress.State) {
+		ch.State, ch.Percent, ch.Error = "failed", 100, why
+		recomputePartial(s, tr, cfg.Name)
+	})
+	tr.Logf("POLICY %s chunk_%04d not started: %s", cfg.Name, r.ID, why)
+	return r
+}
+
 // must be called under tracker lock (inside Update)
 func recomputePartial(s *progress.State, tr *progress.Tracker, phase string) {
 	var part float64
@@ -328,7 +364,7 @@ func writeTimings(path string, rs []ChunkResult) {
 // Confirm re-scans specific ports on specific hosts (one nmap per host, up to
 // parallel at once). Used to double-check services that "disappeared" while the
 // host is still up - a single lost probe must not close a finding.
-func Confirm(ctx context.Context, ports map[string][]int, args []string, parallel int, outDir string) []nmapxml.Host {
+func Confirm(ctx context.Context, ports map[string][]int, args []string, parallel int, outDir string, guard *safety.Policy, procRate int, logf func(string, ...any)) []nmapxml.Host {
 	os.MkdirAll(outDir, 0o755)
 	var (
 		mu  sync.Mutex
@@ -346,8 +382,21 @@ func Confirm(ctx context.Context, ports map[string][]int, args []string, paralle
 			for i, p := range ps {
 				list[i] = strconv.Itoa(p)
 			}
-			x := filepath.Join(outDir, strings.ReplaceAll(ip, ":", "_")+".xml")
-			a := append(append([]string{}, args...), "-p", strings.Join(list, ","), "-oX", x, ip)
+			base := filepath.Join(outDir, strings.ReplaceAll(ip, ":", "_"))
+			x, tf := base+".xml", base+".targets"
+			os.WriteFile(tf, []byte(ip+"\n"), 0o644)
+			a := append(append([]string{}, args...), "-p", strings.Join(list, ","), "-oX", x, "-iL", tf)
+			if guard != nil {
+				if ok, why := guard.Check(ip); !ok {
+					logf("POLICY confirm: %s blocked - %s", ip, why)
+					return
+				}
+				var err error
+				if a, err = guard.Enforce(a, safety.Opts{Final: true, TargetsFile: tf, MaxProcRate: procRate}); err != nil {
+					logf("POLICY confirm %s: %v", ip, err)
+					return
+				}
+			}
 			exec.CommandContext(ctx, "nmap", a...).Run()
 			r, _ := nmapxml.ParseFile(x)
 			mu.Lock()

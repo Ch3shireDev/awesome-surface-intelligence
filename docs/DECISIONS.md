@@ -158,6 +158,26 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Zweryfikowane na arm64 (fatusia-2): `make crypto-check` 9/9 OK; proba kontrolna na zwyklym postgres:18
       znajduje jawny tekst w pliku tabeli, na `pg_tde` nie. Opis: `docs/guide/encryption.md`.
 
+15. **Polityka bezpieczenstwa skanera w `internal/safety`, sprawdzana takze w workerze** (21.11, SEC-8).
+    - Twarde limity tylko z `.env` (operator wdrozenia): `ASI_MAX_RATE` 1000 pps, `ASI_MAX_PARALLEL` 32,
+      `ASI_ALLOWED_PORTS`, `ASI_SCOPE`/`ASI_EXCLUDE` (+ pliki `targets/scope.txt`, `targets/exclude.txt`).
+      Flagi CLI i GUI (max 5000 pps) sa do nich obnizane z wpisem w logu.
+    - Wykluczenia wbudowane: `0.0.0.0/8`, `169.254.0.0/16` (metadane chmury), multicast, `240.0.0.0/4`, IPv6 link-local/multicast.
+    - Dwa punkty kontroli: plan (wykluczone w `skipped` z powodem) i worker tuz przed startem nmapa
+      (filtr IP paczki + walidacja calej linii polecen). Paczka odrzucona przez polityke ma status `failed`
+      i blad `policy: ...` - bez nowego statusu w `chunks` (bez migracji).
+    - Argumenty nmapa: allowlista flag zamiast denylisty. Zadnych celow w argumentach (jedno `-iL` = plik paczki),
+      bez spoofingu/evasion, bez `--min-rate`, `-T5`, `-A`, `-sC`, `--allports`; NSE tylko z listy nazw
+      detekcyjnych (kategorie zabronione - to sumy zbiorow, `discovery` zawiera brute-force).
+    - Porty: `-p` przycinane do allowlisty; bez `-p` dochodzi `-p <allowlista>` + `--top-ports` (nmap wybiera
+      top N sposrod dozwolonych - sprawdzone na 7.95/7.99). Porty sond `-PS/-PA` tez przycinane.
+    - Profile: `raw` (domyslny, NET_RAW: `-sS`, ICMP, ARP) i `unprivileged` (`docker-compose.unprivileged.yml`,
+      `cap_drop NET_RAW/NET_ADMIN`, nmap `--unprivileged`, tylko `-sT`). Domyslne argumenty dzialaja w obu.
+    - **UDP domyslnie wylaczone**: wolne, duzo `open|filtered`. `ASI_ALLOW_UDP=1` tylko na `53,123,161`
+      (DNS, NTP, SNMP - typowe nieswiadomie wystawione uslugi) i tylko w profilu `raw`.
+    - Zweryfikowane: testy jednostkowe (`internal/safety`, worker w `internal/scanner`), skan 127.0.0.1 bez roota
+      na blackarch (amd64) i oba profile w obrazie `nmap-scanner` na fatusia-2 (arm64: `syn` vs `connect`).
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

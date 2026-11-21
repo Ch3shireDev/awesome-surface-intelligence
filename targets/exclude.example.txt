@@ -1,0 +1,5 @@
+# Wykluczenia (SEC-8): nigdy nie skanowane, wygrywaja z zakresem i plikiem celow.
+# Kopiuj do targets/exclude.txt (gitignored). Jeden IP lub CIDR w linii, komentarze po #.
+# Wbudowane zawsze: 0.0.0.0/8, 169.254.0.0/16 (metadane chmury), multicast, 240.0.0.0/4.
+192.0.2.1        # np. brama / router
+198.51.100.0/28  # np. segment z drukarkami

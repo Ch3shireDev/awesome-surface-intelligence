@@ -7,13 +7,13 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | # | wymaganie | stan | jak / co brakuje |
 |---|---|---|---|
 | 1 | wczytanie IP, CIDR, domen | ✅ | CSV/JSON/TXT, wspólny schemat, `asi convert`; [Format celów](/guide/targets) |
-| 2 | bezpieczny, wielowątkowy skan nmap | ✅ | worker pool, `-sT`, `--version-light`, globalny `-rate`; [Bezpieczeństwo](/guide/safety) |
+| 2 | bezpieczny, wielowątkowy skan nmap | ✅ | worker pool, `-sT`, `--version-light`, globalny `-rate` + twardy limit `ASI_MAX_RATE`; polityka SEC-8 w planie i w workerze (zakres, wykluczenia, allowlista portów i flag nmapa); [Bezpieczeństwo](/guide/safety) |
 | 2 | czas trwania skanu | ✅ | `timings.csv` per faza, `run.json`, ETA na żywo |
 | 2 | podział na optymalne podgrupy | ✅ | 2 fazy + adaptacyjny `Sizer` (EWMA s/host) + pamięć `tuning.json`; [Podział](/guide/chunking) |
 | 3 | wykrycie aktywnych hostów | ✅ | faza discovery (`-sn`, TCP SYN/connect ping na 8 portów) |
-| 3 | …w sieciach blokujących sondy | 🟡 | `-skip-discovery`; brak ICMP bez roota ❓ (uruchamiać nmap z `CAP_NET_RAW`?) |
+| 3 | …w sieciach blokujących sondy | ✅ | `-skip-discovery`; profil `raw` (domyślny, `NET_RAW`) pozwala na ICMP `-PE` i ARP, profil `unprivileged` tylko connect; [Profile](/guide/safety#profile-z-surowymi-gniazdami-i-bez-roota) |
 | 4 | identyfikacja usług | ✅ | `-sV --version-light`, top 1000 TCP |
-| 4 | UDP | ❌ | nie skanujemy UDP (wolne); ❓ czy potrzebne (DNS/SNMP/NTP)? |
+| 4 | UDP | 🟡 | decyzja 15: domyślnie wyłączone; `ASI_ALLOW_UDP=1` włącza `-sU` tylko na 53,123,161 (DNS, NTP, SNMP), profil `raw`; [UDP](/guide/safety#udp-decyzja) |
 | 5 | HTTP: tytuł, kod, nagłówki, cookies, TLS, przekierowania | ❌ | **następny krok** — moduł Go `net/http` na usługach http/https z fazy 2 |
 | 6 | wykrywanie technologii / CMS / IoT | ❌ | po module HTTP: reguły na nagłówkach, cookies, HTML, favicon hash |
 | 7 | staging / panel admina | 🟡 | tagi z wejścia (`staging`, `admin`) + ocena portów admin; brak detekcji z treści |

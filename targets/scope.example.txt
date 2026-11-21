@@ -1,0 +1,5 @@
+# Zakres skanowania (SEC-8): skanowane sa tylko adresy z tych sieci.
+# Kopiuj do targets/scope.txt (gitignored). Jeden IP lub CIDR w linii, komentarze po #.
+# Brak pliku = brak dodatkowego ograniczenia (decyduje plik celow).
+192.0.2.0/24   # lab (docker/lab)
+127.0.0.1

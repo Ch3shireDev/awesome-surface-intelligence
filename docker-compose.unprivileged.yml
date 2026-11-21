@@ -1,0 +1,16 @@
+# SEC-8: skaner bez surowych gniazd (profil "unprivileged"). Nakladka na docker-compose.yml.
+# Wlaczenie: dopisz ja do COMPOSE_FILE w .env, np.
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.crypto.yml:docker-compose.unprivileged.yml
+# i `docker compose up -d nmap-scanner`.
+# Kontener traci NET_RAW/NET_ADMIN (takze NET_RAW z domyslnego zestawu dockera), a asi dodaje
+# nmapowi --unprivileged i odrzuca -sS, -sU, -O, ping ICMP (-PE/-PP/-PM). Zostaje TCP connect (-sT)
+# i "ping" przez connect na porty z -PS. Wolniej i glosniej w logach celu, ale bez uprawnien roota do sieci.
+# Opis: docs/guide/safety.md
+services:
+  nmap-scanner:
+    cap_add: !reset []
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      ASI_SCAN_PROFILE: unprivileged
