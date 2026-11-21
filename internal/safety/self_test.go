@@ -24,15 +24,28 @@ func TestSelfPortsFromEnv(t *testing.T) {
 	if !p.SelfPorts.Contains(9999) {
 		t.Fatal("-ui port not added")
 	}
+	// "Obcy" adres nie moze byc zaszyty na sztywno: host moze sam miec adres z zakresu
+	// dokumentacyjnego (np. mostek labu docker/lab to 192.0.2.1/24), wtedy slusznie jest
+	// uwazany za wlasny. Wybieramy pierwszy dokumentacyjny, ktorego ten host nie ma.
+	foreign := ""
+	for _, c := range []string{"192.0.2.1", "198.51.100.1", "203.0.113.1", "192.0.2.77"} {
+		if !p.IsSelf(c) {
+			foreign = c
+			break
+		}
+	}
+	if foreign == "" {
+		t.Skip("host ma wszystkie adresy dokumentacyjne uzyte w tescie")
+	}
 	for ip, want := range map[string]bool{"127.0.0.1": true, "127.0.0.53": true, "::1": true,
-		"203.0.113.10": true, "192.0.2.77": false, "bad": false} {
+		"203.0.113.10": true, foreign: false, "bad": false} {
 		if p.IsSelf(ip) != want {
 			t.Errorf("IsSelf(%s) != %v", ip, want)
 		}
 	}
-	self, rest := p.SplitSelf([]string{"192.0.2.1", "127.0.0.1", "203.0.113.10"})
-	if strings.Join(self, ",") != "127.0.0.1,203.0.113.10" || strings.Join(rest, ",") != "192.0.2.1" {
-		t.Fatalf("split: %v %v", self, rest)
+	self, rest := p.SplitSelf([]string{foreign, "127.0.0.1", "203.0.113.10"})
+	if strings.Join(self, ",") != "127.0.0.1,203.0.113.10" || strings.Join(rest, ",") != foreign {
+		t.Fatalf("split: %v %v (obcy=%s)", self, rest, foreign)
 	}
 
 	t.Setenv("ASI_SELF_PORTS", "off")
