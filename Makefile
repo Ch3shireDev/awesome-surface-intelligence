@@ -87,7 +87,10 @@ env-sync:
 
 # nginx DD trzyma IP upstreamu uwsgi z chwili startu; gdy `up` odtworzy uwsgi, nginx daje 502,
 # wiec restartujemy go po kazdym up (tani, ~1 s).
+# results/ tworzymy jako uzytkownik: inaczej docker zalozy go jako root przy pierwszym montowaniu
+# i na swiezym klonie nie da sie tam nic wrzucic (np. pliku do importu).
 up: env-sync
+	@mkdir -p results
 	docker compose up -d --build
 	@docker compose restart nginx >/dev/null 2>&1 && echo "nginx DD zrestartowany (bez 502 po odtworzeniu uwsgi)" || true
 

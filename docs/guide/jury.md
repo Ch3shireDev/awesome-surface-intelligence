@@ -234,15 +234,18 @@ Przykładowy plik: [inny-skaner.csv](/import/inny-skaner.csv) (3 hosty z sieci d
 historyczną → **Importuj wyniki**. Albo z terminala:
 
 ```bash
-cp inny-skaner.csv results/                                    # results/ jest widoczne w kontenerze skanera
-make asi ARGS='import results/inny-skaner.csv'                 # pokrycie auto
-make asi ARGS='import -coverage none results/inny-skaner.csv'  # tylko dopisanie obserwacji bez oznaczania braków
+cp inny-skaner.csv targets/                                    # targets/ jest widoczne w kontenerze skanera
+make asi ARGS='import targets/inny-skaner.csv'                 # pokrycie auto
+make asi ARGS='import -coverage none targets/inny-skaner.csv'  # tylko dopisanie obserwacji bez oznaczania braków
 # import historyczny (data w przeszłości: trafia do historii, nie cofa bieżących stanów):
-make asi ARGS='import -at 2026-11-20T22:00:00Z results/inny-skaner.csv'
+make asi ARGS='import -at 2026-11-20T22:00:00Z targets/inny-skaner.csv'
 # import surowego XML nmapa z ostatniego przebiegu labu:
 LAST_XML=$(ls -t results/lab/*/merged.xml | head -1)
 make asi ARGS="import $LAST_XML"
 ```
+
+Plik do importu kładź w `targets/` (albo w `results/`, jeśli należy do ciebie). Sprawdzone na świeżym klonie
+(21.11, fatusia-1): `import targets/inny-skaner.csv` daje `rows 6, hosts 3, events new 8` (3 hosty + 5 portów).
 
 | oczekiwany wynik | wymaganie |
 |---|---|

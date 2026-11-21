@@ -24,6 +24,20 @@ make asi-serve                          # panel z historią bez skanowania
   `.env`, `.dd_token`, `targets/targets.csv`, `results/` i `scans/results/` nigdy nie były commitowane
   (sprawdzone `git log --all --name-only` + szukanie wartości sekretów z `.env` w plikach).
 
+## Czysty start od zera na czystej VM z dockerem (ALL-2, sprawdzony)
+
+VM fatusia-hacknation-1 (x86_64, Debian 14, 7 GB RAM): przed testem bez demona dockera, bez `make`, bez obrazów
+i wolumenów. Doinstalowane tylko `docker.io` i `make` z repozytorium Debiana. Klon z GitHuba (`edc9869`), 21.11:
+
+| krok | wynik |
+|---|---|
+| `git clone … && make env` | `.env` z wygenerowanymi hasłami i kluczem szyfrowania (prawa `600`) |
+| `make up` | **3 min 49 s** (pobranie DefectDojo, build skanera), kod 0; panel :8090 od razu, DefectDojo :8080 po kilkunastu sekundach migracji |
+| `make demo` | **150 s**, kod 0: przebieg 1 → zmiany w labie → przebieg 2; diff: `legacy` zniknął, `app` zmieniony, `jenkins` nowy, usługa niestabilna potwierdzona (`unstable`); DD: 4 testy z deltą (`ASI discovery` closed 3 / created 2, `asi-changes` 2 warunki, `asi-httpx`, `asi-nuclei`) |
+| `make crypto-check` | **9 OK, 0 FAIL** |
+| import (krok 4 ścieżki jury) | `rows 6, hosts 3, new 8`. **Znaleziony problem:** na świeżym klonie `results/` zakładał docker jako root, więc nie dało się tam wrzucić pliku. Poprawione: `make up` tworzy `results/` jako użytkownik, a ścieżka jury używa `targets/` |
+| polityka skanera (krok 9) | oba niedozwolone polecenia odrzucone przed wysłaniem pakietu |
+
 ## Czysty start od zera (SEC-9, sprawdzony)
 
 Test na osobnym klonie z GitHuba, bez `.env` i bez katalogu `results/` (21.11, blackarch):
