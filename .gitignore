@@ -1,6 +1,22 @@
+# sekrety i dane srodowiska
 .env
+.dd_token
+
+# PoC Makefile (nmap -oA)
 scans/targets.txt
 scans/results/*.xml
 scans/results/*.nmap
 scans/results/*.gnmap
 scans/results/*.json
+
+# silnik asi: cele i wyniki zostaja lokalnie (realne IP/domeny)
+/asi
+/results/
+/targets/*
+!/targets/example.csv
+!/targets/example.json
+
+# dokumentacja
+/docs/node_modules/
+/docs/.vitepress/dist/
+/docs/.vitepress/cache/

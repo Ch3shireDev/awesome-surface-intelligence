@@ -15,7 +15,8 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
 
 .PHONY: help env up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
-        import-defectdojo import-latest poc clean
+        import-defectdojo import-latest poc clean \
+        build test asi asi-scan asi-serve docs sync
 
 help:
 	@echo "Cele:"
@@ -35,6 +36,15 @@ help:
 	@echo "  make import-latest    - import najnowszego scans/results/*.xml"
 	@echo "  make poc              - jeden przebieg PoC: discover + fast + import obu do DD"
 	@echo "  make clean            - usun lokalne wyniki skanow"
+	@echo ""
+	@echo "Silnik asi (Go):"
+	@echo "  make asi ARGS='plan'  - dowolna komenda asi w kontenerze skanera (cele: targets/, wyniki: results/)"
+	@echo "  make asi-scan         - skan targets/targets.csv: panel :8090, upload live do DefectDojo"
+	@echo "  make asi-serve        - panel z historia/diffem bez skanowania (:8090)"
+	@echo "  make build            - lokalny build ./asi (wymaga Go na hoscie - dev)"
+	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
+	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
+	@echo "  make sync             - git pull --rebase + push do origin (repo blackarch przez ssh)"
 
 # Tworzy .env tylko jesli nie istnieje (nie nadpisuje istniejacego).
 env:
@@ -126,3 +136,32 @@ poc:
 
 clean:
 	rm -f $(OUT_DIR)/*.xml $(OUT_DIR)/*.nmap $(OUT_DIR)/*.gnmap $(OUT_DIR)/*.json
+
+# --- silnik asi (Go) ---
+# Na VM: asi dziala w kontenerze nmap-scanner (network_mode: host, NET_RAW),
+# czyta .env (DD_*), cele z ./targets, wyniki do ./results.
+# Lokalnie (dev): `make build` i ./asi ... z `set -a; . ./.env`.
+ASI_TARGETS ?= targets/targets.csv
+ARGS ?= help
+
+asi:
+	docker compose exec nmap-scanner asi $(ARGS)
+
+asi-scan:
+	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -ui 127.0.0.1:8090 -upload live
+
+asi-serve:
+	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8090
+
+build:
+	go build -o asi ./cmd/asi
+
+test:
+	go vet ./... && go test ./...
+
+docs:
+	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
+
+# Jedno repo, synchronizacja przez git po ssh (origin = blackarch:~/repos/asi.git).
+sync:
+	git pull --rebase --autostash && git push

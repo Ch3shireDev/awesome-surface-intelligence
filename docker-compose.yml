@@ -14,6 +14,9 @@
 #
 # Celowo NIE uzywamy SecureCodeBox - patrz docs/DECISIONS.md.
 
+# stala nazwa projektu niezaleznie od katalogu (wolumeny asi_dd_*)
+name: asi
+
 x-dd-django: &dd-django
   image: "docker.io/defectdojo/defectdojo-django:${DD_VERSION:-3.5.202}"
   env_file:
@@ -101,7 +104,9 @@ services:
   # kontenera robimy import do DefectDojo przez http://localhost:${DD_PORT},
   # wiec na hoscie nie potrzeba curla/jq ani niczego innego.
   nmap-scanner:
-    build: ./docker/nmap
+    build:
+      context: .
+      dockerfile: docker/nmap/Dockerfile
     network_mode: host
     env_file:
       - .env
@@ -111,6 +116,9 @@ services:
     volumes:
       - ./scans:/scans
       - ./docker/nmap/scripts:/opt/asi:ro
+      # silnik asi: wejscie i wyniki w repo (gitignored)
+      - ./targets:/work/targets
+      - ./results:/work/results
     restart: unless-stopped
 
 networks:

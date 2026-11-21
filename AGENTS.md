@@ -1,75 +1,72 @@
 # AGENTS.md
 
-Kontekst dla agentow AI pracujacych w tym repo (Claude Code / inne).
+Kontekst dla agentow AI (Claude Code i inne) pracujacych w tym repo. `CLAUDE.md` tylko importuje ten plik.
 
 ## Co to jest
 
-Projekt hackathonowy na HackNation 2026, wyzwanie **Attack Surface
-Intelligence** (partner: AGH/CBI AGH). Budujemy wlasny system (Go) do
-cyklicznego discovery scanu duzych sieci: chunking zakresow, gotowe skanery
-(nmap, naabu, httpx, nuclei), postep, historia i diff, RBAC, eksport do
-DefectDojo (system koncowy CBI AGH - eksportujemy do niego, nie budujemy na
-nim).
+HackNation 2026, wyzwanie **Attack Surface Intelligence** (CBI AGH). Budujemy wlasny system w Go do cyklicznego
+discovery scanu duzych sieci (powyzej 10 000 IP):
+- podzial zakresu na paczki, gotowe skanery (nmap, potem httpx/nuclei/naabu),
+- postep na zywo, historia i diff, RBAC, szyfrowanie wrazliwych pol,
+- eksport do DefectDojo. DD to system koncowy CBI AGH: eksportujemy do niego, nie budujemy na nim.
 
 Przeczytaj PRZED wieksza zmiana:
-- `docs/VISION.md` - architektura, rdzen, model danych, schemat dzialania,
-- `docs/DECISIONS.md` - log decyzji z uzasadnieniami,
-- `docs/ROADMAP.md` - brief w skrocie i etapy.
+- `docs/VISION.md`: architektura docelowa, model danych, rdzen (zrodlo prawdy dla projektu),
+- `docs/status.md`: co z wymagan PDF jest zrobione, a co nie (aktualizuj po kazdym kroku),
+- `docs/DECISIONS.md`: log decyzji z uzasadnieniami,
+- `docs/ROADMAP.md`: brief w skrocie, mapa wymaganie -> narzedzie, etapy,
+- `docs/TASKS.md`: aktualne zadania i podzial (dev / devsecops).
+
+## Gdzie jest repo i jak sie synchronizujemy
+
+- **Jedno repo**, origin to bare repo na blackarch: `daniel@blackarch:~/repos/asi.git`.
+  Klony robocze: `~/asi` na blackarch i `~/asi` na fatusia-hacknation-2 (remote po ssh, alias `ba`).
+- Synchronizacja tylko przez git: `make sync` (pull --rebase + push). Commituj male kawalki i czesto syncuj.
+- **Repo NIE lezy w `~/sync`** (Syncthing). Synchronizowany `.git` psuje repo przy rownoleglej pracy, a
+  Syncthing rozsylalby `.env` i wyniki skanow. `~/sync` sluzy tylko do notatek miedzy ludzmi i agentami
+  (`~/sync/komunikacja/`).
+- Stare lokalizacje (`~/sync/hacknation-asi`, `~/asi-poc`) sa nieaktualne. Nie pracuj w nich.
 
 ## Twarde zasady
 
-- **Stack uruchamiamy tylko na dedykowanej VM** (nmap potrzebuje
-  NET_ADMIN/NET_RAW i `network_mode: host`). Na innej maszynie tylko
-  walidacja skladni (`docker compose config`, `make -n <cel>`).
-- **Wszystko zamyka sie w repo.** Konfiguracja jako pliki w repo podpinane
-  bind-mountami do kontenerow, narzedzia (nmap, curl, jq) tylko w
-  kontenerach. Na hoscie wymagane wylacznie: docker + compose plugin, make,
-  openssl. Nie instaluj niczego innego na hoscie.
-- **Nie skanuj niczego poza `scans/targets.txt`.** Do czasu potwierdzenia
-  zakresu z mentorami CBI AGH (patrz "Otwarte pytania" w
-  `docs/DECISIONS.md`) jedynym dozwolonym celem jest `127.0.0.1` (sama VM,
-  do testow pipeline'u). Nie wpisuj przykladowych adresow IP jako
-  "defaultowych" celow skanu.
-- **Nie commituj `.env`, `scans/targets.txt` ani plikow wynikowych
-  `scans/results/*.xml`** - sa w `.gitignore` celowo (dane ze srodowiska
-  sandbox, API key DefectDojo).
-- DefectDojo to **cel eksportu**, nie nasze UI ani baza. Nasze dane zyja w
-  `asi-postgres`. Web UI ASI powstanie pozniej - na razie tylko API + CLI,
-  nie zaczynaj frontendu bez ustalenia.
-- Skanery uruchamiamy jako gotowe narzedzia (adaptery w
-  `internal/scanner/`). Nie piszemy wlasnych skanerow portow/HTTP.
-- Repo lezy w katalogu synchronizowanym przez Syncthing (`~/sync`).
-  `.gitignore` nie chroni przed Syncthingiem - `.env` (hasla, klucze) i
-  `scans/results/` rozchodza sie na inne urzadzenia, chyba ze sa w
-  `.stignore`.
-- `docker-compose.yml` jest wyrownany do upstreamowego compose DefectDojo
-  3.5.202. Jesli cos w nim poprawiasz, zaktualizuj rowniez
-  `docs/DECISIONS.md` (sekcja decyzji nr 3).
+- **Zakres skanu.** Skanuj wylacznie cele z `targets/targets.csv` lub `scans/targets.txt` (oba gitignored).
+  Do czasu potwierdzenia zakresu z mentorami CBI AGH jedynym wspolnym celem jest `127.0.0.1`. Nie wpisuj
+  przykladowych IP jako domyslnych celow. W dokumentacji i testach uzywaj adresow dokumentacyjnych
+  (RFC 5737: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+- **Nie commituj** `.env`, `.dd_token`, `targets/*` (poza `example.*`), `results/`, `scans/results/`.
+  Sa tam realne IP, domeny i hasla.
+- **Stack (compose) uruchamiamy na VM z dockerem.** nmap w kontenerze potrzebuje `NET_RAW`/`NET_ADMIN` i
+  `network_mode: host`. Na hoscie wymagane: docker + compose, make, openssl. Go i pnpm tylko na maszynie
+  deweloperskiej (`make build`, `make test`, `make docs`).
+- **Bezpieczenstwo skanowania ponad szybkosc**: globalny limit tempa (`-rate`), okno czasowe (`-window`),
+  sygnatury tylko detekcyjne (bez prob logowania i exploitow).
+- Sekrety tylko w `.env`, nigdy w compose, Makefile ani kodzie.
+- `docker-compose.yml` jest wyrownany do upstreamowego compose DefectDojo 3.5.202. Zmiany w nim odnotuj w
+  `docs/DECISIONS.md` (decyzja nr 3).
 
 ## Konwencje
 
-- Etap przejsciowy (PoC): dopoki nie ma `asi`, inwokacje nmapa ida przez
-  `Makefile`. Docelowo flagi skanerow zyja w adapterach i profilach ASI
-  (`docs/VISION.md`, 4.3), a `make poc` zostaje jako test dymny.
-- Nowe cele `make` dopisuj w sekcji odpowiadajacej istniejacemu wzorcowi
-  (patrz `scan-fast` jako referencja) i dodaj je do listy w `help:`.
-- Sekrety/klucze (`DD_API_KEY`, hasla) tylko w `.env` (gitignored), nigdy w
-  `docker-compose.yml`, `Makefile` ani kodzie.
+- Kod Go: tylko biblioteka standardowa, chyba ze decyzja w `DECISIONS.md` mowi inaczej (np. sterownik
+  Postgresa). Przed commitem: `make test` (go vet + go test).
+- Flagi nmapa dla silnika zyja w `cmd/asi` / `internal/scanner` (profile). `Makefile` `scan-*` i `make poc`
+  to stary PoC fatusi, zostaje jako test dymny stacku.
+- Dokumentacja: VitePress w `docs/`, po polsku. Nowa strona = wpis w `docs/.vitepress/config.mts`.
+  Po kazdej zmianie funkcjonalnej zaktualizuj `docs/status.md`.
+- Commity po polsku, krotko, w trybie "co zmienia".
 
 ## Gdzie co jest
 
-- `docker-compose.yml` - caly stack (DefectDojo + nmap-scanner).
-- `docker/nmap/Dockerfile` - obraz skanera (alpine + nmap + curl + jq).
-- `docker/nmap/scripts/` - skrypty montowane do skanera w `/opt/asi`
-  (`import-defectdojo.sh` - import wynikow przez API v2).
-- `docker/defectdojo/extra_settings/` - nadpisania settings DefectDojo.
-- `Makefile` - sterowanie skanami i importem do DefectDojo.
-- `scans/targets.example.txt` - szablon listy celow (skopiuj do
-  `scans/targets.txt` PO potwierdzeniu zakresu).
-- `docs/VISION.md` - wizja, architektura i rdzen (zrodlo prawdy dla
-  projektu systemu).
-- `docs/ROADMAP.md` - streszczenie briefu, mapa wymaganie -> narzedzie,
-  plan etapow. Przed nowym etapem sprawdz, co pokrywa gotowe narzedzie/DD.
-- `docs/DECISIONS.md` - log decyzji, otwarte pytania, TODO wedlug
-  priorytetu. Aktualizuj na biezaco zamiast trzymac ustalenia tylko w
-  rozmowie.
+| sciezka | co |
+|---|---|
+| `cmd/asi/` | CLI: `convert`, `plan`, `scan`, `upload`, `diff`, `serve` |
+| `internal/targets` | wejscie CSV/JSON/TXT, plan, CIDR, DNS, reguly bezpieczenstwa |
+| `internal/scanner` | pula workerow, adaptacyjny Sizer, nmap `--stats-every`, skan potwierdzajacy |
+| `internal/nmapxml` | parser XML nmapa |
+| `internal/findings` | model uslug, ocena "ciekawosci", diff, Generic Findings dla DD |
+| `internal/progress`, `internal/cli`, `internal/web` | stan na zywo, pasek CLI, panel web (SSE) |
+| `internal/dojo` | klient DefectDojo API v2 (login, import, reimport) |
+| `docker-compose.yml` | DefectDojo 3.5.202 + `nmap-scanner` (nmap + `asi`) |
+| `docker/nmap/` | obraz skanera i skrypty PoC (`import-defectdojo.sh`, `nmap-hosts-to-generic.sh`) |
+| `Makefile` | `make help`: stack, PoC, `asi`, `build`, `test`, `docs`, `sync` |
+| `targets/example.csv` | szablon celow (kopiuj do `targets/targets.csv`) |
+| `docs/` | VitePress: VISION, status, DECISIONS, ROADMAP, TASKS, przewodniki |

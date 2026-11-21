@@ -100,6 +100,16 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
    Zwykly PostgreSQL nie ma TDE (`pgcrypto` przepuszcza klucz przez SQL).
    Szyfrowanie wolumenu / `pg_tde` jako opcjonalna druga warstwa.
 
+10. **Jedno repo poza Syncthingiem, synchronizacja gitem po ssh** (21.11).
+    Origin: `daniel@blackarch:~/repos/asi.git` (bare), klony `~/asi` na
+    blackarch i fatusia-hacknation-2. Polaczone dwa rownolegle PoC: compose +
+    PoC na Makefile (fatusia) i silnik `asi` w Go (blackarch: plan, 2 fazy
+    skanu, adaptacyjne paczki, postep CLI/web, diff, reimport Generic
+    Findings). `asi` jest budowany w obrazie `nmap-scanner` (multi-stage), wiec
+    na hoscie VM dalej wystarcza docker + make. Kod `asi` to obecna
+    implementacja planera/skanera/eksportu z VISION; baza, RBAC, API i
+    szyfrowanie dochodza na nim (patrz `docs/TASKS.md`).
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

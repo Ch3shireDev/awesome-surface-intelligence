@@ -1,58 +1,36 @@
-# Attack Surface Intelligence - HackNation 2026
+# ASI - Attack Surface Intelligence (HackNation 2026, CBI AGH)
 
-Pipeline do automatycznego skanowania bezpieczenstwa: Nmap (wlasny kontener,
-sterowany z Makefile) -> import wynikow do DefectDojo (dostarczony przez
-CBI AGH, pelni role dashboardu/zarzadzania podatnosciami).
+System do cyklicznego discovery scanu dużych sieci (10 000+ IP). Wczytuje listę celów, skanuje ją
+nmapem w adaptacyjnych paczkach, pokazuje postęp na żywo (CLI i panel web), porównuje przebiegi
+i eksportuje wyniki do DefectDojo.
 
-Decyzje i uzasadnienia architektury: [`docs/DECISIONS.md`](docs/DECISIONS.md).
-Plan etapow i mapa wymagan z briefu: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-Kontekst dla agentow AI pracujacych w repo: [`AGENTS.md`](AGENTS.md).
+- Architektura docelowa: [`docs/VISION.md`](docs/VISION.md)
+- Co jest zrobione, a co nie: [`docs/status.md`](docs/status.md)
+- Zadania i podział pracy: [`docs/TASKS.md`](docs/TASKS.md)
+- Dla agentów AI: [`AGENTS.md`](AGENTS.md)
 
-## Wymagania na hoscie (VM z Linuksem)
-
-Tylko: docker + compose plugin, `make`, `openssl`. Wszystko inne (nmap, curl,
-jq) siedzi w kontenerach, konfiguracja w repo.
-
-## Start
+## Start na VM (docker + make + openssl)
 
 ```bash
-make env     # .env z .env.example + wygenerowane sekrety i haslo admina
-make up      # DefectDojo + kontener skanera
-make ps      # initializer powinien skonczyc z "Exited (0)" (1. start: kilka minut)
+make env                      # .env z sekretami i hasłem admina DefectDojo
+make up                       # DefectDojo :8080 + kontener skanera (nmap + asi)
+cp targets/example.csv targets/targets.csv
+make asi ARGS=plan            # co będzie skanowane, a co pominięte i dlaczego
+make asi-scan                 # skan: pasek w terminalu, panel http://127.0.0.1:8090, upload do DD
+make asi ARGS=diff            # zmiany względem poprzedniego przebiegu
 ```
 
-UI: http://localhost:8080, login `admin`, haslo: `grep DD_ADMIN_PASSWORD .env`.
-Na VM forwardujesz z hosta tylko port **8080/tcp**.
+DefectDojo: http://localhost:8080, login `admin`, hasło: `grep DD_ADMIN_PASSWORD .env`.
+Z hosta VM forwardujesz 8080/tcp (DD) i opcjonalnie 8090/tcp (panel asi).
 
-## Skanowanie
+Test dymny samego stacku (stary PoC na skryptach): `echo 127.0.0.1 > scans/targets.txt && make poc`.
 
-Zakres skanu potwierdzamy z mentorami CBI AGH - do tego czasu tylko
-`127.0.0.1` (test pipeline'u).
+## Praca deweloperska (Go 1.27, pnpm)
 
 ```bash
-echo 127.0.0.1 > scans/targets.txt
-make poc                # host discovery + szybki skan portow + wgranie obu do DD
+make build && make test
+set -a; . ./.env; set +a      # DD_* dla ./asi upload / scan -upload
+./asi scan -targets targets/targets.csv -ui 127.0.0.1:8090 -upload live
+make docs                     # dokumentacja na http://127.0.0.1:4173
+make sync                     # git pull --rebase + push (origin: blackarch:~/repos/asi.git)
 ```
-
-W DefectDojo: Product `Attack Surface` -> Engagement `nmap` -> testy
-`nmap-discover` (findingi "Host Up", tag `liveness`) i `nmap-fast` (otwarte
-porty). Kolejne przebiegi ida do tych samych testow (`reimport-scan`), wiec DD
-pokazuje diff: nowe / zamkniete / bez zmian (zakladka historii importow
-testu, a w terminalu podsumowanie `diff`).
-
-Szybki test wykrywania zmian na VM:
-
-```bash
-make poc                                              # przebieg 1
-docker compose exec -d nmap-scanner nc -lk -p 8888    # nowa "usluga"
-make poc                                              # przebieg 2: created 1
-docker compose exec nmap-scanner pkill -f 'nc -lk'
-make poc                                              # przebieg 3: closed 1
-```
-
-Product/Engagement/testy tworza sie przy pierwszym imporcie same. Pelna lista celow: `make help`.
-
-## Status / co dalej
-
-Zobacz sekcje "Otwarte pytania" i "Zaleglosci / TODO" w
-[`docs/DECISIONS.md`](docs/DECISIONS.md).

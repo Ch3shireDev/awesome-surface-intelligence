@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASI · skan na żywo</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#fff;--ink:#17202b;--muted:#5d6b7a;--line:#e3e7ec;
+  --accent:#2563eb;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--run:#2563eb;--idle:#cbd5e1;
+  --high:#b91c1c;--medium:#b45309;--low:#64748b;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1116;--panel:#161b22;--ink:#e6edf3;--muted:#8b98a5;--line:#2a313b;
+  --accent:#60a5fa;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--run:#60a5fa;--idle:#334155;
+  --high:#f87171;--medium:#fbbf24;--low:#94a3b8;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:650}
+nav{display:flex;gap:4px;margin-left:auto}
+nav button{border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 10px;font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.big{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.big .pct{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums}
+.bar{height:12px;background:var(--idle);border-radius:6px;overflow:hidden;margin:10px 0}
+.bar>i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px}
+.kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:12px}
+.phase{display:grid;grid-template-columns:110px 1fr 260px;gap:12px;align-items:center;margin:6px 0}
+.phase .bar{margin:0;height:8px}
+@media (max-width:700px){.phase{grid-template-columns:1fr}.phase .meta{font-size:12px}}
+.grid{display:flex;flex-wrap:wrap;gap:4px}
+.chunk{position:relative;width:34px;height:34px;border-radius:5px;background:var(--idle);overflow:hidden;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.chunk>i{position:absolute;left:0;bottom:0;width:100%;background:var(--run);opacity:.35}
+.chunk.done{background:color-mix(in srgb,var(--ok) 35%,transparent)}
+.chunk.killed,.chunk.failed{background:color-mix(in srgb,var(--bad) 35%,transparent)}
+.chunk.discovery{border-radius:50%}
+.chunk span{position:relative}
+.cols{display:grid;grid-template-columns:3fr 2fr;gap:14px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.tbl{max-height:420px;overflow:auto}
+.i-high{color:var(--high)}.i-medium{color:var(--medium)}.i-low{color:var(--low)}
+.log{max-height:420px;overflow:auto;white-space:pre-wrap;margin:0}
+.muted{color:var(--muted)}
+.k-new{color:var(--ok)}.k-gone{color:var(--bad)}.k-changed{color:var(--warn)}
+select{font:inherit;padding:5px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.hidden{display:none}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Attack Surface Intelligence</h1>
+  <span id="runid" class="mono muted"></span>
+  <span id="status" class="pill"></span>
+  <nav><button data-tab="live" class="on">Na żywo</button><button data-tab="runs">Historia i diff</button></nav>
+</header>
+<main>
+<section id="tab-live">
+  <div class="card">
+    <div class="big"><span class="pct" id="pct">0%</span>
+      <span class="muted" id="times"></span></div>
+    <div class="bar"><i id="mainbar" style="width:0"></i></div>
+    <div class="kpis">
+      <div class="kpi"><b id="k-targets">–</b><span>IP w planie</span></div>
+      <div class="kpi"><b id="k-up">–</b><span>hosty aktywne</span></div>
+      <div class="kpi"><b id="k-open">–</b><span>otwarte porty</span></div>
+      <div class="kpi"><b id="k-chunks">–</b><span>paczki gotowe / wszystkie</span></div>
+      <div class="kpi"><b id="k-par">–</b><span>równoległe nmapy</span></div>
+      <div class="kpi"><b id="k-dojo">–</b><span>DefectDojo</span></div>
+    </div>
+  </div>
+  <div class="card"><h2>Fazy</h2><div id="phases"></div></div>
+  <div class="card"><h2>Paczki nmap</h2><div class="grid" id="grid"></div>
+    <div class="legend"><span><i style="background:var(--idle)"></i>w toku (wypełnienie = %)</span><span><i style="background:color-mix(in srgb,var(--ok) 35%,transparent)"></i>gotowa</span><span><i style="background:color-mix(in srgb,var(--bad) 35%,transparent)"></i>przerwana</span><span>● discovery · ■ usługi · liczba = hosty w paczce</span></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h2>Wykryte usługi (na żywo)</h2><div class="tbl"><table><thead><tr><th>usługa</th><th>opis</th><th>ciekawość</th></tr></thead><tbody id="svcs"></tbody></table></div></div>
+    <div class="card"><h2>Log</h2><pre class="log mono" id="log"></pre></div>
+  </div>
+</section>
+<section id="tab-runs" class="hidden">
+  <div class="card"><h2>Przebiegi skanu</h2><div class="tbl"><table><thead><tr><th>run</th><th>czas</th><th>IP</th><th>aktywne</th><th>porty</th><th>high / medium</th><th>status</th></tr></thead><tbody id="runs"></tbody></table></div></div>
+  <div class="card"><h2>Porównanie przebiegów</h2>
+    <p>z <select id="from"></select> do <select id="to"></select></p>
+    <div id="diff" class="muted">Wybierz dwa przebiegi.</div>
+  </div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const t=s=>{s=Math.max(0,Math.round(s||0));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const statusColor={running:'var(--run)',done:'var(--ok)',interrupted:'var(--bad)',planning:'var(--muted)',idle:'var(--muted)'};
+const PL={running:'w toku',done:'zakończony',interrupted:'przerwany',planning:'planowanie',idle:'brak aktywnego skanu',pending:'czeka',skipped:'pominięta'};
+
+function render(s){
+  $('runid').textContent=s.run_id||'';
+  const st=s.status||'idle';$('status').textContent=PL[st]||st;$('status').style.color=statusColor[st]||'var(--muted)';
+  if(st==='idle'){$('times').textContent='Uruchom: asi scan -ui 127.0.0.1:8090';return}
+  $('pct').textContent=(s.percent||0).toFixed(1)+'%';
+  $('mainbar').style.width=(s.percent||0)+'%';
+  $('times').textContent=`upłynęło ${t(s.elapsed)}`+(s.eta>0?` · pozostało ~${t(s.eta)}`:'')+(s.window?` · okno ${s.window}`:'');
+  $('k-targets').textContent=s.targets;$('k-up').textContent=s.hosts_up;$('k-open').textContent=s.open;
+  const ch=s.chunks||[];$('k-chunks').textContent=ch.filter(c=>c.state!=='running').length+' / '+ch.length;
+  $('k-par').textContent=s.parallel;
+  const u=s.upload||{};$('k-dojo').textContent=u.state==='idle'?'–':(u.state+(u.batches?` (${u.batches})`:''));
+  $('phases').innerHTML=(s.phases||[]).map(p=>{
+    const pc=p.hosts?100*p.partial/p.hosts:(p.state==='done'?100:0);
+    return `<div class="phase"><b>${p.name}</b><div class="bar"><i style="width:${pc}%"></i></div>
+    <span class="meta mono muted">${PL[p.state]||p.state} · ${Math.round(p.partial)}/${p.hosts} · paczka ${p.chunk_size||'–'} · ${p.sec_per_host?p.sec_per_host.toFixed(2)+' s/host':''}</span></div>`}).join('');
+  $('grid').innerHTML=ch.map(c=>`<div class="chunk ${c.state} ${c.phase}" title="${c.phase} #${c.id}: ${c.hosts} hostów, ${c.up} up, ${c.open} portów, ${c.seconds?c.seconds.toFixed(1)+'s':Math.round(c.percent)+'%'} ${esc(c.error)}">
+    ${c.state==='running'?`<i style="height:${c.percent}%"></i>`:''}<span>${c.hosts}</span></div>`).join('');
+  $('svcs').innerHTML=(s.services||[]).map(v=>`<tr><td class="mono">${esc(v.key)}</td><td>${esc(v.label)}${v.domains?`<br><span class="muted">${esc(v.domains)}</span>`:''}</td><td class="i-${v.interest}">${v.interest}</td></tr>`).join('');
+  const lg=$('log');const stick=lg.scrollTop+lg.clientHeight>=lg.scrollHeight-20;
+  lg.textContent=(s.log||[]).join('\n');if(stick)lg.scrollTop=lg.scrollHeight;
+  if(u.delta){$('k-dojo').title=JSON.stringify(u.delta)}
+}
+
+function connect(){
+  const es=new EventSource('api/events');
+  es.onmessage=e=>render(JSON.parse(e.data));
+  es.onerror=()=>{es.close();fetch('api/live').then(r=>r.json()).then(render).catch(()=>{});setTimeout(connect,3000)};
+}
+connect();
+
+async function loadRuns(){
+  const runs=await (await fetch('api/runs')).json()||[];
+  $('runs').innerHTML=runs.map(r=>`<tr><td class="mono">${r.id}</td><td>${t(r.duration_s)}</td><td>${r.targets}</td><td>${r.hosts_up}</td><td>${r.open}</td><td><span class="i-high">${r.interest_high}</span> / <span class="i-medium">${r.interest_medium}</span></td><td>${PL[r.status]||r.status}</td></tr>`).join('')||'<tr><td colspan=7 class="muted">brak przebiegów</td></tr>';
+  const opts=runs.map(r=>`<option>${r.id}</option>`).join('');
+  $('from').innerHTML=opts;$('to').innerHTML=opts;
+  if(runs.length>1){$('from').selectedIndex=1;$('to').selectedIndex=0;diff()}
+}
+async function diff(){
+  const f=$('from').value,to=$('to').value;if(!f||!to)return;
+  const r=await fetch(`api/diff?from=${f}&to=${to}`);if(!r.ok){$('diff').textContent=await r.text();return}
+  const d=await r.json();const ch=d.changes||[];
+  const cnt=k=>ch.filter(c=>c.kind===k).length;
+  $('diff').innerHTML=`<p><b class="k-new">${cnt('new')} nowych</b> · <b class="k-gone">${cnt('gone')} znikło</b> · <b class="k-changed">${cnt('changed')} zmienionych</b> · ${d.unchanged} bez zmian
+  · hosty nowe: ${(d.hosts_new||[]).join(', ')||'–'} · hosty znikły: ${(d.hosts_gone||[]).join(', ')||'–'}</p>`+
+  (ch.length?`<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>`+ch.map(c=>{
+    const fp=s=>s?esc([s.service,s.product,s.version].filter(Boolean).join(' ')):'–';
+    return `<tr><td class="k-${c.kind}">${c.kind}</td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`}).join('')+'</tbody></table>':'');
+}
+$('from').onchange=$('to').onchange=diff;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  $('tab-live').classList.toggle('hidden',b.dataset.tab!=='live');$('tab-runs').classList.toggle('hidden',b.dataset.tab!=='runs');
+  if(b.dataset.tab==='runs')loadRuns();
+});
+</script>
+</body>
+</html>

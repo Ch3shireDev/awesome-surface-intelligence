@@ -1,0 +1,46 @@
+import { defineConfig } from 'vitepress'
+
+export default defineConfig({
+  lang: 'pl-PL',
+  title: 'ASI',
+  description: 'Attack Surface Intelligence — discovery scan dużej infrastruktury z integracją DefectDojo',
+  cleanUrls: true,
+  lastUpdated: false,
+  themeConfig: {
+    nav: [
+      { text: 'Start', link: '/guide/quickstart' },
+      { text: 'Status projektu', link: '/status' },
+      { text: 'Wizja', link: '/VISION' },
+      { text: 'Zadania', link: '/TASKS' },
+    ],
+    sidebar: [
+      { text: 'Wprowadzenie', items: [
+        { text: 'Czym jest ASI', link: '/' },
+        { text: 'Szybki start', link: '/guide/quickstart' },
+        { text: 'Architektura', link: '/guide/architecture' },
+      ]},
+      { text: 'Działanie', items: [
+        { text: 'Format celów (CSV/JSON/TXT)', link: '/guide/targets' },
+        { text: 'Podział na paczki nmap', link: '/guide/chunking' },
+        { text: 'Postęp: CLI i panel web', link: '/guide/progress' },
+        { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },
+        { text: 'Porównanie przebiegów', link: '/guide/diff' },
+        { text: 'Bezpieczeństwo skanowania', link: '/guide/safety' },
+      ]},
+      { text: 'Referencja', items: [
+        { text: 'Komendy CLI', link: '/guide/cli' },
+        { text: 'Pliki wynikowe', link: '/guide/outputs' },
+      ]},
+      { text: 'Projekt', items: [
+        { text: 'Wizja i architektura docelowa', link: '/VISION' },
+        { text: 'Zadania i podział pracy', link: '/TASKS' },
+        { text: 'Decyzje', link: '/DECISIONS' },
+        { text: 'Roadmapa i mapa wymagań', link: '/ROADMAP' },
+        { text: 'Status: zrobione / do zrobienia / decyzje', link: '/status' },
+      ]},
+    ],
+    outline: { level: [2, 3], label: 'Na tej stronie' },
+    docFooter: { prev: 'Poprzednia', next: 'Następna' },
+    search: { provider: 'local' },
+  },
+})
