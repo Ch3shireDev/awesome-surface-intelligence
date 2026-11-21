@@ -498,7 +498,17 @@ func cmdScan(args []string) {
 	// final reimport: closes findings that disappeared - but only after a COMPLETE run,
 	// otherwise hosts we never reached would be wrongly marked as mitigated.
 	if dd != nil {
-		uploadBatch(dd, ddTarget, svcs, !interrupted, tr)
+		// close_old only after a COMPLETE run whose discovery and services chunks all finished
+		// without error: a failed chunk or a host nmap gave up on (--host-timeout, LAB-T7) would
+		// otherwise look like "all its services are gone" and close them in DefectDojo.
+		closeOld := !interrupted
+		for _, st := range []string{"discovery", "services"} {
+			if complete, ran, why := stageCoverage(filepath.Join(dir, st, "timings.csv")); ran && !complete {
+				closeOld = false
+				tr.Logf("dojo: close_old disabled - %s: %s", st, why)
+			}
+		}
+		uploadBatch(dd, ddTarget, svcs, closeOld, tr)
 		// SEC-7: raw httpx / nuclei output -> native DD parsers, tests asi-httpx / asi-nuclei
 		exportNative(dd, ddTarget, dir, !interrupted, tr.Logf)
 	}
@@ -653,6 +663,15 @@ func cmdUpload(args []string) {
 		// coverage rule: a partial run must not close findings of hosts it never reached
 		*closeOld = false
 		log.Printf("%s is a partial (interrupted) run - close_old=false (override with -close-old=true)", *run)
+	}
+	if !closeSet && *closeOld {
+		for _, st := range []string{"discovery", "services"} {
+			if complete, ran, why := stageCoverage(filepath.Join(*run, st, "timings.csv")); ran && !complete {
+				// LAB-T7: failed chunk / host timeout - those hosts were not really scanned
+				*closeOld = false
+				log.Printf("%s: %s incomplete (%s) - close_old=false (override with -close-old=true)", *run, st, why)
+			}
+		}
 	}
 	t := dojo.Target{ProductType: envOr("DD_PRODUCT_TYPE", "Research and Development"), Product: *product, Engagement: *eng, Tags: []string{"asi"}}
 	var res dojo.Result

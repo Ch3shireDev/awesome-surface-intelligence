@@ -130,6 +130,13 @@ przeskoczył o ~20 min (VM wstrzymana: ASI zmierzył zegarem monotonicznym 92 s,
 usługi jako `missing`. Powtórka bez wstrzymania: 97 s, poprawnie. Wyzwalacz był środowiskowy, ale ten sam
 skutek da każdy host, który przekroczy `--host-timeout` (wolny host, wisząca usługa przy `-sV`).
 
+**Poprawka LAB-T7 (21.11, sprawdzona na żywo).** ASI czyta `timedout="true"`: taki host jest
+**nieprzeskanowany** (znika z pokrycia paczki, trafia do `pending` / `asi scan -resume`, nie dostaje braków),
+a główny reimport `ASI discovery` używa `close_old` tylko przy etapach discovery i services bez błędów (też
+`asi upload`). Test: ten sam zbiór z historią, `--host-timeout 5s`. Wynik: host w `pending`, reconcile bez
+zdarzeń (wcześniej 10× `missing` + `flapping`), skan potwierdzający odzyskał 8 znanych usług (tag
+`unstable`), DD `close_old=false`.
+
 **Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
 przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 

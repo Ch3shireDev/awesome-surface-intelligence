@@ -120,6 +120,10 @@ testu przez reimport. DD śledzi wtedy nowe i zamknięte wyniki per narzędzie:
 
 Wysyłane na końcu `asi scan` z uploadem i przez `asi upload` (wyłączenie: `-native=false`).
 
+**Główny test `ASI discovery`** zamyka wyniki (`close_old`) tylko po pełnym przebiegu, w którym etapy
+discovery i services przeszły bez błędów paczek. Host, który przekroczył `--host-timeout` nmapa, liczy się
+jako błąd: nmap zwraca go bez portów, a bez tej zasady DD zamknąłby wszystkie jego usługi (LAB-T7).
+
 **Kiedy DD może zamknąć wynik (`close_old`):** tylko gdy cały przebieg jest pełny, etap naprawdę się
 wykonał (`<etap>/timings.csv` istnieje) i żadna jego paczka nie skończyła się błędem. Etap pominięty (np.
 brak httpx w obrazie), przerwany albo z błędami niczego w DD nie zamyka. Pusty raport z takiego etapu

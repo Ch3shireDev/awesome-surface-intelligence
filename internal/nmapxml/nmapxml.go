@@ -30,6 +30,9 @@ func (r Run) Ports(proto string) string {
 }
 
 type Host struct {
+	// TimedOut: nmap gave up on the host (--host-timeout) and DROPPED all its results -
+	// the host is not "up with no ports", it was not scanned (LAB-T7).
+	TimedOut  bool       `xml:"timedout,attr"`
 	Status    Status     `xml:"status"`
 	Addresses []Address  `xml:"address"`
 	Hostnames []Hostname `xml:"hostnames>hostname"`

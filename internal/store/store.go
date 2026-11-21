@@ -161,6 +161,14 @@ func (s *Store) FinishChunk(ctx context.Context, runID, stage string, id int, st
 	return err
 }
 
+// SetChunkTargets replaces the targets a chunk really covered (hosts nmap gave up on with
+// --host-timeout are removed, so reconcile does not count them as covered - LAB-T7).
+func (s *Store) SetChunkTargets(ctx context.Context, runID, stage string, id int, tgts []string) error {
+	_, err := s.DB.Exec(ctx, `UPDATE chunks SET targets=$4, size=$5 WHERE run_id=$1 AND stage=$2 AND id=$3`,
+		runID, stage, id, tgts, len(tgts))
+	return err
+}
+
 // SetChunkPorts records the port set a chunk actually scanned (nmap ranges, per protocol tcp).
 func (s *Store) SetChunkPorts(ctx context.Context, runID, stage string, id int, ports string) error {
 	_, err := s.DB.Exec(ctx, `UPDATE chunks SET ports=$4 WHERE run_id=$1 AND stage=$2 AND id=$3`, runID, stage, id, ports)

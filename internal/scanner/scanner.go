@@ -100,14 +100,59 @@ type PhaseConfig struct {
 }
 
 type ChunkResult struct {
-	ID           int               `json:"id"`
-	Hosts        []string          `json:"hosts"`
-	Started      time.Time         `json:"started"`
-	Duration     time.Duration     `json:"duration_ns"`
-	Output       string            `json:"output"` // raw tool output file (evidence)
-	Error        string            `json:"error,omitempty"`
-	State        string            `json:"state"` // done | failed | killed
+	ID       int           `json:"id"`
+	Hosts    []string      `json:"hosts"`
+	Started  time.Time     `json:"started"`
+	Duration time.Duration `json:"duration_ns"`
+	Output   string        `json:"output"` // raw tool output file (evidence)
+	Error    string        `json:"error,omitempty"`
+	State    string        `json:"state"` // done | failed | killed
+	// TimedOut: hosts the tool gave up on (nmap --host-timeout). They are removed from Hosts,
+	// so they count as NOT scanned (pending, no misses) - LAB-T7.
+	TimedOut     []string          `json:"timed_out,omitempty"`
 	Observations []obs.Observation `json:"-"`
+}
+
+// hostTimeouts is implemented by adapters whose tool can give up on single hosts and drop
+// their results while still exiting 0 (nmap --host-timeout writes <host timedout="true">).
+type hostTimeouts interface {
+	TimedOutHosts(outputPath string) []string
+}
+
+// dropTimedOut removes timed-out hosts from the chunk result: from Hosts (coverage) and from
+// Observations (a timed-out host has none, but a partial line must not count either).
+func dropTimedOut(r *ChunkResult, timedOut []string) {
+	if len(timedOut) == 0 {
+		return
+	}
+	gone := map[string]bool{}
+	for _, h := range timedOut {
+		gone[h] = true
+	}
+	kept := r.Hosts[:0:0]
+	for _, h := range r.Hosts {
+		if !gone[h] {
+			kept = append(kept, h)
+		}
+	}
+	r.Hosts = kept
+	obsKept := r.Observations[:0:0]
+	for _, o := range r.Observations {
+		ip, _, _ := obs.SplitKey(o.AssetKey)
+		if !gone[ip] {
+			obsKept = append(obsKept, o)
+		}
+	}
+	r.Observations = obsKept
+	r.TimedOut = append(r.TimedOut, timedOut...)
+	msg := fmt.Sprintf("host timeout (not scanned): %s", strings.Join(timedOut, ","))
+	if r.Error != "" {
+		msg = r.Error + "; " + msg
+	}
+	r.Error = msg
+	if len(r.Hosts) == 0 && r.State == "done" {
+		r.State = "failed"
+	}
 }
 
 // RunPhase scans targets with a pool of cfg.Parallel tool processes.
@@ -331,6 +376,13 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, self
 		}
 	}
 	r.Observations, _ = cfg.Adapter.Parse(raw)
+	if ht, ok := cfg.Adapter.(hostTimeouts); ok && spec.Path != "" {
+		if to := ht.TimedOutHosts(spec.Path); len(to) > 0 {
+			dropTimedOut(&r, to)
+			tr.Logf("%s %s: %d host(s) hit the tool's host timeout and were NOT scanned (pending, no misses): %s",
+				cfg.Name, name, len(to), strings.Join(to, ","))
+		}
+	}
 	if cfg.Guard != nil {
 		var dropped int
 		r.Observations, dropped = filterSelfObservations(r.Observations, cfg.Guard)

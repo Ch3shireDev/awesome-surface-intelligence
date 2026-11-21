@@ -180,6 +180,11 @@ func (d *dbRecorder) chunkDone(stage, tool, format string, r scanner.ChunkResult
 	if err := d.st.FinishChunk(c, d.runID, stage, r.ID, r.State, r.Duration, r.Error); err != nil {
 		d.logf("db: chunk finish: %v", err)
 	}
+	if len(r.TimedOut) > 0 { // LAB-T7: hosts the tool gave up on are not covered by this chunk
+		if err := d.st.SetChunkTargets(c, d.runID, stage, r.ID, r.Hosts); err != nil {
+			d.logf("db: chunk targets: %v", err)
+		}
+	}
 	if err := d.st.InsertObservations(c, d.runID, stage, r.ID, r.Observations); err != nil {
 		d.logf("db: observations: %v", err)
 	}

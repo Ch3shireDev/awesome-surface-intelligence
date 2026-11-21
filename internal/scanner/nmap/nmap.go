@@ -222,11 +222,27 @@ func (a *Adapter) Parse(raw io.Reader) ([]obs.Observation, error) {
 	return FromHosts(run.Hosts), err
 }
 
+// TimedOutHosts lists hosts nmap gave up on (--host-timeout) in an XML output file.
+// scanner.runChunk treats them as NOT scanned: no misses, back to pending (LAB-T7).
+func (a *Adapter) TimedOutHosts(path string) []string {
+	run, err := nmapxml.ParseFile(path)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, h := range run.Hosts {
+		if h.TimedOut {
+			out = append(out, h.IP())
+		}
+	}
+	return out
+}
+
 // FromHosts converts parsed nmap hosts to observations (host + port + service).
 func FromHosts(hosts []nmapxml.Host) []obs.Observation {
 	var out []obs.Observation
 	for _, h := range hosts {
-		if !h.Up() {
+		if !h.Up() || h.TimedOut { // timed out = no data, not "no open ports" (LAB-T7)
 			continue
 		}
 		ip := h.IP()
