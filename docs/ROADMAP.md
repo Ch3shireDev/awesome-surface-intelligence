@@ -13,7 +13,7 @@ M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅ (cele z tekstu + MCP), oś czasu i KPI ✅, sekcja HTTP i sygnatury w assecie ✅
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur (DEV-7 osobno)
 M6 Ochrona danych i role  █████████░  95%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅; brak: tokeny API w GUI (DEV-3)
-M7 Harmonogram i eksport  ████████░░  85%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; httpx/nuclei po M5), DEV-6 🟡 (eksport ✅, import ❌)
+M7 Harmonogram i eksport  ████████░░  85%  🔨  DEV-5 ✅, SEC-8 ✅, SEC-7 🟡 (asi-changes ✅; parsery httpx/nuclei do DD: do zrobienia, M5 gotowe), DEV-6 🟡 (eksport ✅, import ❌)
 M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 nie zaczęte (dokumentacja VitePress jest)
 ```
 

@@ -84,6 +84,20 @@ zmiany:
   (- gone   192.0.2.17:80/tcp        zależnie od fazy hosta flaky)
 ```
 
+Etapy **http** (httpx) i **signatures** (nuclei + nasze szablony) idą automatycznie w każdym przebiegu.
+Sprawdzone 21.11, 17:00, `make demo` na pełnym stacku:
+
+| host | co wykrył fingerprint i sygnatury |
+|---|---|
+| .10 web-prod | PHP 7.4.33 (`asi-php-outdated`, medium), `PHPSESSID`, cert TLS self-signed `intranet.lab.example`, `/login` → przekierowanie, „LabPortal 1.8.2” w stopce |
+| .11 wordpress | WordPress 6.4.2: `asi-html-generator`, `asi-cms-wordpress:readme`, `:api-link`, `:wp-login` |
+| .12 staging-admin | staging (`X-Environment`, tytuł, `staging_session`), panel `/admin/`, `/version` 2.3.1-rc1 |
+| .13 cache | Redis bez hasła (`asi-redis-noauth`, high) |
+| .16 jenkins (przebieg 2) | httpx: Jenkins 2.401.1; `asi-jenkins` (medium), `asi-footer-version`, `asi-session-cookies:java` |
+
+W DefectDojo przebieg 2 daje reimport `created 2, closed 4, untouched 5` oraz test `asi-changes`
+z 4 warunkami (zniknięcia, zmiana, nowy host).
+
 Wynik .17 zależy od chwili skanu, i o to chodzi: przy kilku przebiegach co chwilę
 (`make asi ARGS="scan -targets targets/lab.csv -out results/lab"`) reconcile w bazie powinien oznaczyć go
 jako `flapping`.

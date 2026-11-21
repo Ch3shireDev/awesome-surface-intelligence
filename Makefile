@@ -227,6 +227,5 @@ demo:
 	@echo "== zmiany w labie: legacy (.14) znika, app (.15) zmienia serwer, jenkins (.16) dochodzi"
 	$(LAB) rm -sf legacy app
 	$(LAB) --profile pass2 up -d app-v2 jenkins
-	@echo "== przebieg 2"
+	@echo "== przebieg 2 (na koncu diff wzgledem przebiegu 1; pelna historia w panelu :8090)"
 	$(LAB_SCAN)
-	docker compose exec -T nmap-scanner asi diff -results results/lab
