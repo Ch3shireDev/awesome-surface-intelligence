@@ -139,6 +139,32 @@ docker-compose-custom-network.yml up -d`, jeden stack naraz. Cel `127.0.0.1`, po
 kopię uruchamiamy z remapem portu (np. `18080:80`), żeby nie zatrzymywać naszego stacku. Wynik LAB-3 opisze
 faktyczne porty.
 
+## Wyniki LAB-3 (21.11, `modern` na blackarch, amd64)
+
+Ta sama niezależna kopia (`~/lab-org`), `docker-compose-modern-local.yml` z **remapem WordPressa 8080 → 18080**
+(na 8080 stoi nasze DefectDojo; reszta portów jak u organizatorów). Cel `127.0.0.1`, porty
+`80,81,443,6379,8081,18080`, `-rate 200 -parallel 2`, przebieg ~40 s.
+
+| wymóg LAB-3 | wynik |
+|---|---|
+| WordPress z wersją | `http Apache httpd` na 18080; tytuł strony instalatora, **wersja 7.1.5** z `?ver=` arkuszy CSS rdzenia (readme.html od WP 5.8 nie podaje już wersji) |
+| `asi-redis-noauth` high | Redis 7.4.12 na 6379, sygnatura `asi-redis-noauth` **high**; dodatkowo ocena portu `medium` („Redis reachable internally”) |
+| phpMyAdmin | tytuł `phpMyAdmin`, `Apache/2.4.71`, `PHP 8.3.37`, sygnatura `asi-phpmyadmin` (low) |
+| Nginx Proxy Manager | tytuł `Nginx Proxy Manager`, `openresty`, sygnatura `asi-nginx-proxy-manager` (low) z wersją panelu `2.17.1` z `/api/` |
+| TLS na 443 | **niezaliczone na świeżym NPM**: bez skonfigurowanego hosta NPM nie ma żadnego certyfikatu, handshake kończy się `unrecognized name`, więc nie ma czego odciskować. Samo 443 jest wykryte jako `https` (`tls=true`) |
+
+**Weryfikacja TLS poza labem** (żeby nie zostawić tej ścieżki niesprawdzonej): tymczasowy serwer HTTPS z certyfikatem
+self-signed (`CN=lab-tls.local`) na `127.0.0.1:8443`, skan `-ports 8443`. Wynik: `https`, tytuł `ASI TLS test`,
+`tls_subject`/`tls_issuer` = `lab-tls.local`, `tls_not_after` = data z certyfikatu, `tls_sans` = `lab-tls.local`,
+a w surowej obserwacji httpx `tls.self_signed=true`, `tls.mismatched=true`, `tls_version=tls13`,
+`cipher=TLS_AES_256_GCM_SHA384`. Czyli parser TLS działa; do zaliczenia „TLS na 443” w labie wystarczy dodać
+host + certyfikat w NPM (albo wystawić 443 z certyfikatem w `docker-compose-modern`).
+
+**Zmiana w kodzie:** szablon `signatures/http/asi-cms-wordpress.yaml` dostał drugie żądanie (`GET /`) z ekstrakcją
+wersji rdzenia z `wp-(includes|admin)/css/*.css?ver=…` — bez tego WordPress z instalatora nie miał wersji,
+a readme jej już nie zawiera (tylko wersje PHP/MySQL). Sprawdzone: `extracted-results = ["7.1.5"]`,
+po zawężeniu do CSS rdzenia bez fałszywych jQuery 3.7.1/3.4.1.
+
 ## Wyniki LAB-5 (21.11, Toxiproxy, `modern-proxy`)
 
 Domyślne ustawienia skanera (pełne TCP przez `-ports auto`, pomijanie portów ASI/DD), cel `127.0.0.1`,

@@ -30,3 +30,21 @@ http:
         part: body
         group: 1
         regex: ['(?i)Version ([0-9]+\.[0-9]+(\.[0-9]+)?)']
+  # Wersja rdzenia: WordPress od 5.8 nie podaje jej w readme.html, ale w HTML stron
+  # administracyjnych/instalatora pliki rdzenia mają ?ver=<wersja WP>. Bierzemy numer
+  # z arkusza CSS rdzenia WP (dashicons/forms), a nie z jQuery (ma własną wersję).
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    redirects: true
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - 'wp-(includes|admin)/css/[A-Za-z0-9._/-]+\.css\?ver=[0-9]+\.[0-9]+'
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - 'wp-(?:includes|admin)/css/[A-Za-z0-9._/-]+\.css\?ver=([0-9]+\.[0-9]+(?:\.[0-9]+)?)'
