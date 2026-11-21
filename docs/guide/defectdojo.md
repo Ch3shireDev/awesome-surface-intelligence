@@ -133,3 +133,53 @@ raport z `close_old`: sygnatura, która przestała pasować, zostaje zamknięta.
 Parser httpx w DD przenosi URL, kod, tytuł strony, serwer, technologie, typ treści i przekierowania.
 Nagłówki, cookies i certyfikat TLS zostają w ASI (obserwacje `http`, zaszyfrowane, panel i `asi assets`).
 
+
+## Jedna instancja DD na wiele środowisk i maszyn (decyzja 22)
+
+Testy robimy na różnych środowiskach (lab organizatorów, nasz lab `docker/lab`, własna infrastruktura z
+`targets/targets.csv`), ale **DefectDojo jest jednym końcowym punktem, do którego pchamy wyniki**. Jedna baza =
+jedno źródło prawdy: diff i historia zmian (`asi-changes`, `close_old`, dedupe po hashu) działają tylko
+w obrębie jednej instancji, więc rozbicie na DD per VM gubi najciekawszą rzecz w projekcie.
+
+| rola maszyny | co stoi | `DD_URL` |
+|---|---|---|
+| **kanoniczny** (dziś fatusia-1) | pełny stack: DD `:18080`, `asi-db`, `asi server` | — |
+| pozostałe VM (fatusia-2, blackarch…) | **tylko skaner + lab**: `docker compose up -d nmap-scanner asi-db` | `http://100.113.45.50:18080` |
+
+### Konfiguracja kanonicznego (jednorazowo)
+
+```bash
+# fatusia-1:~/asi/.env - DD ma być dostępny z tailnetu, nie tylko z localhost
+DD_PORT=18080                                          # 8080/8090 zostają labom (WordPress, DVWA)
+DD_SITE_URL=http://100.113.45.50:18080
+DD_CSRF_TRUSTED_ORIGINS=http://localhost:18080,http://127.0.0.1:18080,http://100.113.45.50:18080
+```
+
+Bez wpisu z adresem tailnetu przeglądarka dostanie błąd CSRF przy logowaniu. Po zmianie wystarczy
+`docker compose up -d nginx uwsgi` (nie `make nuke`).
+
+### Konfiguracja maszyny ze skanerem
+
+```bash
+# .env na VM, która nie stawia DD
+DD_URL=http://100.113.45.50:18080
+DD_API_KEY=<token z UI admina na kanonicznym>            # osobny token per maszyna (audyt)
+DD_PRODUCT_TYPE=HackNation
+DD_PRODUCT="ASI lab-org"                                # produkt = ŚRODOWISKO, nie maszyna
+DD_ENGAGEMENT="lab-org@f1"                              # równoległy skan tego samego środowiska = inny engagement
+```
+
+`DD_URL` ma pierwszeństwo przed `DD_PORT` (`cmd/asi/main.go`), więc nie trzeba ruszać portu lokalnego.
+
+### Zasady
+
+- **Produkt = środowisko** (`ASI lab-org`, `ASI lab`, `ASI infra`), a nie maszyna: ten sam asset ma trafiać do
+  tego samego produktu niezależnie od tego, kto skanował.
+- **Ten sam produkt z dwóch maszyn równolegle = duplikaty** w jednym teście. Albo jeden skan naraz na środowisko,
+  albo różne engagementy (`lab-org@f1`, `lab-org@ba`) - wtedy diff działa w obrębie engagementu.
+- **`make nuke` wymaga uzgodnienia**: dane odtwarza `asi upload` z `results/`, ale historia reimportów i diff
+  w DD przepadają.
+- **`DD_VERSION` podnosimy tylko na kanonicznym** i tylko gdy nikt nie robi przebiegu - inaczej migracje rozjadą
+  się w środku testu.
+- **DD padnie w trakcie testu?** Każdy przebieg zostawia `results/<run>` + `run.json`, więc po podniesieniu DD
+  robimy `asi upload -out results/<run>` i nic nie ginie. DD jest celem eksportu, nie magazynem prawdy.

@@ -320,12 +320,17 @@ czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyst
 1. **Rezerwacja** w `docs/TASKS.md`: przy zadaniu `🔨 w toku: <kto>, <stack>@<VM>`. Na jednej VM tylko jeden stack labu.
 2. **Kopia labu** (materiał organizatorów, poza repo, bez `.env` z cudzej maszyny):
    `rsync -a --exclude .env fh:lab/ ~/lab/` (albo z dowolnej VM, która go ma).
-3. **Własny stack ASI + DefectDojo** na tej VM (`make env && make up`, z klonu `~/asi`). Skan idzie na `127.0.0.1`.
-4. **Porty naszego stacku** przed stackiem, który z nim koliduje (w `.env`, potem `make up`):
+3. **Własny skaner ASI + wspólny DefectDojo** (decyzja 22): na tej VM wstaje tylko skaner i baza,
+   `docker compose up -d nmap-scanner asi-db`, a `DD_URL` w `.env` wskazuje kanoniczny DD
+   (`http://100.113.45.50:18080`). Nie stawiamy drugiej instancji DD - wyniki z każdej VM mają trafiać do jednej
+   bazy. Konfiguracja: [Integracja z DefectDojo](defectdojo.md#jedna-instancja-dd-na-wiele-srodowisk-i-maszyn-decyzja-22).
+   Skan idzie na `127.0.0.1`, produkt = środowisko, engagement per VM (`lab-org@f2`), żeby równoległe przebiegi
+   się nie dublowały.
+4. **Porty naszego stacku** przed stackiem, który z nim koliduje (w `.env`):
 
    | stack labu | koliduje z | w `.env` |
    |---|---|---|
-   | `modern` | DefectDojo 8080 | `DD_PORT=18080`, `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` na 18080 |
+   | `modern` | kanoniczny DD (tylko na maszynie z DD) | `DD_PORT=18080`, `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` na 18080 |
    | `vulnerable` | panel ASI 8090 | `ASI_WEB_ADDR=127.0.0.1:18090` |
    | `custom-network`, `modern-proxy` | — | — |
 
@@ -340,7 +345,8 @@ czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyst
    ```
 
    Sprawdzone `docker compose config`: bez nakładki 31 portów czterech stacków na `0.0.0.0`, z nakładką wszystkie na `127.0.0.1`.
-6. **Wynik** w tabeli zadania i w sekcji „Wyniki LAB-n” niżej, z nazwą VM (różne VM = różny szum własnych usług
-   i inne DefectDojo).
-- **Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM),
-  ASI ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.
+6. **Wynik** w tabeli zadania i w sekcji „Wyniki LAB-n” niżej, z nazwą VM (różne VM = różny szum własnych usług,
+   dlatego engagement nazywamy `lab-org@<vm>`).
+
+**Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM), ASI
+ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.

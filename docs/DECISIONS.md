@@ -221,7 +221,8 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       na hoscie) i przed brakiem RAM. Start: `docker compose -f docker-compose-<stack>.yml up -d`, dla
       `custom-network` scenariusz `./quickstart.sh up|change|up`.
     - **Testy LAB-* rownolegle na kilku VM** (21.11 22:00): kopia `~/lab` na kazda VM z dockerem, na kazdej
-      wlasny stack ASI+DD i jeden stack labu. Nie czekamy na "wolny lab" na jednej maszynie. Rezerwacja w
+      wlasny skaner ASI (`docker compose up -d nmap-scanner asi-db`) i jeden stack labu; **DefectDojo jest
+      wspolny** - jedna instancja, decyzja 22. Nie czekamy na "wolny lab" na jednej maszynie. Rezerwacja w
       TASKS jako `stack@VM`. LAB-6 (fatusia-1) szedl rownolegle z LAB-5 (fatusia-2), wyniki czyste.
     - Cel skanu zalezy od tego, gdzie stoi skaner: ta sama VM -> `127.0.0.1`; inna maszyna w tailnecie ->
       `<tailscale-ip>` tej VM. **Nie skanujemy adresow mostkow dockera (172.x) z innej maszyny** - tailscale
@@ -271,12 +272,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Zamykanie panelu szczegółów: klik w wiersz dokłada wpis historii, „✕”/`Esc` robi krok wstecz; wejście
       z linku (bez wpisu w historii) tylko czyści adres `replaceState`, żeby nie wypychać użytkownika z panelu.
 
-22. **Jeden kanoniczny DefectDojo, nie instancja na każdą VM** (21.11 21:05, po sprawdzeniu fatusia-1/fatusia-2).
+22. **Dokładnie jedna instancja DefectDojo = źródło prawdy dla wszystkich środowisk** (21.11 21:12).
     - Stan: fatusia-1 ma pełny stack (DD `:18080`, `asi server`, `asi-db`, LAB-4), fatusia-2 ma pełny stack
       (DD `:8080`, `asi server`, lab `modern-proxy`, LAB-T8), blackarch bez DD (stacja dev). Oba DD są osiągalne
       z tailnetu (`/login` z blackarch: 200, 0,27 s f1 i 1,19 s f2).
-    - Wniosek: **jedna instancja kanoniczna** = to, co pokazujemy jury; druga tylko jako „scratch” do izolacji
-      pracy agentów (wolno ją wyczyścić `make nuke`, nigdy nie jest demowana). Powody:
+    - Wniosek (potwierdzony przez zespół 21.11 21:12): **dokładnie jedna instancja**, bez „scratch”. Testy robimy
+      na różnych środowiskach (lab organizatorów, nasz lab, własna infrastruktura), ale DD jest **jednym końcowym
+      punktem, do którego pchamy wyniki** - więc między środowiskami i maszynami ma być jedna baza, jako źródło
+      prawdy. Powody:
       (1) jury widzi jeden system końcowy - findings rozproszone po VM to dwa źródła prawdy;
       (2) `asi-changes`, `close_old` i dedupe po hashu są per-instancja, więc porównanie przebiegów z różnych
       maszyn ma sens tylko w jednej bazie;
@@ -286,18 +289,32 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       przenumerować porty i dokumentację, a `:18080` zostawia 8080/8090 labom;
       (5) jeden admin, jeden token, jedna wersja `DD_VERSION` (brak rozjazdu migracji przy równoległej pracy).
     - Wdrożenie: kanoniczny = fatusia-1 `http://100.113.45.50:18080` (6 rdzeni, relay „waw”). Pozostałe VM:
-      tylko skaner + lab, `DD_URL` na kanoniczny, **osobny token API per maszyna** (audyt), produkt per źródło
-      (`ASI lab-org @ f1`), żeby dedupe nie mieszał przebiegów z dwóch maszyn. fatusia-2: DD albo wyłączyć,
-      albo przenumerować na `18080` i traktować jako scratch.
+      **tylko skaner + lab**, `DD_URL` na kanoniczny (nie stawiają własnego DD). fatusia-2: DD wyłączyć
+      (`docker compose stop nginx uwsgi celeryworker celerybeat postgres valkey`) albo zostawić wyłączony na stałe;
+      jego skaner pcha wyniki do fatusia-1.
+    - Zasady pracy ze wspólną instancją:
+      (1) **produkt = środowisko, nie maszyna** (`ASI lab-org`, `ASI lab`, `ASI infra`), bo to ten sam asset
+      niezależnie od tego, która VM skanuje;
+      (2) ten sam produkt skanowany równolegle z dwóch maszyn = duplikaty w jednym teście, więc albo jeden skan
+      naraz na środowisko, albo różne engagementy (`lab-org@f1`, `lab-org@ba`) - diff działa wtedy w obrębie
+      engagementu;
+      (3) `make nuke` na maszynie z DD tylko po uzgodnieniu: dane odtwarza `asi upload` z `results/`, ale
+      historia reimportów i diff w DD przepadają;
+      (4) `DD_VERSION` podnosimy **tylko tutaj** i tylko po sprawdzeniu, że nikt nie robi przebiegu - inaczej
+      migracje rozjadą się w środku testu;
+      (5) token API **per maszyna** (`DD_API_KEY` w `.env` każdej VM, tworzony w UI admina) - ta sama instancja,
+      ale widać, kto co wysłał.
+    - Wyjątek (dozwolony, ale nie jest źródłem prawdy): lokalny DD na innej VM do eksperymentu offline. Po
+      teście `asi upload` do kanonicznego i lokalny stack do kosza - findings mają być w jednym miejscu.
     - Wymóg konfiguracji: do `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` kanonicznego dopisać
       `http://100.113.45.50:18080` - bez tego logowanie z przeglądarki przez tailnet wpadnie na CSRF (dziś
       wpisany jest tylko `localhost`).
     - Odporność (dlaczego wspólny DD nie jest pojedynczym punktem awarii danych): każdy przebieg zostawia
       `results/<run>` + `run.json`, a `asi upload` odtwarza import po podniesieniu DD. DD jest celem eksportu,
       nie magazynem prawdy (decyzja 8).
-    - Do rozstrzygnięcia: **która VM jest demo** - kanoniczny DD ma stać tam, gdzie robimy demo; jeśli demo
-      idzie z innej maszyny, przenosimy kanoniczny (wolumen `asi_db_data`/DD trzeba wtedy przenieść albo
-      zaakceptować świeży start i reimport z `results/`).
+    - **Demo:** jeśli prezentacja idzie z innej VM, nie przenosimy bazy - puszczamy `asi upload` do świeżego DD
+      na maszynie demo (albo pokazujemy UI fatusia-1 przez tailnet). Świadoma decyzja: historia diff z DD jest
+      mniej warta niż to, że demo nie zależy od drugiej maszyny.
 
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 

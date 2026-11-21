@@ -81,9 +81,10 @@ Otwarte:
    portów ustalamy sami w `.env`, zakres skanu jest per przebieg (decyzja 19), a wykryty firewall raportujemy jako
    „wynik niepełny”, nie jako brak usług (decyzja 20, `LAB-T11`).
 
-4. **Topologia DefectDojo (decyzja 22)**: kanoniczny DD na fatusia-1 (`:18080`), pozostałe VM tylko skaner + lab;
-   druga instancja co najwyżej jako „scratch”. Do rozstrzygnięcia: **z której VM idzie demo** - tam ma stać
-   kanoniczny DD (dziś w `.env` na fatusia-1 jest `DD_SITE_URL=http://localhost:18080`, bez adresu tailnetu).
+4. **Topologia DefectDojo (decyzja 22, rozstrzygnięta 21.11 21:12)**: **jedna instancja** - źródło prawdy dla
+   wszystkich środowisk i maszyn. Kanoniczny DD na fatusia-1 (`:18080`), pozostałe VM tylko skaner + lab z
+   `DD_URL` na kanoniczny. Do zrobienia: wpis adresu tailnetu w `DD_SITE_URL`/`DD_CSRF_TRUSTED_ORIGINS` na
+   fatusia-1 i wyłączenie DD na fatusia-2 (`guide/defectdojo.md`, „Jedna instancja DD…”).
 
 ## Następne kroki
 

@@ -113,7 +113,7 @@ i `make sync`.
 
 Środowisko: `~/lab` (poza repo), kopia na każdej VM z dockerem (fatusia-1, fatusia-2, blackarch). To są **materiały od organizatorów z Discorda** (SEC-2). Opis, analiza i sposób testowania:
 [Lab organizatorów](guide/lab-organizers.md). **Jeden stack naraz na maszynę, testy równolegle na kilku VM**: kopia
-`~/lab` na każdą VM z dockerem, własny stack ASI+DD, nakładka `docker/lab-org/<stack>.bind.yml`, rezerwacja jako
+`~/lab` na każdą VM z dockerem, własny skaner ASI + **wspólny** DefectDojo (decyzja 22), nakładka `docker/lab-org/<stack>.bind.yml`, rezerwacja jako
 `stack@VM` ([Testy równolegle](guide/lab-organizers.md#testy-rownolegle-na-kilku-vm)). Nie czekamy na „wolny lab”. Cel: `127.0.0.1`, gdy skaner stoi
 na tej samej VM, albo `<tailscale-ip>` tej VM, gdy skaner jest na innej maszynie w tailnecie (decyzja 19);
 pliki celów per maszyna, np. `targets/lab-org.csv`.
