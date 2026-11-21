@@ -344,7 +344,7 @@ func (d *dbRecorder) reconcile(cfg store.ReconcileConfig) {
 }
 
 func printEvents(ev []store.Event) {
-	colors := map[string]string{"new": "32", "reappeared": "32", "changed": "33", "missing": "31", "gone": "31", "flapping": "35"}
+	colors := map[string]string{"new": "32", "reappeared": "32", "changed": "33", "reverted": "35", "missing": "31", "gone": "31", "flapping": "35"}
 	for _, e := range ev {
 		detail := ""
 		if e.Type == "changed" {

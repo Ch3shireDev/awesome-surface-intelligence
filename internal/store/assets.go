@@ -39,7 +39,7 @@ type AssetFilter struct {
 	Flapping bool
 	Search   string   // substring of key
 	RunID    string   // only assets with an event of one of Events types in this run
-	Events   []string // new | reappeared | changed | missing | gone | flapping (with RunID)
+	Events   []string // new | reappeared | changed | reverted | missing | gone | flapping (with RunID)
 	Limit    int
 }
 

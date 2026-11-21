@@ -196,6 +196,12 @@ a główny reimport `ASI discovery` używa `close_old` tylko przy etapach discov
 zdarzeń (wcześniej 10× `missing` + `flapping`), skan potwierdzający odzyskał 8 znanych usług (tag
 `unstable`), DD `close_old=false`.
 
+**Poprawka LAB-T8 (21.11, sprawdzona na żywo).** Powrót odcisku do stanu sprzed ostatniej zmiany to
+zdarzenie `reverted`, a nie drugie `changed`. Powtarzające się awarie podnoszą `flapping`, a test `asi-changes`
+w DD zamyka finding „zmiana” po cofnięciu. Na żywo (`timeout` → brak zakłóceń): awaria `changed:2` (usługa +
+HTTP), powrót `reverted:2`, w `asi-changes` brak otwartej zmiany dla 8085. Główny test `ASI discovery` dalej
+zamyka i reaktywuje finding (DD dopasowuje po hashu opisu), to zachowanie DefectDojo.
+
 **Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
 przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 

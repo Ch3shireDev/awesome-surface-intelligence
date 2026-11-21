@@ -47,7 +47,7 @@ th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
 tr.click{cursor:pointer} tr.click:hover td{background:var(--soft)}
 .scroll{max-height:460px;overflow:auto}
 .badge{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
-.t-new,.t-reappeared,.s-new{color:var(--ok)} .t-changed{color:var(--warn)} .t-missing,.s-missing{color:var(--warn)}
+.t-new,.t-reappeared,.s-new{color:var(--ok)} .t-changed{color:var(--warn)} .t-reverted{color:var(--flap)} .t-missing,.s-missing{color:var(--warn)}
 .t-gone,.s-gone{color:var(--bad)} .t-flapping{color:var(--flap)} .s-active{color:var(--muted)}
 .i-high{color:var(--high);font-weight:600} .i-medium{color:var(--medium);font-weight:600} .i-low{color:var(--low)}
 .tag{display:inline-block;background:var(--soft);border-radius:4px;padding:0 6px;margin:1px 3px 1px 0;font-size:12px}
@@ -291,9 +291,9 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LV={viewer:1,analyst:2,operator:3,admin:4};
-const TYPES=['new','reappeared','changed','missing','gone','flapping'];
-const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)'};
-const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',active:'aktywny',
+const TYPES=['new','reappeared','changed','reverted','missing','gone','flapping'];
+const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',reverted:'var(--flap)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)'};
+const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',reverted:'cofnięta zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',active:'aktywny',
   running:'w toku',completed:'zakończony',partial:'częściowy',failed:'błąd',cancelled:'anulowany',deferred:'odłożony'};
 let me=null, curSet='default', timer=null;
 

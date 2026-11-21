@@ -48,14 +48,21 @@ func ChangesJSON(assets []store.Asset, events []store.Event) []byte {
 		}
 	}
 
-	// latest "changed" event per asset, only while the asset is live
+	// latest "changed" event per asset, only while the asset is live and only if the change
+	// was not reverted afterwards (LAB-T8: a backend outage behind a proxy flips the fingerprint
+	// and flips it back - the asset is then flagged as flapping, not as changed)
 	latest := map[string]store.Event{}
 	for _, e := range events {
-		if e.Type != "changed" {
+		if e.Type != "changed" && e.Type != "reverted" {
 			continue
 		}
-		if cur, ok := latest[e.Key]; !ok || e.At.After(cur.At) {
+		if cur, ok := latest[e.Key]; !ok || e.At.After(cur.At) || (e.At.Equal(cur.At) && e.Type == "reverted") {
 			latest[e.Key] = e
+		}
+	}
+	for k, e := range latest {
+		if e.Type == "reverted" {
+			delete(latest, k)
 		}
 	}
 	keys := make([]string, 0, len(latest))

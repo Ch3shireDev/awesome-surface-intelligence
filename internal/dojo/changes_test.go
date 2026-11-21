@@ -140,3 +140,21 @@ func keys(m map[string]map[string]any) []string {
 	}
 	return out
 }
+
+func TestChangesRevertedIsNotACurrentChange(t *testing.T) {
+	a := port("192.0.2.40/tcp/8085", "active", `{"name":"http","product":"Apache httpd"}`)
+	a.Flapping = true
+	ev := []store.Event{
+		{Key: a.Key, Type: "changed", RunID: "run-2", At: t0, Before: json.RawMessage(`{"product":"Apache httpd"}`), After: json.RawMessage(`{"product":"Traefik"}`)},
+		{Key: a.Key, Type: "reverted", RunID: "run-3", At: t0.Add(time.Hour), Before: json.RawMessage(`{"product":"Traefik"}`), After: json.RawMessage(`{"product":"Apache httpd"}`)},
+	}
+	r := parse(t, ChangesJSON([]store.Asset{a}, ev))
+	for _, f := range r.Findings {
+		if strings.Contains(f["unique_id_from_tool"].(string), ":changed:") {
+			t.Fatalf("a reverted change must not stay open as 'changed': %v", f["title"])
+		}
+	}
+	if len(r.Findings) != 1 || !strings.Contains(r.Findings[0]["unique_id_from_tool"].(string), ":flapping:") {
+		t.Fatalf("want only the flapping condition, got %v", r.Findings)
+	}
+}

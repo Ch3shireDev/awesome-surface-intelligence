@@ -20,7 +20,8 @@ Po każdym przebiegu zapisanym w bazie `asi` przelicza **assety**: trwałe byty 
 | `missing` | pierwszy brak w przebiegu, który ten asset **naprawdę sprawdzał** |
 | `gone` | `consecutive_misses ≥ próg` (host: 3, port: 2) i opcjonalnie `-gone-after 24h` od ostatniego widzenia |
 | `reappeared` | wrócił ze stanu `missing` albo `gone` |
-| `flapping` | ≥ 3 przejścia active↔missing w ostatnich 10 przebiegach (flaga na assecie) |
+| `reverted` | odcisk usługi lub HTTP wrócił do stanu sprzed ostatniej zmiany (np. zaplecze za proxy chwilowo nie działało i odpowiadał sam proxy). To nie jest druga zmiana, tylko cofnięcie: liczy się jak 2 przejścia do `flapping`, a w DefectDojo zamyka finding „zmiana” (LAB-T8) |
+| `flapping` | ≥ 3 przejścia w ostatnich 10 przebiegach: active↔missing albo cofnięte zmiany odcisku (flaga na assecie) |
 
 Odpowiedź na pytanie z treści zadania *„po jakim czasie braku odpowiedzi raportować host jako nieaktywny?”*:
 po `-miss-threshold` kolejnych brakach (domyślnie 3) i opcjonalnie po `-gone-after`. Pojedynczy brak to

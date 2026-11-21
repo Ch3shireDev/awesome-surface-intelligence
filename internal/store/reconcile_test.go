@@ -232,3 +232,45 @@ func TestReconcileHTTPChange(t *testing.T) {
 		t.Fatalf("changed title must be an event: %+v", r.Events)
 	}
 }
+
+// LAB-T8: a backend behind a proxy goes down (the proxy answers instead: another fingerprint)
+// and comes back. The first flip is a change, the flip back is a "reverted" (not a second
+// change), and repeated outages raise flapping like a blinking port.
+func TestReconcileRevert(t *testing.T) {
+	st := testStore(t, xorSealer{})
+	ctx := context.Background()
+	prefix := fmt.Sprintf("rv%d", time.Now().UnixNano())
+	ip := "198.51.100.88"
+	key := obs.PortKey(ip, "tcp", 8085)
+	t.Cleanup(func() {
+		st.DB.Exec(ctx, `DELETE FROM assets WHERE key LIKE '198.51.100.88%'`)
+		st.DB.Exec(ctx, `DELETE FROM runs WHERE id LIKE $1`, prefix+"%")
+	})
+	run := func(i int, product string) ReconcileResult {
+		return runScan(t, st, prefix, i, scan{covered: []string{ip}, ports: "1-65535",
+			up: map[string][]port{ip: {{8085, product}}}})
+	}
+	run(1, "Apache httpd")
+	if r := run(2, "Golang net/http server"); !has(r, "changed", key) {
+		t.Fatalf("first flip must be a change: %+v", r.Events)
+	}
+	r := run(3, "Apache httpd")
+	if has(r, "changed", key) || !has(r, "reverted", key) {
+		t.Fatalf("flip back must be 'reverted', not 'changed': %+v", r.Events)
+	}
+	if r := run(4, "Apache httpd"); len(r.Events) != 0 {
+		t.Fatalf("stable after the outage: %+v", r.Events)
+	}
+	// second outage: flipping between two KNOWN fingerprints is instability, not a change -
+	// "reverted" again and flapping raised right away (4 transitions >= 3)
+	if r := run(5, "Golang net/http server"); has(r, "changed", key) || !has(r, "reverted", key) || !has(r, "flapping", key) {
+		t.Fatalf("second outage must be 'reverted' + flapping, not 'changed': %+v", r.Events)
+	}
+	if r := run(6, "Apache httpd"); has(r, "changed", key) || !has(r, "reverted", key) {
+		t.Fatalf("end of second outage must be 'reverted': %+v", r.Events)
+	}
+	// a real, lasting change to something new is still a change
+	if r := run(7, "nginx"); !has(r, "changed", key) || has(r, "reverted", key) {
+		t.Fatalf("new fingerprint must be a change: %+v", r.Events)
+	}
+}
