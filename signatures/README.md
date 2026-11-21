@@ -46,6 +46,10 @@ http:
 
 3. Sprawdź: `nuclei -t signatures/http/asi-grafana.yaml -validate`, potem
    `nuclei -t signatures/http/asi-grafana.yaml -u http://192.0.2.12:8080 -nc -duc -ni` na labie.
+   Bez labu jest atrapa urządzeń IoT (tylko loopback): `python3 scripts/iot-stub.py &`, a potem
+   `nuclei -t signatures/http -u http://127.0.0.1:18080 -nc -duc -ni` — powinno trafić 6 sygnatur
+   (`hikvision`, `camera-generic`, `embedded-server`, `openwrt`, `printer`, `upnp-description`),
+   a Dahua, MikroTik i NAS **nie** (atrapa ich nie udaje).
 4. `go test ./internal/scanner/nuclei` (lint bezpieczeństwa wszystkich szablonów).
 5. Commit. Kontener czyta katalog z repo (`./signatures` jest podpięty), więc wystarczy kolejny skan.
 
