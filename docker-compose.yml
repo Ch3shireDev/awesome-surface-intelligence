@@ -98,6 +98,27 @@ services:
       - dd_media:/usr/share/nginx/html/media:ro
     networks: [defectdojo]
 
+  # --- baza ASI (osobna od bazy DefectDojo; decyzja 12) ---
+  # Port tylko na 127.0.0.1: skaner (network_mode: host) i deweloper lacza sie przez
+  # ASI_DATABASE_URL=postgres://asi:...@127.0.0.1:5433/asi
+  asi-db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB: asi
+      POSTGRES_USER: asi
+      POSTGRES_PASSWORD: ${ASI_DB_PASSWORD:?ASI_DB_PASSWORD missing in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asi -d asi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:${ASI_DB_PORT:-5433}:5432"
+    volumes:
+      - asi_db_data:/var/lib/postgresql/data
+
   # --- nasz skaner ---
   # network_mode: host -> nmap widzi siec VM tak jak sama VM (localhost to
   # VM, nie kontener; brak NAT-u dockera po drodze do sandboxa). Z tego samego
@@ -125,6 +146,7 @@ networks:
   defectdojo:
 
 volumes:
+  asi_db_data:
   dd_postgres_data:
   dd_valkey_data:
   dd_media:

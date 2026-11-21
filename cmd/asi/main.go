@@ -59,13 +59,15 @@ func main() {
 		cmdDiff(args)
 	case "serve":
 		cmdServe(args)
+	case "db":
+		cmdDB(args)
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <convert|plan|scan|upload|diff|serve> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <convert|plan|scan|upload|diff|serve|db> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 
@@ -186,6 +188,7 @@ func cmdScan(args []string) {
 	window := fs.Duration("window", 0, "scan window: stop everything after this (e.g. 2h), 0 = no limit")
 	outRoot := fs.String("out", "results", "results directory")
 	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
+	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	upload := fs.String("upload", "off", "DefectDojo: off | end (one reimport) | live (per chunk + final)")
 	product := fs.String("product", envOr("DD_PRODUCT", "ASI PoC"), "DefectDojo product (env DD_PRODUCT)")
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
@@ -214,6 +217,15 @@ func cmdScan(args []string) {
 	bar := cli.NewBar(tr)
 	bar.Start()
 
+	var rec *dbRecorder
+	if st, err := openStore(context.Background(), *dbURL); err != nil {
+		tr.Logf("db: %v - continuing with files only", err)
+	} else if st != nil {
+		defer st.Close()
+		rec = &dbRecorder{st: st, runID: runID, logf: tr.Logf}
+		tr.Logf("db: recording run %s", runID)
+	}
+
 	// --- plan
 	plan := pf.build()
 	writeJSON(filepath.Join(dir, "plan.json"), plan)
@@ -226,6 +238,8 @@ func cmdScan(args []string) {
 		s.Targets, s.Skipped, s.Status = len(ips), len(plan.Skipped), "running"
 	})
 	tr.Logf("plan: %d IPs, %d targets skipped (see plan.json)", len(ips), len(plan.Skipped))
+	rec.start(filepath.Base(*pf.targets), map[string]any{"parallel": *parallel, "rate_pps": *rate,
+		"discovery_args": *discArgs, "nmap_args": *svcArgs, "window": window.String(), "targets": len(ips)})
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
 	tune := loadTuning(tunePath)
@@ -271,9 +285,10 @@ func cmdScan(args []string) {
 		z.Seed(tune["discovery"])
 		scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", RunID: runID, Adapter: nmapad.Discovery(*discArgs),
 			Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
-			OutDir: filepath.Join(dir, "discovery")}, ips, tr,
+			OutDir: filepath.Join(dir, "discovery"), OnStart: rec.chunkStart("discovery")}, ips, tr,
 			func(r scanner.ChunkResult) {
 				keep(r.Observations)
+				rec.chunkDone("discovery", "nmap", "nmap-xml", r)
 				n := 0
 				upMu.Lock()
 				for _, o := range r.Observations {
@@ -301,9 +316,10 @@ func cmdScan(args []string) {
 	z.Seed(tune["services"])
 	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", RunID: runID, Adapter: nmapad.Services(*svcArgs),
 		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
-		OutDir: filepath.Join(dir, "services")}, up, tr,
+		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services")}, up, tr,
 		func(r scanner.ChunkResult) {
 			keep(r.Observations)
+			rec.chunkDone("services", "nmap", "nmap-xml", r)
 			got := findings.FromObservations(r.Observations, meta)
 			svcMu.Lock()
 			svcs = append(svcs, got...)
@@ -348,6 +364,7 @@ func cmdScan(args []string) {
 			hosts := scanner.Confirm(ctx, recheck, args, *parallel, filepath.Join(dir, "confirm"))
 			confirmed := nmapad.FromHosts(hosts)
 			keep(confirmed)
+			rec.observations("confirm", confirmed)
 			back := findings.FromObservations(confirmed, meta)
 			for i := range back {
 				back[i].Tags = append(back[i].Tags, "unstable")
@@ -407,6 +424,12 @@ func cmdScan(args []string) {
 		"phases": snap.Phases, "parallel": *parallel, "rate_pps": *rate,
 		"discovery_args": *discArgs, "nmap_args": *svcArgs,
 	})
+	dbStatus := "completed"
+	if interrupted {
+		dbStatus = "partial" // coverage rule: unscanned chunks must not produce "missing"
+	}
+	rec.finish(dbStatus, map[string]any{"duration_s": snap.Elapsed, "targets": len(ips), "skipped": len(plan.Skipped),
+		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL})
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)
 	time.Sleep(300 * time.Millisecond)
@@ -531,7 +554,19 @@ func cmdDiff(args []string) {
 	fs := flag.NewFlagSet("diff", flag.ExitOnError)
 	root := fs.String("results", "results", "results directory")
 	asJSON := fs.Bool("json", false, "print JSON")
+	fromDB := fs.Bool("db", false, "compare runs stored in the database (ASI_DATABASE_URL) instead of results/")
 	fs.Parse(args)
+	if *fromDB {
+		d, err := diffFromDB(os.Getenv("ASI_DATABASE_URL"), fs.Arg(0), fs.Arg(1))
+		must(err)
+		if *asJSON {
+			out, _ := json.MarshalIndent(d, "", "  ")
+			fmt.Println(string(out))
+		} else {
+			printDiff(d)
+		}
+		return
+	}
 	var a, b string
 	switch fs.NArg() {
 	case 2:

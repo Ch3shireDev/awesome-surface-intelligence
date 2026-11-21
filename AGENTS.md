@@ -70,6 +70,9 @@ Przeczytaj PRZED wieksza zmiana:
 | sciezka | co |
 |---|---|
 | `cmd/asi/` | CLI: `convert`, `plan`, `scan`, `upload`, `diff`, `serve` |
+| `internal/obs` | kontrakt `Observation` + interfejs `Scanner` (adaptery skanerow), patrz `docs/guide/adapters.md` |
+| `internal/scanner/nmap` | adaptery nmap (discovery, services) |
+| `internal/store` | Postgres `asi-db` (pgx), migracje SQL w binarce, `Sealer` dla pol `_enc`; `docs/guide/database.md` |
 | `internal/targets` | wejscie CSV/JSON/TXT, plan, CIDR, DNS, reguly bezpieczenstwa |
 | `internal/scanner` | pula workerow, adaptacyjny Sizer, nmap `--stats-every`, skan potwierdzajacy |
 | `internal/nmapxml` | parser XML nmapa |

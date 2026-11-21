@@ -124,6 +124,18 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       bez synchronizacji z uzytkownikami DD. 4 role (DEV-3) obnizone do "jesli starczy czasu".
     - Skanery: nmap, httpx, Wappalyzer i inne narzedzia CLI zaakceptowane.
 
+12. **Baza ASI: osobny Postgres `asi-db`, sterownik pgx, bez River na razie** (21.11, DEV-1).
+    - Osobny kontener `asi-db` (postgres:18-alpine), port tylko `127.0.0.1:5433`, wolumen `asi_db_data`.
+      Nie dzielimy bazy z DefectDojo: inne cykle zycia, migracje i kopie; DD to tylko cel eksportu.
+    - Sterownik `github.com/jackc/pgx/v5` (wyjatek od "tylko stdlib"): COPY dla obserwacji, typy `inet`/`text[]`.
+    - Migracje SQL osadzone w binarce (`internal/store/migrations`, tabela `schema_migrations`),
+      `asi db migrate` albo automatycznie przy `asi scan` z `ASI_DATABASE_URL`.
+    - Kolumny `*_enc` (dane obserwacji, surowe wyjscia skanerow, notatki) ida przez `store.Sealer`.
+      Domyslnie `Plain`, SEC-6 podpina AES-256-GCM bez zmiany schematu.
+    - Kolejka River (VISION 4.5) odlozona: obecna pula workerow w procesie wystarcza do demo.
+      Wraca, gdy bedzie harmonogram z wieloma workerami (DEV-5).
+    - Pliki w `results/` zostaja jako eksport i fallback, gdy bazy nie ma.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

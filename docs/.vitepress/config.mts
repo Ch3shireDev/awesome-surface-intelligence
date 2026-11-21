@@ -31,6 +31,7 @@ export default defineConfig({
       { text: 'Referencja', items: [
         { text: 'Komendy CLI', link: '/guide/cli' },
         { text: 'Adaptery skanerów', link: '/guide/adapters' },
+        { text: 'Baza danych', link: '/guide/database' },
         { text: 'Pliki wynikowe', link: '/guide/outputs' },
       ]},
       { text: 'Projekt', items: [

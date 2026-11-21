@@ -49,9 +49,11 @@ help:
 # Tworzy .env tylko jesli nie istnieje (nie nadpisuje istniejacego).
 env:
 	@if [ -f .env ]; then echo ".env juz istnieje - nie nadpisuje"; exit 0; fi; \
+	ASI_DBP=$$(openssl rand -hex 16); \
 	sed -e "s|^DD_SECRET_KEY=.*|DD_SECRET_KEY=$$(openssl rand -hex 32)|" \
 	    -e "s|^DD_CREDENTIAL_AES_256_KEY=.*|DD_CREDENTIAL_AES_256_KEY=$$(openssl rand -hex 16)|" \
 	    -e "s|^DD_ADMIN_PASSWORD=.*|DD_ADMIN_PASSWORD=$$(openssl rand -hex 12)|" \
+	    -e "s|CHANGE_ME_ASI_DB|$$ASI_DBP|g" \
 	    .env.example > .env && chmod 600 .env && \
 	echo "Utworzono .env (haslo admina: grep DD_ADMIN_PASSWORD .env)"
 
