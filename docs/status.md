@@ -76,7 +76,9 @@ Otwarte:
 2. **Licencje (regulamin §4.2).** nmap (NPSL) wołamy jako zewnętrzny program; httpx i nuclei (MIT) tak samo;
    DefectDojo BSD-3. Do potwierdzenia z mentorami, że wywołanie nmapa jest OK.
 3. **Format i limity organizatorów** (SEC-2 ✅): materiały z Discorda to lab (`docs/guide/lab-organizers.md`); osobnego przykładowego JSON/CSV ani limitów ruchu w nich nie ma, porty bierzemy z labu.
-   Polityka (`internal/safety`) i `-rate` są gotowe na te wartości.
+   Polityka (`internal/safety`) i `-rate` są gotowe na te wartości. **21.11: rozstrzygnięte** - limity i allowlistę
+   portów ustalamy sami w `.env`, zakres skanu jest per przebieg (decyzja 19), a wykryty firewall raportujemy jako
+   „wynik niepełny”, nie jako brak usług (decyzja 20, `LAB-T11`).
 
 ## Następne kroki
 

@@ -111,7 +111,9 @@ i `make sync`.
 ## Testy na labie organizatorów (LAB-*), od 21.11 wieczór
 
 Środowisko: `~/lab` na fatusia-hacknation-2 (poza repo). To są **materiały od organizatorów z Discorda** (SEC-2). Opis, analiza i sposób testowania:
-[Lab organizatorów](guide/lab-organizers.md). Jeden stack naraz. Cel `127.0.0.1` (`targets/lab-org.csv`).
+[Lab organizatorów](guide/lab-organizers.md). Jeden stack naraz, per maszyna. Cel: `127.0.0.1`, gdy skaner stoi
+na tej samej VM, albo `<tailscale-ip>` tej VM, gdy skaner jest na innej maszynie w tailnecie (decyzja 19);
+pliki celów per maszyna, np. `targets/lab-org.csv`.
 Każdy test kończy się wpisem wyniku (OK / FAIL + liczby) w tej tabeli i w `status.md`.
 
 | ID | kto | test | zaliczony, gdy |
@@ -123,6 +125,7 @@ Każdy test kończy się wpisem wyniku (OK / FAIL + liczby) w tej tabeli i w `st
 | LAB-4 | SEC | `vulnerable`: WordPress 4.7, Adminer, DVWA, vsftpd. **Bez prób logowania** (domyślne hasła w compose). | WordPress 4.7 oznaczony jako przestarzały i wysoko w ocenie, Adminer/DVWA rozpoznane, vsftpd z wersją; w logach skanera brak żądań logowania |
 | LAB-5 | SEC ✅ *przetestowany (agent fatusia, 21.11 19:37-20:15): opóźnienie/wolne łącze/wolne zamykanie OK; wyszły LAB-T7 (krytyczne), LAB-T8, LAB-T9; wyniki: `docs/guide/lab-organizers.md`* | `modern-proxy` + Toxiproxy: przebiegi z `ENABLE_LATENCY` 500 ms, potem `ENABLE_TIMEOUT`, `ENABLE_BANDWIDTH`, `ENABLE_SLOW_CLOSE`. | skan kończy się w oknie, brak fałszywych `gone` przy opóźnieniu, timeout odnotowany jako brak odpowiedzi HTTP (nie zniknięcie portu); czas odpowiedzi widoczny (po LAB-T4); dashboard Traefika i API Toxiproxy (8474) wykryte jako panele bez uwierzytelniania |
 | LAB-6 | SEC ✅ *zaliczony (agent fatusia, fatusia-1, 21.11 21:32-21:43): 5 przebiegów custom-network → modern → custom-network; 7 i 6 portów `missing` → `gone` po 2 brakach, powrót `reappeared`, DD reactivated 7 / created 0, 0 duplikatów w 4 testach; wyniki: `docs/guide/lab-organizers.md`; luka PostgreSQL → LAB-T10* | Zmiana stacku między przebiegami (`custom-network` → `modern`) i powrót. | masowe `missing` → `gone` po progu, nowe usługi, powrót = `reappeared`; DD bez duplikatów; czas przebiegów w normie |
+| LAB-7 | SEC | Sandbox na innej maszynie w tailnecie: stack na VM A, skaner (ASI) na VM B; cel `<tailscale-ip>` VM A, `-parallel 1 -rate 500`. | wszystkie opublikowane porty stacku widoczne z VM B (`100.x`), brak fałszywych `missing` poza realnymi zmianami, w logu skanu widac zrodlo `100.x`; potwierdzone, ze adresy `172.x` mostkow nie sa celem skanu (decyzja 19). |
 
 Zadania kodu wynikające z analizy (przed LAB-1…5):
 
@@ -138,6 +141,8 @@ Zadania kodu wynikające z analizy (przed LAB-1…5):
 | LAB-T8 | DEV 🔨 *w toku: agent fatusia (fatusia-2)* | **Przejściowa awaria zaplecza = 2× „changed” + rotacja w DD.** LAB-5 (Toxiproxy `timeout`): WordPress za Traefikiem przestaje odpowiadać, na porcie odpowiada sam Traefik (TLS, 404), więc `-sV` i httpx dają inny fingerprint: `changed` (Apache/WordPress → Go/Traefik), a po ustąpieniu awarii znowu `changed`. DD: closed/created, potem closed/reactivated. `flapping` tego nie łapie (port cały czas otwarty). Do zrobienia: potwierdzanie `changed` (ponowny probe w tym samym przebiegu albo zmiana musi się utrzymać 2 przebiegi) i/lub klasa „zdegradowana” (5xx / timeout zaplecza) zamiast zmiany; wykrywanie migania fingerprintu. |
 | LAB-T9 | SEC | Próg wolnej odpowiedzi `ASI_HTTP_SLOW_MS=500` = scenariusz organizatorów `LATENCY_MS=500` (±50 ms), w LAB-5 zmierzone 493 ms, czyli flaga losowa. Obniżyć (np. 300 ms) albo liczyć względnie do poprzednich pomiarów usługi (np. ×5 mediany). |
 | LAB-T10 | DEV | Rozpoznawanie usług: `-sV --version-light` (intensywność 2) nie rozpoznaje PostgreSQL (LAB-6: port 15432 bez nazwy usługi). Od `--version-intensity 4` nmap zwraca `postgresql` (sprawdzone 3–7). Decyzja: domyślnie intensywność 4 (więcej sond na port, zmierzyć wpływ na czas przy 10 000+ IP w `guide/scale.md`) albo 4 tylko w profilu `-ports auto` dla małych zbiorów. |
+| LAB-T11 | DEV | **Wykryty firewall musi być raportowany, nie zgadywany jako „brak usług”** (decyzja 20). Dziś `nmap.FromHosts` bierze tylko `state=open`, a etap usług ma `--open`, więc porty `filtered` nie trafiają do XML, a usługi hosta za drop-all stają się `missing` → fałszywe `gone` w DD (ten sam skutek co LAB-T7, inne źródło). Do zrobienia: (1) celowana reproba portów znanych z poprzedniego przebiegu z `--reason` przed oznaczeniem braku (`reset` = zamknięty, `no-response` = filtrowany), (2) obserwacja `port state=filtered` (informacyjna, bez `service`, poza `fp_hash`), (3) flaga przebiegu/paczki „wykryto filtrowanie ruchu – wynik niepełny”, traktowana jak `timedout` (bez braków, `close_old=false`), (4) w DD finding `info` „host filtruje ruch” zamiast znikania usług. Bez technik evasion. |
+
 
 ## Ryzyka
 

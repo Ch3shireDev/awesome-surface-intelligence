@@ -214,20 +214,60 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Sprawdzone: DD 3.5.202 przyjmuje pusty JSONL (201) i zamyka poprzednie wyniki; lab `make demo`:
       httpx `closed 1 / created 2 / untouched 5`, nuclei `created 2 / untouched 16` w przebiegu 2.
 
-## Otwarte pytania / do potwierdzenia z CBI AGH
+19. **Sandbox = compose stawiany sami; jeden stack na maszyne, cele przez tailnet** (21.11, ustalenia zespolu).
+    - `lab.zip` -> `~/lab-org` (poza repo). Cztery stacki, **jeden naraz na jednej maszynie** (stale porty
+      8080/8090/80/443/6379 koliduja miedzy stackami i z DD/ASI). Start: `docker compose -f
+      docker-compose-<stack>.yml up -d`, dla `custom-network` scenariusz `./quickstart.sh up|change|up`.
+    - Cel skanu zalezy od tego, gdzie stoi skaner: ta sama VM -> `127.0.0.1`; inna maszyna w tailnecie ->
+      `<tailscale-ip>` tej VM. **Nie skanujemy adresow mostkow dockera (172.x) z innej maszyny** - tailscale
+      ich nie routuje, z zewnatrz widoczne sa tylko porty opublikowane (`ports:` = DNAT na hoscie). Skaner w
+      `network_mode: host` widzi `tailscale0` bez dodatkowej konfiguracji (decyzja 5), widzi tez uslugi samej
+      VM (SSH, Syncthing, procesy lokalne) - to szum, wycinany zakresem/portami (LAB-T2).
+    - Plik celow **per maszyna** (`targets/lab-org-<host>.csv`, w `note` nazwa stacku), bo reconcile porownuje
+      przebiegi: zmiana stacku to celowe masowe `missing` -> `gone` (LAB-6), a nie awaria. GUI: Cele -> Import,
+      CLI: `asi scan -targets targets/lab-org-<host>.csv`.
+    - Bezpieczenstwo: stacki maja domyslne hasla (WordPress, DVWA, FTP `test/test123`, RabbitMQ `guest`) i
+      publikuja na `0.0.0.0`, czyli w tailnecie sa widoczne dla **calego tailnetu** (na maszynie bez firewalla
+      takze w LAN). Stawiac tylko na maszynie testowej, po testach `docker compose down`; na maszynie z
+      publicznym IP tylko za firewallem albo z bindem `127.0.0.1:<port>:<port>` (skan wtedy tylko lokalny).
+
+20. **Wykryty firewall = "nie da sie sprawdzic", nigdy "brak uslug"** (21.11, zespol; dotyczy zalozenia o
+    plaskim intranecie z sekcji pytan).
+    - Zasada: zaden brak i zadna obserwacja nie moga powstac z ciszy. `filtered` / `open|filtered` w nmapie oraz
+      host `down` z `reason=no-response` znacz "nie wiem", a nie "zamkniete". Firewalla **nie omijamy** (zakaz
+      technik evasion, decyzja 15) - raportujemy go.
+    - **Luka w kodzie (21.11)**: `nmap.FromHosts` zapisuje tylko `state=open`, a domyslne argumenty etapu uslug
+      maja `--open`, wiec porty filtrowane nie trafiaja nawet do XML. Host za polityka drop-all wyglada jak host
+      bez uslug, a jego uslugi z poprzedniego przebiegu staja sie `missing` -> falszywe `gone` w DD. To ten sam
+      skutek co LAB-T7 (timeout), tylko inne zrodlo. Do zrobienia: `LAB-T11`.
+    - Docelowo: (1) przed oznaczeniem braku celowana reproba portow znanych z poprzedniego przebiegu z
+      `--reason` (kilka portow, nie pelny skan): `reset` = zamkniety, `no-response` = filtrowany;
+      (2) obserwacja `port state=filtered` (informacyjna, bez `service`, poza `fp_hash`); (3) flaga przebiegu
+      i paczki "wykryto filtrowanie ruchu - wynik niepelny", traktowana jak `timedout` (bez brakow,
+      `close_old=false`); (4) w DD finding `info` "host filtruje ruch / wynik niepelny" zamiast znikania uslug.
+
+## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan
       testów w `docs/guide/lab-organizers.md`, zadania `LAB-*` w `TASKS.md`. Wniosek: usługi na niestandardowych
       portach (np. 8787 w ich quickstarcie) są poza domyślnym zestawem portów ASI.
-- [ ] **Lista dozwolonych portów i limity ruchu** w labie jury (brief, pkt 7.2-7.3) - od tego zależy profil
-      portów (LAB-T1). Nadal brak.
-
-- [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
-      czego wpisac do `scans/targets.txt`.
-- [ ] Czy zalozenie "plaski intranet bez firewalli/segmentacji do omijania"
-      jest poprawne, czy jest tam cos, co moze zmylic wyniki skanu.
-- [ ] Czy sandbox jest dostepny z poziomu VM od razu, czy wymaga VPN/dostepu
-      specjalnego.
+- [x] **Lista dozwolonych portów i limity ruchu** (brief, pkt 7.2-7.3) - **nie czekamy na jury, wpisujemy własne.**
+      Profil portów (LAB-T1) i limity (decyzja 15) są parametrami naszego wdrożenia, nie czekają na brief:
+      `-ports auto` (pełne TCP dla ≤16 hostów, zawsze przycinane do `ASI_ALLOWED_PORTS`), `ASI_MAX_RATE=1000`,
+      `ASI_MAX_PARALLEL=32`, `ASI_SCOPE`/`ASI_EXCLUDE`. Jeśli jury poda listę portów, trafia do
+      `ASI_ALLOWED_PORTS` + `-ports allowed` (bez zmian w kodzie); jeśli poda niższe limity ruchu - do `.env`.
+      Domyślnie allowlista portów jest **pusta** (wszystkie porty), więc nie zgubimy usługi spoza listy jury.
+- [x] **Dokładny zakres skanu** (CIDR/hostname'y) - **nie wiadomo jeszcze, na czym jury testuje.** Nie ma jednego
+      `scans/targets.txt`: zakres jest argumentem przebiegu, w pliku celów. Etap 1 (dziś) = lab organizatorów
+      z `lab.zip` (`~/lab-org`, compose, jeden stack naraz); etap 2 = własna infrastruktura zespołu (maszyny
+      w tailnecie `100.x` + publiczne IP z `targets/targets.csv`). Konkretne CIDR-y jury dostarczymy, gdy będą -
+      nie zgadujemy ich w repo. Szczegóły i pułapki: decyzja 19.
+- [x] **"Płaski intranet bez firewalli/segmentacji"** - **założenie poprawne** (potwierdzone przez zespół), ale
+      **wykryty firewall ma być raportowany jako "nie da się sprawdzić", nie jako "brak usług"**. Dziś kod tego
+      nie robi - patrz decyzja 20 i `LAB-T11`.
+- [x] **Dostęp do sandboxa** - **bez osobnego VPN od organizatorów**: sandbox to `lab.zip` z compose, który
+      stawiamy sami na swoich maszynach. Dostęp = localhost na maszynie ze stackiem albo tailnet (`100.x`),
+      bo maszyny zespołu są w Tailscale. Nie ma "specjalnego dostępu" do wyproszenia. Szczegóły: decyzja 19.
 
 ## Ustalenia z uruchomienia (21.11)
 

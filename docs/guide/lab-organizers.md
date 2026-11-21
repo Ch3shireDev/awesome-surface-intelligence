@@ -221,4 +221,37 @@ zakresem portów, zmiana w labie, kolejny skan, potem wynik w panelu (Assety, po
 DefectDojo (testy `ASI discovery`, `asi-changes`, `asi-httpx`, `asi-nuclei`). Na koniec
 `docker compose -f <plik> down -v`.
 
-Oczekiwane wyniki i kryteria zaliczenia: zadania `LAB-1` … `LAB-6` w [TASKS](../TASKS.md).
+Oczekiwane wyniki i kryteria zaliczenia: zadania `LAB-1` … `LAB-7` w [TASKS](../TASKS.md).
+
+## Kilka maszyn w tailnecie (decyzja 19)
+
+Zespół ma kilka VM w Tailscale i stawia stack na tej maszynie, która jest akurat wolna - **jeden stack naraz na
+maszynę** (porty `8080/8090/80/443/6379` kolidują między stackami i z DefectDojo/ASI).
+
+| gdzie stoi skaner | cel w pliku celów | co widać |
+|---|---|---|
+| ta sama VM co stack | `127.0.0.1` | wszystko, także porty z `0.0.0.0` i usługi samej VM (szum) |
+| inna VM w tailnecie | `<tailscale-ip>` VM ze stackiem (np. `100.x.y.z`) | tylko porty **opublikowane** (`ports:` w compose) |
+
+Adresy mostków dockera (`172.x`) **nie są celem skanu** - Tailscale ich nie routuje, więc z innej maszyny ich
+nie ma. Nie ma też osobnego VPN od organizatorów: `lab.zip` stawiamy sami, dostęp to localhost albo tailnet.
+
+```bash
+# na VM ze stackiem
+docker compose -f docker-compose-custom-network.yml up -d
+tailscale ip -4                                  # -> 100.x.y.z
+# na VM ze skanerem: osobny plik celów na tę maszynę, note = stack
+printf 'target,asset,owner,tags,enabled,note\n100.x.y.z,lab-org,secops,lab-org,true,custom-network\n' \
+  > ~/asi/targets/lab-org-$(hostname -s).csv
+make asi ARGS="scan -targets targets/lab-org-$(hostname -s).csv -ports auto -rate 500 -parallel 1"
+```
+
+Uwagi:
+
+- **Zmiana stacku = celowe masowe `missing`** (LAB-6). Aktualizuj `note` w pliku celów, żeby nie czytać tego jako
+  awarii; `gone` po progu i `reappeared` po powrocie to poprawne zachowanie.
+- **Ekspozycja:** stacki mają domyślne hasła i publikują na `0.0.0.0` - w tailnecie widzi je cały tailnet, a na
+  maszynie bez firewalla także LAN. Stawiać tylko na maszynie testowej, po testach `docker compose down`;
+  na maszynie z publicznym IP bind `127.0.0.1:<port>:<port>` (skan wtedy wyłącznie lokalny).
+- **Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM),
+  ASI ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.
