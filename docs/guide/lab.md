@@ -1,0 +1,72 @@
+# Lab testowy i demo
+
+Własna mała „infrastruktura” do testów i prezentacji (zadanie SEC-3). Imituje to, co w PDF jury opisuje
+jako swoje środowisko: hosty z różnymi usługami, technologie webowe, panel admina, staging, ciekawe
+nagłówki i ciasteczka, hosty niestabilne. Jury testuje „co najmniej dwa przebiegi skanu”, dlatego
+lab ma dwa stany.
+
+## Uruchomienie
+
+```bash
+make up          # stack asi (skaner musi działać)
+make demo        # lab od zera -> przebieg 1 -> zmiany w labie -> przebieg 2 -> diff, upload do DD
+make lab-ps      # stan kontenerów labu
+make lab-down    # usuń lab
+```
+
+`make demo` skanuje z kontenera `nmap-scanner` cele z `targets/lab.csv`. Wyniki trafiają do `results/lab/`,
+a w DefectDojo do produktu **ASI lab** (engagement `demo`). Porty są zawężone do tych, które lab wystawia,
+więc jeden przebieg trwa ok. 20–30 s.
+
+## Sieć i bezpieczeństwo
+
+- Osobny projekt compose `asi-lab` (`docker/lab/compose.yml`), niezależny od stacku `asi`.
+- Sieć `192.0.2.0/24` to **TEST-NET-1 (RFC 5737)**. Adresy nie są routowane w internecie, więc gdy lab nie
+  stoi, pakiety skanu nigdzie nie wychodzą.
+- Bramka `192.0.2.1` to sama VM i jest celowo **poza zakresem** celów (`192.0.2.8/29`, `192.0.2.16/30`).
+- Lab nie zawiera prawdziwych podatności ani powłok. Telnet na `legacy` odrzuca każde logowanie
+  (`-l /bin/false`), a „WordPress” i „Jenkins” to statyczne strony z odciskami.
+- Certyfikat TLS w `docker/lab/tls/` to self-signed **tylko do labu** (CN `intranet.lab.example`).
+
+## Hosty i co powinien wykryć skaner
+
+| IP | host | usługi | artefakty do wykrycia |
+|---|---|---|---|
+| 192.0.2.10 | `web-prod` | 80, 443 (TLS) | `Server: nginx/1.27.x`, `X-Powered-By: PHP/7.4.33` (stary PHP), cookie `PHPSESSID`, tytuł „Intranet AGH-LAB”, `/login` → przekierowanie, cert self-signed, wersja w stopce „LabPortal 1.8.2” |
+| 192.0.2.11 | `wordpress` | 80 | CMS: `<meta name="generator" content="WordPress 6.4.2">`, `/wp-login.php` (cookie `wordpress_test_cookie`), `/readme.html`, `/wp-content/themes/…`, nagłówek `Link: …api.w.org` |
+| 192.0.2.12 | `staging-admin` | 8080 | **staging**: `X-Environment: staging`, tytuł „[STAGING]”, cookie `staging_session`; **panel admina** `/admin/` („Admin Panel - Login”); `/version` (JSON, `2.3.1-rc1`) |
+| 192.0.2.13 | `cache` | 6379 | redis/valkey **bez hasła** wystawiony w sieci |
+| 192.0.2.14 | `legacy` | 23, 8000 | telnet (BusyBox telnetd), stary httpd; **znika w przebiegu 2** |
+| 192.0.2.15 | `app` | 80 | przebieg 1: nginx, przebieg 2: BusyBox httpd na tym samym IP:port → **zmieniona usługa** |
+| 192.0.2.16 | `jenkins` | 8080 | **nowy host w przebiegu 2**; `X-Jenkins: 2.401.1`, `X-Hudson`, cookie `JSESSIONID.*`, tytuł „Dashboard [Jenkins]” |
+| 192.0.2.17 | `flaky` | 80 | port na przemian 30 s włączony / 30 s wyłączony → **host niestabilny** (`unstable` / `flapping` po kilku przebiegach) |
+
+Adresy .8, .9, .18 i .19 są w zakresie, ale nic na nich nie ma: skaner powinien je pominąć jako nieaktywne.
+
+## Oczekiwany wynik `make demo`
+
+Sprawdzone 21.11 na blackarch, w kontenerze skanera i z hosta:
+
+```
+przebieg 1: 7/12 hosts up, 9 open services (2 high, 1 medium)
+przebieg 2: 7/12 hosts up, 7-8 open services
+zmiany:
+  + host    192.0.2.16
+  - host    192.0.2.14
+  ~ changed 192.0.2.15:80/tcp        http nginx 1.27.5 -> http
+  - gone    192.0.2.14:23/tcp        telnet
+  - gone    192.0.2.14:8000/tcp      http-alt
+  + new     192.0.2.16:8080/tcp      http nginx 1.27.5
+  (- gone   192.0.2.17:80/tcp        zależnie od fazy hosta flaky)
+```
+
+Wynik .17 zależy od chwili skanu, i o to chodzi: przy kilku przebiegach co chwilę
+(`make asi ARGS="scan -targets targets/lab.csv -out results/lab"`) reconcile w bazie powinien oznaczyć go
+jako `flapping`.
+
+## Rozszerzanie
+
+Nowy host to nowa usługa w `docker/lab/compose.yml` z kolejnym `ipv4_address` w 192.0.2.8–.19. Treść
+stron leży w `docker/lab/html/<host>/`, a konfiguracja nginx w `docker/lab/nginx/<host>.conf`. Jeśli
+host wychodzi poza zakres celów, dopisz go do `targets/lab.csv`. Do testów sygnatur (SEC-5) dokładaj
+artefakty w HTML i nagłówkach, nigdy prawdziwe podatności.

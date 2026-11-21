@@ -8,7 +8,7 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 ```
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
-M2 Fundament (kontrakt+DB)█████████░  90%  🔨  SEC-1 ✅; brak: SEC-2 materiały, SEC-3 lab (w toku)
+M2 Fundament (kontrakt+DB)█████████░  90%  🔨  SEC-1 ✅, SEC-3 lab ✅; brak: SEC-2 materiały od organizatorów
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
 M4 Web GUI                █████████░  90%  ✅  DEV-4 (brak: przegląd wizualny w przeglądarce, tokeny API w GUI)
 M5 Fingerprint i sygnatury░░░░░░░░░░   0%  🔨  SEC-4 (zarezerwowane), SEC-5
@@ -51,6 +51,7 @@ i DefectDojo; RBAC zostaje jednym kontem admina (mentor to akceptuje).
 | 21.11 14:44 | konsultacja z mentorem: GUI wymagane, Postgres + szyfrowanie, RBAC 10% ([MENTOR](MENTOR.md)) |
 | 21.11 ~15:30 | scalenie repo `~/asi`; DEV-0 kontrakt `Observation`, adaptery nmap |
 | 21.11 ~15:50 | DEV-1 baza `asi-db`, zapis przebiegów, `asi diff -db`; obraz skanera z pgx |
+| 21.11 ~16:25 | SEC-3: lab `docker/lab` (8 hostów, 192.0.2.0/24) + `make demo`: new/gone/changed/unstable w 2 przebiegach |
 | 21.11 ~16:20 | DEV-4: panel web `asi server` (login, dashboard, assety z edycją, formularz/import celów, skany z GUI + postęp na żywo, role, audit, eksport CSV/JSON); kontener skanera startuje panel na :8090 |
 | 21.11 ~16:10 | DEV-2: assety ze stanami, flapping, zasady pokrycia (hosty i porty) i hierarchii, edycje trwałe; `asi changes/assets/asset edit` |
 | 21.11 ~16:00 | stary DefectDojo z `~/asi-poc` usunięty; cały stack przez `make up`; skan z kontenera → baza + DD sprawdzony |

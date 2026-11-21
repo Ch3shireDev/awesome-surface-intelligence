@@ -1,0 +1,107 @@
+# Lab ASI: mala "infrastruktura" do testow i demo (SEC-3). Osobny projekt compose (`asi-lab`),
+# niezalezny od stacku `asi`. Skaner (network_mode: host) widzi siec labu przez bridge na hoscie.
+#
+# Siec 192.0.2.0/24 to TEST-NET-1 (RFC 5737): adresy nieroutowalne w internecie. Jesli lab nie stoi,
+# pakiety skanu nigdzie nie wyjda, a .1 (bramka = sama VM) jest celowo poza zakresem celow.
+#
+# Przebieg 1: uslugi bez profilu. Przebieg 2 (`make demo`): legacy znika, app zmienia serwer,
+# jenkins sie pojawia (profil pass2). flaky wlacza sie i wylacza co 30 s przez caly czas.
+# Cele: targets/lab.csv. Opis scenariusza: docs/guide/lab.md.
+
+name: asi-lab
+
+x-nginx: &nginx
+  image: nginx:1.27-alpine
+  restart: unless-stopped
+
+x-busybox: &busybox
+  image: busybox:1.37
+  restart: unless-stopped
+
+services:
+  web-prod:
+    <<: *nginx
+    networks: { lab: { ipv4_address: 192.0.2.10 } }
+    volumes:
+      - ./nginx/web-prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html/web-prod:/usr/share/nginx/html:ro
+      - ./tls:/etc/nginx/tls:ro
+
+  wordpress:
+    <<: *nginx
+    networks: { lab: { ipv4_address: 192.0.2.11 } }
+    volumes:
+      - ./nginx/wordpress.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html/wordpress:/usr/share/nginx/html:ro
+
+  staging-admin:
+    <<: *nginx
+    networks: { lab: { ipv4_address: 192.0.2.12 } }
+    volumes:
+      - ./nginx/staging-admin.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html/staging-admin:/usr/share/nginx/html:ro
+
+  # redis-kompatybilny cache bez hasla - "ciekawa" usluga bazodanowa wystawiona w sieci
+  cache:
+    image: valkey/valkey:9-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--protected-mode", "no", "--save", ""]
+    networks: { lab: { ipv4_address: 192.0.2.13 } }
+
+  # stary serwer: telnet (bez powloki, login zawsze odrzucony) + httpd; znika w 2. przebiegu -> gone
+  legacy:
+    <<: *busybox
+    networks: { lab: { ipv4_address: 192.0.2.14 } }
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /www && echo '<html><head><title>Legacy intranet (2014)</title></head></html>' > /www/index.html
+        telnetd -p 23 -l /bin/false
+        exec httpd -f -p 8000 -h /www
+
+  # app v1: nginx; w 2. przebiegu ten sam IP:port obsluguje busybox (app-v2) -> changed
+  app:
+    <<: *nginx
+    networks: { lab: { ipv4_address: 192.0.2.15 } }
+    volumes:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html/app:/usr/share/nginx/html:ro
+
+  app-v2:
+    <<: *busybox
+    profiles: [pass2]
+    networks: { lab: { ipv4_address: 192.0.2.15 } }
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /www && echo '<html><head><title>Aplikacja wewnetrzna v2</title></head></html>' > /www/index.html
+        exec httpd -f -p 80 -h /www
+
+  # nowy host w 2. przebiegu -> new
+  jenkins:
+    <<: *nginx
+    profiles: [pass2]
+    networks: { lab: { ipv4_address: 192.0.2.16 } }
+    volumes:
+      - ./nginx/jenkins.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./html/jenkins:/usr/share/nginx/html:ro
+
+  # host niestabilny: httpd 30 s wlaczony, 30 s wylaczony (kontener zyje, port migocze)
+  flaky:
+    <<: *busybox
+    networks: { lab: { ipv4_address: 192.0.2.17 } }
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /www && echo '<html><head><title>Kiosk (niestabilny)</title></head></html>' > /www/index.html
+        while :; do httpd -f -p 80 -h /www & p=$$!; sleep 30; kill $$p; sleep 30; done
+
+networks:
+  lab:
+    ipam:
+      config:
+        - subnet: 192.0.2.0/24
+          gateway: 192.0.2.1

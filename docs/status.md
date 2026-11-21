@@ -35,6 +35,13 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | — | tagi | ✅ | tagi celów (formularz/import) i assetów (edycja w GUI, trwałe między skanami) |
 | — | dokumentacja | ✅ | ta strona (VitePress) |
 
+## Lab i demo (SEC-3, 21.11)
+
+✅ `make demo`: własny lab w compose (`docker/lab`, 8 hostów w 192.0.2.0/24) i 2 przebiegi ze zmianami
+pomiędzy. Wykrywa nowy host, zniknięty host, zmienioną usługę, zniknięte i nowe porty oraz host niestabilny.
+Sprawdzone z hosta i w kontenerze skanera. Lab ma też artefakty pod fingerprint i sygnatury (WordPress,
+staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo](/guide/lab).
+
 ## Elementy tej iteracji (co i jak przetestowano)
 
 | element | test |

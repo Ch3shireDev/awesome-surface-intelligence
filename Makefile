@@ -16,7 +16,8 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
 .PHONY: help env up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
-        build test asi asi-scan asi-serve docs sync
+        build test asi asi-scan asi-serve docs sync \
+        lab-up lab-down lab-ps demo
 
 help:
 	@echo "Cele:"
@@ -46,6 +47,11 @@ help:
 	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
 	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
 	@echo "  make sync             - git pull --rebase + push do origin (repo blackarch przez ssh)"
+	@echo ""
+	@echo "Lab i demo (docker/lab, siec 192.0.2.0/24, cele targets/lab.csv):"
+	@echo "  make lab-up           - postaw lab w stanie przebiegu 1"
+	@echo "  make lab-down         - usun lab (wszystkie profile)"
+	@echo "  make demo             - lab od zera -> skan 1 -> zmiany w labie -> skan 2 -> diff (+ upload do DD)"
 
 # Tworzy .env tylko jesli nie istnieje (nie nadpisuje istniejacego).
 env:
@@ -169,3 +175,35 @@ docs:
 # Jedno repo, synchronizacja przez git po ssh (origin = blackarch:~/repos/asi.git).
 sync:
 	git pull --rebase --autostash && git push
+
+# --- lab i demo (SEC-3) ---
+# Osobny projekt compose `asi-lab` (docker/lab/compose.yml), siec TEST-NET-1 192.0.2.0/24.
+# Skan idzie z kontenera nmap-scanner (network_mode: host), wyniki do results/lab, DD: produkt "ASI lab".
+# Porty ograniczone do tych, ktore wystawia lab - demo trwa ~1 min zamiast top-1000.
+LAB         := docker compose -f docker/lab/compose.yml
+LAB_TARGETS ?= targets/lab.csv
+LAB_UPLOAD  ?= end
+LAB_NMAP    ?= -sT -sV --version-light -Pn -p 22,23,80,443,6379,8000,8080 -T4 --max-retries 2 --open
+LAB_SCAN     = docker compose exec -T nmap-scanner asi scan -targets $(LAB_TARGETS) -out results/lab \
+               -upload $(LAB_UPLOAD) -product "ASI lab" -engagement demo -nmap "$(LAB_NMAP)"
+
+lab-up:
+	$(LAB) up -d
+
+lab-down:
+	$(LAB) --profile pass2 down --remove-orphans
+
+lab-ps:
+	$(LAB) --profile pass2 ps
+
+demo:
+	$(LAB) --profile pass2 down --remove-orphans
+	$(LAB) up -d
+	@echo "== przebieg 1: stan wyjsciowy labu"
+	$(LAB_SCAN)
+	@echo "== zmiany w labie: legacy (.14) znika, app (.15) zmienia serwer, jenkins (.16) dochodzi"
+	$(LAB) rm -sf legacy app
+	$(LAB) --profile pass2 up -d app-v2 jenkins
+	@echo "== przebieg 2"
+	$(LAB_SCAN)
+	docker compose exec -T nmap-scanner asi diff -results results/lab

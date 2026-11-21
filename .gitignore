@@ -15,6 +15,7 @@ scans/results/*.json
 /targets/*
 !/targets/example.csv
 !/targets/example.json
+!/targets/lab.csv
 
 # dokumentacja
 /docs/node_modules/

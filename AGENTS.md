@@ -42,7 +42,8 @@ Przeczytaj PRZED wieksza zmiana:
 
 - **Zakres skanu.** Skanuj wylacznie cele z `targets/targets.csv` lub `scans/targets.txt` (oba gitignored).
   Do czasu potwierdzenia zakresu z mentorami CBI AGH jedynym wspolnym celem jest `127.0.0.1`. Nie wpisuj
-  przykladowych IP jako domyslnych celow. W dokumentacji i testach uzywaj adresow dokumentacyjnych
+  przykladowych IP jako domyslnych celow. Wyjatek: wlasny lab `docker/lab` (siec dockera 192.0.2.0/24,
+  cele `targets/lab.csv`, `make demo`) - to nasze kontenery, wolno go skanowac zawsze. W dokumentacji i testach uzywaj adresow dokumentacyjnych
   (RFC 5737: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
 - **Nie commituj** `.env`, `.dd_token`, `targets/*` (poza `example.*`), `results/`, `scans/results/`.
   Sa tam realne IP, domeny i hasla.
@@ -83,4 +84,5 @@ Przeczytaj PRZED wieksza zmiana:
 | `docker/nmap/` | obraz skanera i skrypty PoC (`import-defectdojo.sh`, `nmap-hosts-to-generic.sh`) |
 | `Makefile` | `make help`: stack, PoC, `asi`, `build`, `test`, `docs`, `sync` |
 | `targets/example.csv` | szablon celow (kopiuj do `targets/targets.csv`) |
+| `docker/lab/`, `targets/lab.csv` | lab testowy (8 hostow, 2 stany) i jego cele; `make demo`, `docs/guide/lab.md` |
 | `docs/` | VitePress: VISION, status, DECISIONS, ROADMAP, TASKS, przewodniki |
