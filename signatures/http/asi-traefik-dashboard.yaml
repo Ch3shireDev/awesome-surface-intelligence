@@ -1,0 +1,26 @@
+id: asi-traefik-dashboard
+info:
+  name: Dashboard Traefik bez uwierzytelniania
+  author: asi
+  severity: medium
+  description: Publicznie dostepny dashboard lub API Traefika (--api.insecure=true). Ujawnia routing, serwisy i konfiguracje brzegowa. Tylko GET.
+  tags: asi,panel,proxy,traefik,unauth
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/version"
+      - "{{BaseURL}}/dashboard/"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)"version"\s*:\s*"[0-9]+\.[0-9]+[^"]*"\s*,\s*"codename"\s*:\s*"[a-z]+"']
+      - type: word
+        part: body
+        words: ["<title>Traefik</title>"]
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)"version"\s*:\s*"([0-9]+\.[0-9]+[^"]{0,20})"']

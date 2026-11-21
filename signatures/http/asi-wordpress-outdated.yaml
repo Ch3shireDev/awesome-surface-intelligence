@@ -1,0 +1,26 @@
+id: asi-wordpress-outdated
+info:
+  name: Nieaktualny WordPress (< 6.0)
+  author: asi
+  severity: medium
+  description: Wykryto starsza linie WordPressa (ponizej 6.0, np. 4.x/5.x) w meta generator albo /readme.html. Tylko GET.
+  tags: asi,cms,wordpress,outdated
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/readme.html"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)<meta[^>]+name=["'']generator["''][^>]+content=["'']wordpress\s+[1-5]\.[0-9]']
+      - type: regex
+        part: body
+        regex: ['(?is)<title>wordpress[^<]*</title>.{0,800}version\s+[1-5]\.[0-9]']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)(?:wordpress|version)\s+([1-5]\.[0-9]+(?:\.[0-9]+)?)']

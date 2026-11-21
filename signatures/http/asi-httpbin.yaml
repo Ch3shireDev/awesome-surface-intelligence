@@ -1,0 +1,26 @@
+id: asi-httpbin
+info:
+  name: Usluga testowa httpbin
+  author: asi
+  severity: info
+  description: Wykryto narzedzie diagnostyczne / testowe httpbin (zwykle srodowisko deweloperskie lub labowe). Tylko GET.
+  tags: asi,staging,debug,httpbin
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/spec.json"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)<title>\s*httpbin\.org\s*</title>']
+      - type: regex
+        part: body
+        regex: ['(?i)"title"\s*:\s*"httpbin\.org"']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)"version"\s*:\s*"([0-9.]+)"']

@@ -75,7 +75,7 @@ TCP (`tcp: inputs/data`).
 | `asi-favicon-known` | info | znane hashe favicony (Jenkins, Tomcat, Spring Boot) |
 | `asi-git-exposed` | medium | publiczny `/.git/HEAD` |
 | `asi-redis-noauth` | high | Redis odpowiada na `PING` bez hasła (tylko PING) |
-| `asi-iot-camera-hikvision` | low | kamera/rejestrator Hikvision (treść albo nagłówek `App-webs`/`DNVRS-Webs`) |
+| `asi-iot-camera-hikvision` | low | kamera/rejestrator Hikvision (treść albo nagłówek `App-webs`/`Hikvision-Webs`/`webs`) |
 | `asi-iot-camera-dahua` | low | kamera/rejestrator Dahua (nagłówek `DNVRS-Webs`, model `DH-…`) |
 | `asi-iot-camera-generic` | low | „IP camera” / DVR / NVR / system nadzoru z ekranem logowania |
 | `asi-iot-router-mikrotik` | low | RouterOS / WebFig |
@@ -84,3 +84,13 @@ TCP (`tcp: inputs/data`).
 | `asi-iot-nas` | low | Synology DSM, QNAP QTS, TrueNAS/FreeNAS, OpenMediaVault |
 | `asi-iot-embedded-server` | info | wbudowany serwer WWW firmware'u (`GoAhead-Webs`, `Boa`, `uc-httpd`, `thttpd`, `mini_httpd`…) |
 | `asi-iot-upnp-description` | info | opis urządzenia UPnP (`/rootDesc.xml`): producent i model |
+| `asi-phpmyadmin` | low | panel bazy danych phpMyAdmin (ciasteczko/tytuł/pola formularza, wersja) |
+| `asi-adminer` | low | panel bazy danych Adminer (tytuł/formularz, wersja) |
+| `asi-dvwa` | medium | Damn Vulnerable Web Application (celowo podatna aplikacja testowa/labowa) |
+| `asi-gitea` | info | serwer repozytoriów Gitea (`i_like_gitea`, stopka, wersja) |
+| `asi-rabbitmq-management` | low | panel zarządzania RabbitMQ Management (tytuł lub `WWW-Authenticate`) |
+| `asi-nginx-proxy-manager` | low | panel Nginx Proxy Manager (`/` lub `/api/` z wersją) |
+| `asi-traefik-dashboard` | medium | dashboard/API Traefik bez uwierzytelniania (`--api.insecure`, `/api/version`, `/dashboard/`) |
+| `asi-toxiproxy-api` | medium | otwarte API sterowania proxy Toxiproxy (`/proxies`, bez uwierzytelniania) |
+| `asi-httpbin` | info | usługa testowa/diagnostyczna httpbin (`/` lub `/spec.json`) |
+| `asi-wordpress-outdated` | medium | nieaktualny WordPress (< 6.0, np. 4.7/5.x w meta generator lub `/readme.html`) |

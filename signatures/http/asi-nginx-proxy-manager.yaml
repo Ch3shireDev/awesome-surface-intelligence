@@ -1,0 +1,26 @@
+id: asi-nginx-proxy-manager
+info:
+  name: Panel Nginx Proxy Manager
+  author: asi
+  severity: low
+  description: Wystawiony panel administracyjny Nginx Proxy Manager (zwykle port 81). Tylko GET, bez prob logowania.
+  tags: asi,panel,proxy,npm
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/"
+      - "{{BaseURL}}/"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words: ["<title>Nginx Proxy Manager</title>"]
+      - type: regex
+        part: body
+        regex: ['(?i)"status"\s*:\s*"ok"[^}]*"version"\s*:\s*\{\s*"major"\s*:[0-9]+']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)"version"\s*:\s*\{([^}]{1,60})\}']

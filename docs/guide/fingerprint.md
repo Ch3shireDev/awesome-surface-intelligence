@@ -43,7 +43,7 @@ detekcyjnych (tylko GET, bez prób logowania) w `signatures/http/`:
 
 | id | wykrywa |
 |---|---|
-| `asi-iot-camera-hikvision` | kamera/rejestrator Hikvision (treść strony albo nagłówek `App-webs`/`DVRs-Webs`) |
+| `asi-iot-camera-hikvision` | kamera/rejestrator Hikvision (treść strony albo nagłówek `App-webs`/`Hikvision-Webs`/`webs`) |
 | `asi-iot-camera-dahua` | kamera/rejestrator Dahua (nagłówek `DNVRS-Webs`, model `DH-…`) |
 | `asi-iot-camera-generic` | ogólne urządzenie wizyjne: „IP camera”, DVR/NVR, system nadzoru + ekran logowania |
 | `asi-iot-router-mikrotik` | RouterOS / WebFig |
@@ -52,6 +52,24 @@ detekcyjnych (tylko GET, bez prób logowania) w `signatures/http/`:
 | `asi-iot-nas` | Synology DSM, QNAP QTS, TrueNAS/FreeNAS, OpenMediaVault |
 | `asi-iot-embedded-server` | wbudowany serwer WWW firmware'u (`GoAhead-Webs`, `Boa`, `uc-httpd`, `thttpd`, `mini_httpd`, …) |
 | `asi-iot-upnp-description` | publiczny opis urządzenia UPnP (`/rootDesc.xml`) z producentem i modelem |
+
+### Sygnatury usług, paneli i labu organizatorów (LAB-T3)
+
+Dodatkowe 10 bezpiecznych sygnatur (wyłącznie GET, bez prób logowania) pod usługi i panele spotykane w
+infrastrukturze i w [labie organizatorów](/guide/lab-organizers):
+
+| id | severity | wykrywa |
+|---|---|---|
+| `asi-phpmyadmin` | low | panel baz danych phpMyAdmin (ciasteczko, tytuł, pola formularza, wersja) |
+| `asi-adminer` | low | panel baz danych Adminer (tytuł, formularz, wersja) |
+| `asi-dvwa` | medium | Damn Vulnerable Web Application (aplikacja testowa/labowa) |
+| `asi-gitea` | info | serwer repozytoriów Gitea (`i_like_gitea`, stopka, wersja) |
+| `asi-rabbitmq-management` | low | panel RabbitMQ Management (tytuł lub `WWW-Authenticate`) |
+| `asi-nginx-proxy-manager` | low | panel Nginx Proxy Manager (`/` lub `/api/` z wersją) |
+| `asi-traefik-dashboard` | medium | niezabezpieczony dashboard/API Traefika (`--api.insecure`) |
+| `asi-toxiproxy-api` | medium | otwarte API sterowania proxy Toxiproxy (`/proxies`) |
+| `asi-httpbin` | info | usługa diagnostyczna/testowa httpbin |
+| `asi-wordpress-outdated` | medium | nieaktualna wersja WordPressa (< 6.0, np. 4.7 w `vulnerable`) |
 
 Dlaczego tak: same nazwy modeli/producentów to fakt techniczny (severity `low`/`info`), a nie podatność —
 panel urządzenia to sygnał „sprawdź to ręcznie”, bo IoT często ma domyślne konta i nieaktualny firmware.

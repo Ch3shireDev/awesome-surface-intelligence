@@ -1,0 +1,24 @@
+id: asi-toxiproxy-api
+info:
+  name: API Toxiproxy bez uwierzytelniania
+  author: asi
+  severity: medium
+  description: Otwarte API sterowania proxy (Toxiproxy, domyslnie port 8474) zwraca liste tuneli i reguly sieciowe bez uwierzytelniania. Tylko GET.
+  tags: asi,panel,proxy,toxiproxy,unauth
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/proxies"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ['"listen":', '"upstream":', '"toxics":']
+        condition: and
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['"upstream"\s*:\s*"([^"]{1,80})"']

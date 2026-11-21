@@ -1,0 +1,26 @@
+id: asi-dvwa
+info:
+  name: Damn Vulnerable Web Application (DVWA)
+  author: asi
+  severity: medium
+  description: Wykryto celowo podatna aplikacje szkoleniowa DVWA (srodowisko testowe / labowe). Tylko GET, bez prob logowania.
+  tags: asi,staging,vulnerable,dvwa
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/login.php"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)damn vulnerable web application']
+      - type: word
+        part: body
+        words: ["dvwa/css/login.css", "dvwa/images/login_logo.png"]
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

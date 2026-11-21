@@ -17,7 +17,7 @@ http:
         regex: ['(?i)(hikvision|ds-2cd|ds-7[0-9]{2,3})']
       - type: regex
         part: header
-        regex: ['(?im)^server:\s*(app-webs|webs|dnvrs-webs)']
+        regex: ['(?im)^server:\s*(app-webs|hikvision-webs|webs)\b']
     extractors:
       - type: regex
         part: body

@@ -1,0 +1,26 @@
+id: asi-rabbitmq-management
+info:
+  name: Panel zarzadzania RabbitMQ Management
+  author: asi
+  severity: low
+  description: Wystawiony panel zarzadzania brokerem kolejek RabbitMQ. Tylko GET, bez prob logowania.
+  tags: asi,panel,queue,rabbitmq
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/api/overview"
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words: ["<title>RabbitMQ Management</title>"]
+      - type: regex
+        part: header
+        regex: ['(?im)^www-authenticate:[^\r\n]*rabbitmq management']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

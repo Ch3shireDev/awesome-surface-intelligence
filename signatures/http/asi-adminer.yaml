@@ -1,0 +1,25 @@
+id: asi-adminer
+info:
+  name: Panel bazy danych Adminer
+  author: asi
+  severity: low
+  description: Wystawiony panel administracyjny baz danych Adminer. Tylko GET, bez prob logowania.
+  tags: asi,panel,database,adminer
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/adminer.php"
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex: ['(?i)(<title>[^<]*adminer|adminer\.org|name=["'']auth\[driver\]["''])']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)adminer(?:</span>\s*<span[^>]*>|\s+)v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)']

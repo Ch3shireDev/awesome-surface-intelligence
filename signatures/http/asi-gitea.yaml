@@ -1,0 +1,24 @@
+id: asi-gitea
+info:
+  name: Serwer repozytoriow Gitea
+  author: asi
+  severity: info
+  description: Wykryto instancje Gitea po ciasteczku, stopce lub metadanych HTML. Tylko GET.
+  tags: asi,tech,git,gitea
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: header
+        regex: ['(?im)^set-cookie:[^\r\n]*i_like_gitea=']
+      - type: regex
+        part: body
+        regex: ['(?i)(powered by gitea|content=["'']gitea|gitea - git with a cup of tea)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)powered by gitea[^0-9<\n]{0,20}([0-9]+\.[0-9]+(?:\.[0-9]+)?)']

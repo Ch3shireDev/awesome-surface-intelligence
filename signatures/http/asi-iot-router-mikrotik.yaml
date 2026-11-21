@@ -3,7 +3,7 @@ info:
   name: Router MikroTik (RouterOS / WebFig)
   author: asi
   severity: low
-  description: Panel WebFig RouterOS. Router brzegowy - if wystawiony na zewnatrz, to zwykle blad konfiguracji; sprawdzic wersje i dostep do zarzadzania.
+  description: Panel WebFig RouterOS. Router brzegowy - jesli wystawiony na zewnatrz, to zwykle blad konfiguracji; sprawdzic wersje i dostep do zarzadzania.
   tags: asi,iot,router,mikrotik,panel
 http:
   - method: GET

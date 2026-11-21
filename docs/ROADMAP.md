@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 21.11.2026, 19:55** (goose na blackarch: SEC-10 sygnatury IoT, SEC-9 publiczne repo, DEV-3 tokeny API w GUI). Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 21.11.2026, 20:00 CET** (LAB-T3 sygnatury labu organizatorów + synchronizacja z TASKS i audytem jury). Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -8,13 +8,13 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 ```
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
-M2 Fundament (kontrakt+DB)█████████░  90%  🔨  DEV-0/1 ✅, SEC-1 ✅, SEC-3 lab ✅; brak: SEC-2 materiały od organizatorów
+M2 Fundament (kontrakt+DB)█████████░  95%  🔨  DEV-0/1 ✅, SEC-1 ✅, SEC-3 lab ✅, SEC-2 🟡 (lab organizatorów w ~/lab na fh2, analiza gotowa)
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
-M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅, DEV-9 ✅ (porównanie przebiegów, ocena analityka, edycja harmonogramu), HTTP/sygnatury w assecie ✅
-M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx, SEC-5 nuclei + 14 sygnatur, SEC-10 +9 sygnatur IoT (DEV-7 osobno)
-M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM), role+audit ✅, tokeny API w GUI ✅ (DEV-3)
-M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5 ✅, SEC-8 ✅, SEC-7 ✅ (asi-changes, asi-nmap/httpx/nuclei natywnie; test na DD organizatorów czeka na SEC-2), DEV-6 ✅
-M8 Finisz dla jury        █████░░░░░  50%  🔨  test skali ✅ (DEV-10), publiczne repo + czysty start ✅ (SEC-9); ALL-1 (prezentacja, w toku na fh2), ALL-2 (status 100%, quickstart)
+M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅, DEV-9 ✅; weryfikacja live progress PTY (DEV-13)
+M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx ✅, SEC-5 +14 ✅, SEC-10 +9 IoT ✅, LAB-T3 +10 lab ✅, DEV-7 ✅
+M6 Ochrona danych i role  █████████░  95%  🔨  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3 ✅; w toku: DEV-11 (konta), wolne: DEV-12 (rola analyst)
+M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5 ✅, SEC-8 ✅, SEC-7 ✅ (asi-changes, asi-nmap/httpx/nuclei natywnie), DEV-6 ✅
+M8 Finisz dla jury        █████░░░░░  55%  🔨  DEV-10 ✅, SEC-9 ✅, LAB-T3 ✅; w toku: ALL-1 (Beamer, fh2), LAB-T1/T4 (agy); wolne: LAB-T2, LAB-0..6, ALL-2, OPS-1
 ```
 
 ## Etapy
@@ -76,18 +76,26 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | **DEV-10** | M8 | test skali: ≥10 000 adresów lokalnie (127.0.0.0/18, wyłącznie loopback), pomiar skanu, zapisu, przeliczania stanów i dashboardu; poprawki wydajności | ✅ agent blackarch | 30% („w dużej infrastrukturze”) |
 | **DEV-7** | M5 | zmiana treści HTTP jako `changed`, ocena ciekawości z portów, HTTP i sygnatur razem, grupowanie podobnych usług, wzorce pory dnia z `hours_seen` | ✅ agent blackarch | 10–15% + „mile widziane” |
 | **SEC-7** | M7 | natywne parsery httpx/nuclei do DD (`asi-httpx`, `asi-nuclei`) + `asi-changes` | ✅ agent fatusia-2 | 20% (integracja DD) |
-| ~~SEC-10~~ | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | ✅ goose/blackarch (9 sygnatur, test na atrapie) | pkt 6 PDF |
-| ~~SEC-9~~ | M8 | publiczne repo bez sekretów i realnych IP; czysty start z GitHuba | ✅ goose (repo + test `make env && make build && make test`); README/quickstart uzupełnia fh2 | formalny wymóg |
-| **ALL-1** | M8 | prezentacja ≤10 slajdów + nagranie demo | 🔨 agent fatusia-2 (`docs/presentation/asi.tex`) | formalny wymóg |
-| **ALL-2** | M8 | `status.md` 100%, quickstart przetestowany przez drugą osobę | wszyscy | 20% |
+| ~~SEC-10~~ | M5 | sygnatury IoT (kamery, routery, drukarki, panele urządzeń) | ✅ goose/blackarch (9 sygnatur + poprawka Hikvision/Dahua) | pkt 6 PDF |
+| ~~LAB-T3~~ | M5 | 10 sygnatur pod lab organizatorów (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ, NPM, Traefik, Toxiproxy, httpbin, WordPress < 6.0) | ✅ agy/blackarch (`nuclei -validate` + test na 12 usługach) | 10% + lab jury |
+| ~~SEC-9~~ | M8 | publiczne repo bez sekretów i realnych IP; czysty start z GitHuba | ✅ goose (repo + test `make env && make build && make test`); README/quickstart fh2 | formalny wymóg |
 | ~~DEV-3~~ | M6 | tokeny API w GUI (zakładka Konto, `scripts/test-tokens.sh` 24/24) | ✅ goose/blackarch | role 10% |
-| **SEC-2** | M2 | materiały organizatorów (lab, porty, limity, format JSON/CSV) | człowiek na miejscu | ryzyko testu jury |
-| drobne | docs | `vitepress preview` ignoruje `--host` i słucha na wszystkich interfejsach (`make docs`) | wolne | bezpieczeństwo |
+| **ALL-1** | M8 | prezentacja ≤10 slajdów (`docs/presentation/asi.tex`, uzupełnić `\TODO`) + nagranie demo | 🔨 agent fatusia-2 (szablon Beamer) | formalny wymóg |
+| **DEV-11** | M6 | zarządzanie kontami (zmiana roli, blokada `disabled`, unieważnianie sesji/tokenów, ochrona ostatniego admina) | 🔨 goose/blackarch | role 10% (audyt jury) |
+| **DEV-12** | M6 | wyrównanie roli `analyst` („modyfikacja i odczyt”: edycja celów i harmonogramów bez tworzenia/usuwania) | wolne (DEV) | role 10% (audyt jury) |
+| **LAB-T1 / T4** | M8 | pełny zakres portów `-p-` dla małych celów / profilu lab + czas odpowiedzi HTTP z httpx (Toxiproxy) | 🔨 agy/blackarch (`lab-t1-t4`) | 30% (lab organizatorów) |
+| **LAB-T2** | M8 | wykluczenie portów własnego stacku ASI/DD przy skanie localhosta/hosta skanera | wolne (SEC) | lab organizatorów |
+| **LAB-0..6** | M8 | testy na żywo 4 stacków z `~/lab` (`custom-network`, `modern`, `vulnerable`, `modern-proxy`) | wolne (SEC, po LAB-T1..T4) | 30% (test jury) |
+| **DEV-13** | M4 | przebudowa `nmap-scanner`, weryfikacja PTY nmapa 7.95 w kontenerze i podgląd widoku postępu (`626855b`) | wolne (DEV) | 15% (czytelność GUI) |
+| **ALL-2** | M8 | strona ze ścieżką testowania pod jury, `status.md` 100%, quickstart na czystej VM z Dockerem | wolne (wszyscy) | 20% |
+| **SEC-2** | M2 | materiały organizatorów — lab pobrany (`~/lab` na fh2, `docs/guide/lab-organizers.md`); brak: ew. przykładowy JSON/CSV, oficjalne limity, testowe DD | 🟡 częściowo (człowiek na miejscu) | ryzyko testu jury |
+| **OPS-1** | docs | `make docs` (`vitepress preview` słucha na wszystkich interfejsach) + sprzątanie starych procesów na `blackarch` | wolne | bezpieczeństwo / porządek |
 
 ## Dziennik postępu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~20:00 | LAB-T3: 10 bezpiecznych sygnatur pod lab organizatorów (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, NPM, Traefik dashboard, Toxiproxy API, httpbin, WordPress < 6.0) + poprawka `asi-iot-camera-hikvision` (usunięty nagłówek Dahua `DNVRS-Webs`), `nuclei -validate` i test na 12 usługach OK; uporządkowane `TASKS.md` (SEC-2 🟡, DEV-13, OPS-1) |
 | 21.11 ~19:40 | blackarch: szyfrowanie włączone na maszynie demo — `asi-db` przestawiona na `pg_tde` (15/15 tabel, WAL AES-256) z zachowaniem danych (dump → restore → `asi db reseal`), `make crypto-check` 9 OK / 0 FAIL; nowa komenda `asi db reseal` (szyfruje stare jawne `_enc`, idempotentna) |
 | 21.11 ~18:45 | DEV-7: ocena 0–100 z powodami (port, sygnatury, TLS, świeżość, flapping, ocena analityka), grupy podobnych usług i technologii, wzorce pory dnia, zmiana treści HTTP jako `changed` |
 | 21.11 ~18:30 | DEV-10: test skali 16 384 adresów (loopback) w 86 s, dashboard 0,22 s przy 49 tys. assetów; poprawione domyślne porównanie (ten sam zbiór celów), `-set` dla skanów z GUI, ponawianie `apk add` w Dockerfile |

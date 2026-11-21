@@ -1,7 +1,7 @@
 # Zadania i podział pracy
 
-Stan na 21.11.2026, ok. 15:40. Źródła: PDF zadania, `VISION.md` (architektura docelowa), `status.md` (co działa),
-rozmowy z agentami na blackarch i fatusia-hacknation-2.
+Stan na 21.11.2026, ~20:00 CET. Źródła: PDF zadania, `VISION.md` (architektura docelowa), `status.md` (co działa),
+`ROADMAP.md` (postęp etapów), `guide/lab-organizers.md` (analiza labu organizatorów).
 
 ## Zgłoszenie (HackTribe)
 
@@ -10,7 +10,7 @@ rozmowy z agentami na blackarch i fatusia-hacknation-2.
 | nazwa projektu | **Asia - Attack Surface Intelligence Aggregator** |
 | repozytorium | https://github.com/Ch3shireDev/awesome-surface-intelligence |
 | zadanie | Attack Surface Intelligence (CBI AGH) |
-| terminy | **21.11 20:00 DRAFT** (projekt + repo + opis + stolik), **22.11 11:00 FINALNE** (wszystkie pola + prezentacja i materiały) |
+| terminy | **21.11 20:00 DRAFT ✅ złożone**, **22.11 11:00 FINALNE** (wszystkie pola + prezentacja i materiały) |
 | uwaga | zgłoszenie utworzone przed 20:00 można edytować po 20:00; nie da się już zmienić zadania |
 
 Kod jest rozwijany dalej w repo roboczym (bare `daniel@blackarch:~/repos/asi.git`, klony `~/asi` na blackarch,
@@ -23,25 +23,11 @@ skanery i sygnatury, bezpieczeństwo, szyfrowanie, DefectDojo, demo).
 
 ## Gdzie jesteśmy
 
-Działa i jest przetestowane na 127.0.0.1 (21.11, scalone repo):
-
-- plan celów z CSV, JSON i TXT, z rozwijaniem CIDR,
-- dwie fazy skanu nmap, adaptacyjne paczki, globalny limit tempa, okno czasowe,
-- postęp w CLI i panelu web,
-- diff przebiegów, potwierdzanie zniknięć (tag `unstable`),
-- reimport do DefectDojo: `created → closed → reactivated`,
-- stack DefectDojo 3.5.202 w compose.
-
-Brakuje (wymagania „musi” z PDF):
-
-- baza z edycją trwałą między skanami,
-- RBAC z 4 rolami,
-- formularz celów w UI,
-- dashboard najważniejszych znalezisk,
-- szyfrowanie pól,
-- fingerprinting HTTP/TLS, wykrywanie CMS, własne sygnatury,
-- harmonogram ze wznawianiem w kolejnym oknie,
-- eksport CSV, import cudzych wyników.
+Rdzeń systemu (M0–M7, 16 wymagań „musi” z PDF) jest zaimplementowany i przetestowany — szczegóły w
+[`ROADMAP.md`](ROADMAP.md) i [`status.md`](status.md). Zostały zadania domykające na finisz:
+- poprawki RBAC z audytu jury (`DEV-11`, `DEV-12`) i weryfikacja widoku postępu na żywo (`DEV-13`),
+- dopasowanie do labu organizatorów (`LAB-T1`, `LAB-T2`, `LAB-T4`) i przejście testów `LAB-0`…`LAB-6`,
+- prezentacja ≤10 slajdów + wideo demo (`ALL-1`), dokumentacja 100% + ścieżka testowania + czysty start z Dockerem (`ALL-2`), porządki (`OPS-1`).
 
 ## Priorytety po konsultacji z mentorem (21.11, 14:44)
 
@@ -72,7 +58,7 @@ i `make sync`.
 | ID | kto | zadanie | gotowe, gdy |
 |---|---|---|---|
 | SEC-1 | SEC ✅ *zrobione (agent blackarch #2, 21.11 15:50: build arm64, 2 skany, `make poc`)* | Migracja fatusia-2 na `~/asi` (instrukcja w `~/sync/komunikacja/asi_blackarch.md`). `make up` buduje obraz `nmap-scanner` z `asi` na arm64. Potem `make asi-scan` na 127.0.0.1 i usunięcie `~/sync/hacknation-asi`. | panel :8090 i findingi w DD z kontenera |
-| SEC-2 | SEC | Materiały od organizatorów (Discord albo stanowisko AGH): kontenery labu, dozwolone porty, limity ruchu, wyniki referencyjne, przykładowe sygnatury, format JSON/CSV, testowe DD. Wpisać do `DECISIONS.md` „Otwarte pytania”. | zakres labu w `targets/`, limity w profilu |
+| SEC-2 | SEC 🟡 *lab pobrany (`~/lab` na `fatusia-2`) i przeanalizowany w `docs/guide/lab-organizers.md` → zadania `LAB-*`; nadal brak z Discorda: przykładowy JSON/CSV, oficjalna lista portów/limitów, wyniki referencyjne, testowe DD* | Materiały od organizatorów (Discord albo stanowisko AGH): kontenery labu, dozwolone porty, limity ruchu, wyniki referencyjne, przykładowe sygnatury, format JSON/CSV, testowe DD. Wpisać do `DECISIONS.md` „Otwarte pytania”. | zakres labu w `targets/`, limity w profilu |
 | SEC-3 | SEC ✅ *zrobione (agent blackarch #2): `make demo`, `docs/guide/lab.md`* | Własny mini-lab w compose (profil `lab`): nginx, WordPress, panel `/admin`, nagłówek `X-Environment: staging`, ciekawe cookie, usługa „migająca” (cron on/off). Do tego `make demo`: 2 przebiegi ze zmianą pomiędzy. | `make demo` pokazuje new/gone/changed/unstable |
 | DEV-0 | DEV ✅ *zrobione (blackarch)* | Kontrakt: `Observation` (kind, asset_key, data, fp_hash, confidence), interfejs `Scanner` i adapter nmap przepięty na niego. | SEC może pisać adaptery |
 | DEV-1 | DEV ✅ *zrobione (blackarch)* | Baza `asi-postgres` (osobna od DD) z migracjami SQL w binarce. Tabele: targets, runs, chunks, observations, assets, asset_events, users, api_tokens, audit_log. Zapis przebiegu do bazy zamiast `results/*.json` (pliki zostają jako eksport). | 2 przebiegi w bazie, diff z bazy |
@@ -109,8 +95,10 @@ i `make sync`.
 | SEC-9 | SEC ✅ *zrobione (goose/blackarch, 21.11): https://github.com/Ch3shireDev/awesome-surface-intelligence — publiczne, remote `github` w `~/asi`, historia bez sekretów i realnych celów; czysty start z GitHuba potwierdzony (`make env && make build && make test`), `make up` wymaga dockera na VM* | Publiczne repo dla jury: GitHub jako drugi remote (origin zespołu zostaje na blackarch). Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
 | DEV-11 | DEV 🔨 *w toku: goose/blackarch (21.11 19:05)* | **Zarządzanie kontami (pkt 12–13 PDF, „Administracja”).** Dziś admin może w API/GUI tylko tworzyć konta (`POST /api/v1/users`); w CLI jest `asi user list/passwd/add` (4772620). Brak zmiany roli, blokady (`disabled`) i usunięcia, więc nie da się odebrać dostępu. Do zrobienia: `PATCH /api/v1/users/{id}` (rola, `disabled`, nowe hasło) + unieważnienie sesji/tokenów zablokowanego konta, ochrona przed odebraniem sobie ostatniego admina, widok w GUI (Administracja), wpisy w audit logu. Test: zablokowany użytkownik dostaje 401 na istniejącej sesji. |
 | DEV-12 | DEV | **Wyrównanie ról z treścią zadania (pkt 13).** Brief: *Dodawanie, usuwanie, modyfikacja* (`operator`) vs *Modyfikacja i odczyt* (`analyst`). Dziś `analyst` edytuje tylko assety (`PATCH /asset`); edycja istniejących celów i harmonogramów (`PUT /targets/{id}`, `PUT /schedules/{id}`) wymaga `operator`. Do zrobienia: `analyst` = modyfikacja istniejących wartości (cele, harmonogramy, wyniki, konfiguracja skanu) bez tworzenia i usuwania; `operator` = + dodawanie/usuwanie/uruchamianie. Tabela ról w `docs/guide/gui.md` 1:1 z nazwami z PDF + test API per rola (sprawdzone 21.11: viewer 403 na zapis, CSRF działa). |
-| ALL-1 | oboje | Prezentacja do 10 slajdów (szablon Beamer: `docs/presentation/asi.tex`, `make slides`): problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
-| ALL-2 | oboje | Dokumentacja: `status.md` na 100%, quickstart przetestowany przez drugą osobę na czystej VM. |
+| DEV-13 | DEV | **Weryfikacja postępu skanu na żywo i UI (`626855b`).** Po przebudowie obrazu `nmap-scanner` (`make up`) sprawdzić w kontenerze, czy nmap 7.95 z PTY (`internal/scanner/tty_linux.go`) zwraca realny procent postępu (nie tylko szacunek z czasu), oraz obejrzeć wizualnie w przeglądarce nowy 4-etapowy widok na żywo i dashboard na `:8090`. |
+| ALL-1 | oboje 🔨 *w toku: fatusia-2 (szablon Beamer `docs/presentation/asi.tex`, `make slides`)* | Prezentacja do 10 slajdów (szablon Beamer: `docs/presentation/asi.tex`, `make slides`): uzupełnić `\TODO` o wyniki demo/labu i zrzuty ekranu (problem, architektura, 2 przebiegi, role, szyfrowanie, DD, bezpieczeństwo skanowania). Nagranie wideo demo jako plan B. |
+| ALL-2 | oboje | Dokumentacja i ścieżka testowania: nowa strona krok po kroku pod test jury (lab → 2 przebiegi → edycja znalezisk → import → role → eksport → DefectDojo → szyfrowanie), `status.md` na 100%, weryfikacja czystego startu na czystej VM z Dockerem (`git clone && make env && make up && make demo`). |
+| OPS-1 | dowolny | Drobne/porządkowe: naprawić `make docs` (`vitepress preview` ignoruje `--host` i słucha na wszystkich interfejsach — zbindować na `127.0.0.1`), posprzątać osierocone procesy testowe na `blackarch` (`slow.py` :8777, `./asi server` :8097, stary `docker run` ze skasowanego `~/asi-sec`). |
 
 ## Blokery (na bieżąco)
 
@@ -142,16 +130,11 @@ Zadania kodu wynikające z analizy (przed LAB-1…5):
 |---|---|---|
 | LAB-T1 | DEV 🔨 *w toku: agy/blackarch* | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
 | LAB-T2 | SEC | Nie skanować samego siebie: wykluczenie portów ASI/DD przy celu = host skanera (wykluczenia per port albo automatyczne). |
-| LAB-T3 | SEC | Sygnatury detekcyjne (`signatures/`): phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, Nginx Proxy Manager, Traefik dashboard (`api.insecure`), API Toxiproxy, httpbin. Tylko detekcja, bez logowania. Łączy się z SEC-10 (IoT). |
+| LAB-T3 | SEC ✅ *zrobione (agy/blackarch, 21.11): 10 sygnatur w `signatures/http/` (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, NPM, Traefik, Toxiproxy, httpbin, WordPress < 6.0) + poprawka `asi-iot-camera-hikvision` (usunięty nagłówek Dahua `DNVRS-Webs`), `nuclei -validate` OK, test na 12-usługowej atrapie HTTP 100% trafień / 0 FP* | Sygnatury detekcyjne (`signatures/`): phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, Nginx Proxy Manager, Traefik dashboard (`api.insecure`), API Toxiproxy, httpbin, nieaktualny WordPress (< 6.0). Tylko detekcja, bez logowania. Uzupełnia SEC-10 (IoT). |
 | LAB-T4 | DEV 🔨 *w toku: agy/blackarch* | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
 
 ## Ryzyka
 
-- **Ścieżka krytyczna to DEV-1 → DEV-2 → DEV-3 → DEV-4** (baza, reconcile, API, UI). Jeśli do jutra rana nie
-  będzie bazy, awaryjnie zostaje obecny zapis w plikach plus prosty RBAC na tokenach z `.env`. Wtedy formularz i
-  edycja zapisują się do pliku `assets.json`, szyfrowanego AES-GCM.
-- Build obrazu `nmap-scanner` z `asi` sprawdzony na blackarch (amd64, 21.11 ~15:50, po dodaniu go.sum).
-  arm64 (fatusia-2) sprawdza SEC-1. Mirror Alpine bywa bardzo wolny: jeśli `apk add` padnie, ponów build.
-- Środowisko jury jest nieznane. Bez SEC-2 stroimy na ślepo (porty, tempo, ICMP).
-- Dwóch agentów w jednym repo: małe commity, `make sync` przed i po pracy, każdy w swoich pakietach
-  (SEC: `internal/scanner/{httpx,nuclei}`, `internal/crypto`, `signatures/`, `docker/`; DEV: reszta).
+- **Porty i opóźnienia w labie organizatorów (`LAB-T1`, `LAB-T4`, `LAB-0`…`6`):** domyślny zestaw top 1000 nie obejmuje m.in. `8787` z quickstartu organizatorów — stąd priorytet na `LAB-T1` i przejście wszystkich 4 stacków przed 11:00.
+- **Mirror Alpine w Docker buildzie:** bywa wolny (Dockerfile ma 3 próby `apk add`); warto przebudować obraz skanera z wyprzedzeniem przed demo (`DEV-13`).
+- **Równoległa praca wielu agentów w jednym repo:** małe commity, `make sync` przed i po pracy, rezerwacja zadania w `TASKS.md` i rozdzielone pliki, żeby unikać konfliktów.
