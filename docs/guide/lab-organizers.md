@@ -140,6 +140,41 @@ zdarzeń (wcześniej 10× `missing` + `flapping`), skan potwierdzający odzyska�
 **Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
 przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 
+## Wyniki LAB-6 (21.11, zmiana stacku, VM fatusia-hacknation-1)
+
+Własna kopia labu (`~/lab`) na fatusia-1 (x86_64), aktualny `main`, domyślne ustawienia skanera: `-ports auto`
+(pełne TCP dla 1 hosta), `-parallel 1 -rate 1000`, pomijanie portów ASI/DD (LAB-T2). DefectDojo przeniesione na
+`DD_PORT=18080`, bo `modern` zajmuje 8080. Cel `127.0.0.1`, produkt DD `ASI lab-org`, engagement `lab6`.
+Progi domyślne: port `gone` po 2 brakach. Każdy przebieg trwał 118–128 s.
+
+| przebieg | lab | ASI (reconcile) | DD `ASI discovery` | DD `asi-changes` |
+|---|---|---|---|---|
+| 1 | `custom-network` (7 portów) | 14× `new` (7 labu + 6 portów VM + host) | utworzone | 0 warunków |
+| 2 | `modern` | 7× `missing` (1 brak), 6× `new` | closed 7, created 6 | +7 „nie odpowiada” |
+| 3 | `modern` (bez zmian) | **7× `gone`** (2 braki) | untouched 12, **0 zmian** | 7 „nie odpowiada” → 7 „zniknęła” |
+| 4 | `custom-network` | **7× `reappeared`**, 6× `missing` | **reactivated 7, created 0**, closed 6 | 7 „zniknęła” zamknięte, +6 „nie odpowiada” |
+| 5 | `custom-network` (bez zmian) | **6× `gone`** | untouched 13, 0 zmian | 6 „nie odpowiada” → 6 „zniknęła” |
+
+**Duplikaty w DD (API, po przebiegu 5): 0** w każdym z 4 testów. `ASI discovery` ma 19 znalezisk = dokładnie
+19 różnych portów (7 `custom-network` + 6 `modern` + 6 VM), z czego 13 aktywnych (`custom-network` + VM),
+6 zamkniętych (`modern`). `asi-changes`: 6 aktywnych warunków (porty `modern` „zniknęła”), reszta to historia.
+Powrót usługi reaktywuje stare znalezisko zamiast tworzyć nowe. Żaden port nie dostał `flapping`
+(każdy zmienił stan raz w jedną i raz w drugą stronę, poniżej progu 3 przejść).
+
+Rozpoznane usługi: `custom-network`: nginx 1.31.9 (8787), Gitea (3001, tytuł **instalacji**, LAB-T6),
+OpenSSH 10.3 (2223), AMQP (5673), RabbitMQ Management (15673, Cowboy), httpbin (8888, httpx: gunicorn 19.9.0,
+Swagger UI). `modern`: Apache 2.4.71 (WordPress 8080, phpMyAdmin 8081), Redis 7.4.12 (6379), OpenResty
+(Nginx Proxy Manager 80/81), TLS na 443.
+
+**Znalezione luki:**
+
+- **PostgreSQL (15432) bez nazwy usługi**, tylko otwarty port. `-sV --version-light` (intensywność 2) nie ma
+  sondy, która go rozpoznaje. Od `--version-intensity 4` nmap zwraca `postgresql` / `PostgreSQL DB`
+  (sprawdzone na 3, 4, 5, 6, 7). Zadanie **LAB-T10**.
+- httpbin (8888) z nmapa wychodzi jako `tcpwrapped`, ale httpx go rozpoznaje (tytuł, gunicorn), więc fingerprint
+  HTTP jest kompletny. Bez działań.
+- Szum hosta jak w LAB-1/LAB-5: SSH, Syncthing (8384, 22000), dokumentacja (4173) i 2 porty lokalnych procesów VM.
+
 ## Jak testować
 
 Wspólne przygotowanie (LAB-0):
