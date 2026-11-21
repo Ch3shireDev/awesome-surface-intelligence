@@ -1,6 +1,6 @@
 # Lab organizatorów (przykładowe środowisko testowe)
 
-Przykładowe środowisko od organizatorów (CBI AGH), przekazane zespołowi 21.11. Leży **poza repo**
+Przykładowe środowisko od organizatorów (CBI AGH), udostępnione na Discordzie 21.11: to są materiały od organizatorów z zadania SEC-2. Leży **poza repo**
 (`~/lab` na VM fatusia-hacknation-2): to materiał organizatorów, z domyślnymi hasłami do usług. Tutaj jest
 opis, analiza względem ASI i plan testów (zadania `LAB-*` w [TASKS](../TASKS.md)).
 

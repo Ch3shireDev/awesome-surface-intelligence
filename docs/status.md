@@ -66,7 +66,7 @@ Otwarte:
 1. **Zgoda na skan cudzych hostów**: wiersze bez zgody właściciela mają `enabled=false`.
 2. **Licencje (regulamin §4.2).** nmap (NPSL) wołamy jako zewnętrzny program; httpx i nuclei (MIT) tak samo;
    DefectDojo BSD-3. Do potwierdzenia z mentorami, że wywołanie nmapa jest OK.
-3. **Format i limity organizatorów** (SEC-2): przykładowy JSON/CSV, lista dozwolonych portów, limity ruchu.
+3. **Format i limity organizatorów** (SEC-2 ✅): materiały z Discorda to lab (`docs/guide/lab-organizers.md`); osobnego przykładowego JSON/CSV ani limitów ruchu w nich nie ma, porty bierzemy z labu.
    Polityka (`internal/safety`) i `-rate` są gotowe na te wartości.
 
 ## Następne kroki

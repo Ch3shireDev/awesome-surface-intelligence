@@ -58,7 +58,7 @@ i `make sync`.
 | ID | kto | zadanie | gotowe, gdy |
 |---|---|---|---|
 | SEC-1 | SEC ✅ *zrobione (agent blackarch #2, 21.11 15:50: build arm64, 2 skany, `make poc`)* | Migracja fatusia-2 na `~/asi` (instrukcja w `~/sync/komunikacja/asi_blackarch.md`). `make up` buduje obraz `nmap-scanner` z `asi` na arm64. Potem `make asi-scan` na 127.0.0.1 i usunięcie `~/sync/hacknation-asi`. | panel :8090 i findingi w DD z kontenera |
-| SEC-2 | SEC 🟡 *lab pobrany (`~/lab` na `fatusia-2`) i przeanalizowany w `docs/guide/lab-organizers.md` → zadania `LAB-*`; nadal brak z Discorda: przykładowy JSON/CSV, oficjalna lista portów/limitów, wyniki referencyjne, testowe DD* | Materiały od organizatorów (Discord albo stanowisko AGH): kontenery labu, dozwolone porty, limity ruchu, wyniki referencyjne, przykładowe sygnatury, format JSON/CSV, testowe DD. Wpisać do `DECISIONS.md` „Otwarte pytania”. | zakres labu w `targets/`, limity w profilu |
+| SEC-2 | SEC ✅ *materiały od organizatorów z Discorda = pobrany lab (`~/lab` na `fatusia-2`), przeanalizowany w `docs/guide/lab-organizers.md` → zadania `LAB-*`. Osobnego przykładowego JSON/CSV, listy portów/limitów, wyników referencyjnych ani testowego DD w tych materiałach nie ma: porty i scenariusze bierzemy z labu* | Materiały od organizatorów (Discord albo stanowisko AGH): kontenery labu, dozwolone porty, limity ruchu, wyniki referencyjne, przykładowe sygnatury, format JSON/CSV, testowe DD. Wpisać do `DECISIONS.md` „Otwarte pytania”. | zakres labu w `targets/`, limity w profilu |
 | SEC-3 | SEC ✅ *zrobione (agent blackarch #2): `make demo`, `docs/guide/lab.md`* | Własny mini-lab w compose (profil `lab`): nginx, WordPress, panel `/admin`, nagłówek `X-Environment: staging`, ciekawe cookie, usługa „migająca” (cron on/off). Do tego `make demo`: 2 przebiegi ze zmianą pomiędzy. | `make demo` pokazuje new/gone/changed/unstable |
 | DEV-0 | DEV ✅ *zrobione (blackarch)* | Kontrakt: `Observation` (kind, asset_key, data, fp_hash, confidence), interfejs `Scanner` i adapter nmap przepięty na niego. | SEC może pisać adaptery |
 | DEV-1 | DEV ✅ *zrobione (blackarch)* | Baza `asi-postgres` (osobna od DD) z migracjami SQL w binarce. Tabele: targets, runs, chunks, observations, assets, asset_events, users, api_tokens, audit_log. Zapis przebiegu do bazy zamiast `results/*.json` (pliki zostają jako eksport). | 2 przebiegi w bazie, diff z bazy |
@@ -110,7 +110,7 @@ i `make sync`.
 
 ## Testy na labie organizatorów (LAB-*), od 21.11 wieczór
 
-Środowisko: `~/lab` na fatusia-hacknation-2 (poza repo). Opis, analiza i sposób testowania:
+Środowisko: `~/lab` na fatusia-hacknation-2 (poza repo). To są **materiały od organizatorów z Discorda** (SEC-2). Opis, analiza i sposób testowania:
 [Lab organizatorów](guide/lab-organizers.md). Jeden stack naraz. Cel `127.0.0.1` (`targets/lab-org.csv`).
 Każdy test kończy się wpisem wyniku (OK / FAIL + liczby) w tej tabeli i w `status.md`.
 
