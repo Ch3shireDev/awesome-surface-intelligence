@@ -27,8 +27,15 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
   brutto, dzielone rowno miedzy czlonkow zespolu, chyba ze zlozą inny podzial
   na pismie przed podpisaniem).
 - Brak NDA, brak klauzuli zakazu konkurencji w regulaminie.
-- Ten sam szablon prawny (slowo w slowo) wystepuje w regulaminie UZP
-  (Odwolania2json) - najpewniej identyczny we wszystkich 15 wyzwaniach.
+- **Regulaminy zadan nie sa identyczne.** Sprawdzone w pelnym PDF regulaminu CBI AGH (21.11, agent na
+  fatusia-hacknation-1): AGH ma Umowe o dzielo na 25 000 zl brutto, **nie wspomina o terminach ani o
+  repozytorium** (KOWR wymaga prywatnego repo do konca wydarzenia - AGH nie wymaga). Wczesniejszy zapis
+  "ten sam szablon slowo w slowo co UZP" byl nieprawdziwy.
+- Terminy zgloszen pochodza z Regulaminu Wydarzenia i przewodnika uczestnika, nie z regulaminu zadania:
+  **21.11 20:00 DRAFT** (zalozenie projektu w HackTribe: nazwa projektu i zespolu, repozytorium, numer
+  stolika, wstepny opis; po 20:00 nie da sie zalozyc projektu ani zmienic zadania) i **22.11 11:00
+  zgloszenie finalne** (wszystkie pola + prezentacja i materialy do sprawdzenia). Zgloszenie utworzone
+  przed 20:00 mozna edytowac dalej.
 - Jesli zespol NIE podpisze umowy w 7 dni, traci prawo do nagrody (idzie do
   kolejnej druzyny z rankingu) - ale zachowuje pelne prawa do wlasnego kodu.
 - Nic nie stoi na przeszkodzie, zeby repo bylo publiczne/open source JUZ
