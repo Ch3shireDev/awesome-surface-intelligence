@@ -22,6 +22,10 @@ type Chunk struct {
 	Started   time.Time `json:"started"`
 	Seconds   float64   `json:"seconds"`
 	Error     string    `json:"error,omitempty"`
+	// Expected duration (s) from the measured speed of the phase; while the tool reports nothing,
+	// the snapshot shows elapsed/Expected (capped at 90%) and marks the chunk Estimated.
+	Expected  float64 `json:"expected_s,omitempty"`
+	Estimated bool    `json:"estimated,omitempty"`
 }
 
 type Phase struct {
@@ -145,6 +149,23 @@ func (t *Tracker) Snapshot() State {
 func (t *Tracker) snapshotLocked() State {
 	s := t.s
 	s.Elapsed = time.Since(s.Started).Seconds()
+	// copy chunks first: running ones without tool-reported progress get a time-based estimate,
+	// and phase partials are recomputed from these copies so every frame moves smoothly
+	ch := make([]*Chunk, len(s.Chunks))
+	partial := map[string]float64{}
+	for i, c := range s.Chunks {
+		cc := *c
+		if cc.State == "running" {
+			cc.Seconds = time.Since(cc.Started).Seconds()
+			if cc.Expected > 0 {
+				if est := min(0.9, cc.Seconds/cc.Expected) * 100; est > cc.Percent {
+					cc.Percent, cc.Estimated = est, true
+				}
+			}
+		}
+		partial[cc.Phase] += float64(cc.Hosts) * cc.Percent / 100
+		ch[i] = &cc
+	}
 	// weights: discovery is cheap per host, services are where the time goes
 	w := map[string]float64{"discovery": 0.15, "services": 0.6, "http": 0.15, "signatures": 0.1}
 	var pct float64
@@ -154,7 +175,7 @@ func (t *Tracker) snapshotLocked() State {
 			pct += w[p.Name]
 		case "running":
 			if p.Hosts > 0 {
-				pct += w[p.Name] * p.Partial / float64(p.Hosts)
+				pct += w[p.Name] * min(1, max(p.Partial, partial[p.Name])/float64(p.Hosts))
 			}
 		}
 	}
@@ -169,14 +190,12 @@ func (t *Tracker) snapshotLocked() State {
 	ph := make([]*Phase, len(s.Phases))
 	for i, p := range s.Phases {
 		c := *p
+		if c.State == "running" {
+			c.Partial = min(float64(c.Hosts), max(c.Partial, partial[c.Name]))
+		}
 		ph[i] = &c
 	}
 	s.Phases = ph
-	ch := make([]*Chunk, len(s.Chunks))
-	for i, c := range s.Chunks {
-		cc := *c
-		ch[i] = &cc
-	}
 	s.Chunks = ch
 	s.Services = append([]Service(nil), s.Services...)
 	s.Log = append([]string(nil), s.Log...)

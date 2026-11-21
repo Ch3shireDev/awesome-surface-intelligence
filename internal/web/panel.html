@@ -58,6 +58,41 @@ th{color:var(--muted);font-weight:600;font-size:12px}
 select{font:inherit;padding:5px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .hidden{display:none}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+/* --- widok na zywo: etapy, pasek segmentowy, paczki per etap --- */
+:root{--p-discovery:#0891b2;--p-services:#2563eb;--p-http:#7c3aed;--p-signatures:#c2410c}
+@media (prefers-color-scheme:dark){:root{--p-discovery:#22d3ee;--p-services:#60a5fa;--p-http:#a78bfa;--p-signatures:#fb923c}}
+@keyframes stripes{from{background-position:0 0}to{background-position:28px 0}}
+.run-stripes{background-image:linear-gradient(45deg,rgba(255,255,255,.28) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.28) 75%,transparent 75%);background-size:28px 28px;animation:stripes 1s linear infinite}
+@media (prefers-reduced-motion:reduce){.run-stripes{animation:none}}
+.segbar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--idle);margin:12px 0 6px;gap:2px}
+.seg{position:relative;background:color-mix(in srgb,var(--idle) 70%,var(--panel))}
+.seg>i{position:absolute;inset:0 auto 0 0;display:block;transition:width .4s}
+.seglbl{display:flex;gap:2px;font-size:11px;color:var(--muted);margin-bottom:8px}
+.seglbl span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.now{font-size:15px;margin:4px 0 12px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.now b{font-weight:650}
+.live-dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.live-dot i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live-dot.on i{background:var(--ok);box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.steps{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:34px 210px 1fr 230px;gap:12px;align-items:center}
+.step .ico{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid var(--idle);color:var(--muted)}
+.step.running .ico{border-color:var(--pc);color:var(--pc)}
+.step.done .ico{background:var(--pc);border-color:var(--pc);color:#fff}
+.step .nm b{display:block}.step .nm span{font-size:12px;color:var(--muted)}
+.step .sbar{height:12px;border-radius:6px;background:var(--idle);overflow:hidden}
+.step .sbar>i{display:block;height:100%;background:var(--pc);transition:width .4s}
+.step .meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.step.pending{opacity:.55}
+@media (max-width:800px){.step{grid-template-columns:34px 1fr}.step .sbar,.step .meta{grid-column:2}}
+.cgroup{margin:6px 0 10px}.cgroup h3{font-size:12px;margin:0 0 6px;color:var(--muted);font-weight:600}
+.chunk{border:2px solid transparent}
+.chunk.running{border-color:var(--pc)}
+.chunk>i{background:var(--pc);opacity:.45}
+.chunk.est>i{opacity:.25}
+@keyframes flash{from{background:color-mix(in srgb,var(--ok) 25%,transparent)}to{background:transparent}}
+tr.fresh td{animation:flash 2.5s ease-out}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 </style>
 </head>
@@ -72,20 +107,25 @@ select{font:inherit;padding:5px;border-radius:6px;border:1px solid var(--line);b
 <section id="tab-live">
   <div class="card">
     <div class="big"><span class="pct" id="pct">0%</span>
-      <span class="muted" id="times"></span></div>
-    <div class="bar"><i id="mainbar" style="width:0"></i></div>
+      <span class="muted" id="times"></span>
+      <span class="live-dot" id="live" style="margin-left:auto"><i></i><span>łączenie…</span></span></div>
+    <div class="segbar" id="segbar" aria-hidden="true"></div>
+    <div class="seglbl" id="seglbl"></div>
+    <div class="now" id="now"></div>
     <div class="kpis">
       <div class="kpi"><b id="k-targets">–</b><span>IP w planie</span></div>
       <div class="kpi"><b id="k-up">–</b><span>hosty aktywne</span></div>
       <div class="kpi"><b id="k-open">–</b><span>otwarte porty</span></div>
       <div class="kpi"><b id="k-chunks">–</b><span>paczki gotowe / wszystkie</span></div>
-      <div class="kpi"><b id="k-par">–</b><span>równoległe nmapy</span></div>
+      <div class="kpi"><b id="k-par">–</b><span>równoległe procesy</span></div>
       <div class="kpi"><b id="k-dojo">–</b><span>DefectDojo</span></div>
     </div>
   </div>
-  <div class="card"><h2>Fazy</h2><div id="phases"></div></div>
-  <div class="card"><h2>Paczki nmap</h2><div class="grid" id="grid"></div>
-    <div class="legend"><span><i style="background:var(--idle)"></i>w toku (wypełnienie = %)</span><span><i style="background:color-mix(in srgb,var(--ok) 35%,transparent)"></i>gotowa</span><span><i style="background:color-mix(in srgb,var(--bad) 35%,transparent)"></i>przerwana</span><span>● discovery · ■ usługi · liczba = hosty w paczce</span></div>
+  <div class="card"><h2>Etapy skanu</h2><div class="steps" id="phases"></div>
+    <p class="muted" style="font-size:12px;margin:10px 0 0">Każdy etap dostaje tylko to, co znalazł poprzedni (żywe hosty → otwarte porty → usługi HTTP).
+      „≈” = postęp szacowany z czasu (narzędzie nie raportuje go samo).</p></div>
+  <div class="card"><h2>Paczki (podgrupy celów)</h2><div id="grid"></div>
+    <div class="legend"><span><i style="background:var(--idle);outline:2px solid var(--accent)"></i>w toku (wypełnienie = %)</span><span><i style="background:color-mix(in srgb,var(--ok) 35%,transparent)"></i>gotowa</span><span><i style="background:color-mix(in srgb,var(--bad) 35%,transparent)"></i>przerwana / błąd</span><span>liczba = hosty w paczce; najedź, aby zobaczyć szczegóły</span></div>
   </div>
   <div class="cols">
     <div class="card"><h2>Wykryte usługi (na żywo)</h2><div class="tbl"><table><thead><tr><th>usługa</th><th>opis</th><th>ciekawość</th></tr></thead><tbody id="svcs"></tbody></table></div></div>
@@ -107,28 +147,65 @@ const t=s=>{s=Math.max(0,Math.round(s||0));return String(Math.floor(s/60)).padSt
 const statusColor={running:'var(--run)',done:'var(--ok)',interrupted:'var(--bad)',planning:'var(--muted)',idle:'var(--muted)'};
 const PL={running:'w toku',done:'zakończony',interrupted:'przerwany',planning:'planowanie',idle:'brak aktywnego skanu',pending:'czeka',skipped:'pominięta'};
 
+const STEPS={discovery:['Wykrywanie hostów','nmap -sn: które adresy żyją'],services:['Porty i usługi','nmap -sV: otwarte porty, wersje'],
+  http:['HTTP / TLS','httpx: tytuł, nagłówki, cookies, cert'],signatures:['Sygnatury','nuclei: CMS, panele, staging']};
+const W={discovery:.15,services:.6,http:.15,signatures:.1};
+const pcol=n=>`var(--p-${n})`;
+let lastFrame=0,seenSvc=new Set(),firstFrame=true;
+function phasePct(p){return p.state==='done'||p.state==='skipped'?100:(p.hosts?Math.min(100,100*p.partial/p.hosts):0)}
 function render(s){
+  lastFrame=Date.now();
   $('runid').textContent=s.run_id||'';
   const st=s.status||'idle';$('status').textContent=PL[st]||st;$('status').style.color=statusColor[st]||'var(--muted)';
-  if(st==='idle'){$('times').textContent='Uruchom: asi scan -ui 127.0.0.1:8090';return}
-  $('pct').textContent=(s.percent||0).toFixed(1)+'%';
-  $('mainbar').style.width=(s.percent||0)+'%';
-  $('times').textContent=`upłynęło ${t(s.elapsed)}`+(s.eta>0?` · pozostało ~${t(s.eta)}`:'')+(s.window?` · okno ${s.window}`:'');
+  if(st==='idle'){$('times').textContent='Brak aktywnego skanu. Uruchom go w panelu (Skany → Nowy skan) albo: asi scan -ui 127.0.0.1:8090';$('now').textContent='';return}
+  const pct=s.percent||0;
+  $('pct').textContent=(st==='done'?100:pct).toFixed(st==='done'?0:1)+'%';
+  $('times').textContent=`upłynęło ${t(s.elapsed)}`+(st==='running'&&s.eta>0?` · pozostało ok. ${t(s.eta)}`:'')+(s.window?` · okno ${s.window}`:'');
+  const ph=s.phases||[],ch=s.chunks||[];
+  // pasek segmentowy: szerokosc segmentu = waga etapu, wypelnienie = postep etapu
+  $('segbar').innerHTML=ph.map(p=>{const v=phasePct(p),run=p.state==='running';
+    return `<div class="seg" style="flex:${W[p.name]||.1}" title="${esc(STEPS[p.name]?.[0]||p.name)}: ${v.toFixed(0)}%"><i class="${run?'run-stripes':''}" style="width:${v}%;background:${pcol(p.name)}"></i></div>`}).join('');
+  $('seglbl').innerHTML=ph.map((p,i)=>`<span style="flex:${W[p.name]||.1}">${i+1}. ${esc(STEPS[p.name]?.[0]||p.name)}</span>`).join('');
+  // "teraz": co dokladnie robi skaner
+  const cur=ph.find(p=>p.state==='running'),idx=ph.indexOf(cur);
+  const runCh=ch.filter(c=>c.state==='running');
+  if(st==='done') $('now').innerHTML=`<b>Gotowe.</b> <span class="muted">${s.hosts_up} aktywnych hostów, ${s.open} otwartych portów. Zmiany względem poprzedniego przebiegu: zakładka Historia i diff (albo w panelu: Dashboard).</span>`;
+  else if(st==='interrupted') $('now').innerHTML=`<b>Przerwany</b> <span class="muted">(koniec okna albo zatrzymanie). Niezeskanowane cele można wznowić w panelu: Skany → Wznów.</span>`;
+  else if(cur) $('now').innerHTML=`<b>Teraz: etap ${idx+1}/${ph.length} · ${esc(STEPS[cur.name]?.[0]||cur.name)}</b>
+    <span class="muted">${runCh.length} ${runCh.length===1?'proces':'procesów'} w toku · ${Math.round(cur.partial)}/${cur.hosts} ${cur.name==='discovery'?'adresów':'hostów'}${runCh.some(c=>c.estimated)?' · ≈ szacunek z czasu':''}</span>`;
+  else $('now').innerHTML='<b>Planowanie</b> <span class="muted">rozwijanie zakresów, DNS, reguły bezpieczeństwa…</span>';
   $('k-targets').textContent=s.targets;$('k-up').textContent=s.hosts_up;$('k-open').textContent=s.open;
-  const ch=s.chunks||[];$('k-chunks').textContent=ch.filter(c=>c.state!=='running').length+' / '+ch.length;
+  $('k-chunks').textContent=ch.filter(c=>c.state!=='running').length+' / '+ch.length;
   $('k-par').textContent=s.parallel;
-  const u=s.upload||{};$('k-dojo').textContent=u.state==='idle'?'–':(u.state+(u.batches?` (${u.batches})`:''));
-  $('phases').innerHTML=(s.phases||[]).map(p=>{
-    const pc=p.hosts?100*p.partial/p.hosts:(p.state==='done'?100:0);
-    return `<div class="phase"><b>${p.name}</b><div class="bar"><i style="width:${pc}%"></i></div>
-    <span class="meta mono muted">${PL[p.state]||p.state} · ${Math.round(p.partial)}/${p.hosts} · paczka ${p.chunk_size||'–'} · ${p.sec_per_host?p.sec_per_host.toFixed(2)+' s/host':''}</span></div>`}).join('');
-  $('grid').innerHTML=ch.map(c=>`<div class="chunk ${c.state} ${c.phase}" title="${c.phase} #${c.id}: ${c.hosts} hostów, ${c.up} up, ${c.open} portów, ${c.seconds?c.seconds.toFixed(1)+'s':Math.round(c.percent)+'%'} ${esc(c.error)}">
-    ${c.state==='running'?`<i style="height:${c.percent}%"></i>`:''}<span>${c.hosts}</span></div>`).join('');
-  $('svcs').innerHTML=(s.services||[]).map(v=>`<tr><td class="mono">${esc(v.key)}</td><td>${esc(v.label)}${v.domains?`<br><span class="muted">${esc(v.domains)}</span>`:''}</td><td class="i-${v.interest}">${v.interest}</td></tr>`).join('');
+  const u=s.upload||{};$('k-dojo').textContent=u.state==='idle'?'–':({running:'wysyłanie',done:'wysłane',failed:'błąd'}[u.state]||u.state)+(u.batches?` (${u.batches})`:'');
+  // etapy
+  $('phases').innerHTML=ph.map((p,i)=>{const v=phasePct(p),est=p.state==='running'&&ch.some(c=>c.phase===p.name&&c.state==='running'&&c.estimated);
+    const ico=p.state==='done'?'✓':p.state==='skipped'?'–':String(i+1);
+    const meta=p.state==='pending'?'czeka na poprzedni etap':p.state==='skipped'?'pominięty':
+      `${est?'≈ ':''}${v.toFixed(0)}% · ${Math.round(p.partial)}/${p.hosts} · paczka ${p.chunk_size||'–'}${p.seconds?` · ${t(p.seconds)}`:''}${p.sec_per_host?` · ${p.sec_per_host.toFixed(2)} s/host`:''}`;
+    return `<div class="step ${p.state}" style="--pc:${pcol(p.name)}"><div class="ico">${ico}</div>
+      <div class="nm"><b>${esc(STEPS[p.name]?.[0]||p.name)}</b><span>${esc(STEPS[p.name]?.[1]||'')}</span></div>
+      <div class="sbar"><i class="${p.state==='running'?'run-stripes':''}" style="width:${v}%"></i></div><div class="meta">${meta}</div></div>`}).join('');
+  // paczki pogrupowane per etap
+  $('grid').innerHTML=ph.filter(p=>ch.some(c=>c.phase===p.name)).map(p=>{const cs=ch.filter(c=>c.phase===p.name);
+    return `<div class="cgroup" style="--pc:${pcol(p.name)}"><h3>${esc(STEPS[p.name]?.[0]||p.name)} · ${cs.filter(c=>c.state!=='running').length}/${cs.length}</h3><div class="grid">${cs.map(c=>{
+      const tip=`${STEPS[c.phase]?.[0]||c.phase} · paczka #${c.id}: ${c.hosts} ${c.phase==='discovery'?'adresów':'hostów'}`+
+        (c.state==='running'?`, ${c.estimated?'≈ ':''}${Math.round(c.percent)}%, ${t(c.seconds)} z ~${t(c.expected_s)}`:`, ${c.up} aktywnych, ${c.open} portów, ${(c.seconds||0).toFixed(1)} s`)+(c.error?` · ${c.error}`:'');
+      return `<div class="chunk ${c.state} ${c.phase}${c.estimated?' est':''}" title="${esc(tip)}">${c.state==='running'?`<i style="height:${c.percent}%"></i>`:''}<span>${c.hosts}</span></div>`}).join('')}</div></div>`}).join('')
+    ||'<p class="muted">Paczki pojawią się po zaplanowaniu skanu.</p>';
+  // uslugi: nowe w tej klatce podswietlone
+  const svc=s.services||[];
+  $('svcs').innerHTML=svc.map(v=>{const fresh=!firstFrame&&!seenSvc.has(v.key);return `<tr class="${fresh?'fresh':''}"><td class="mono">${esc(v.key)}</td><td>${esc(v.label)}${v.domains?`<br><span class="muted">${esc(v.domains)}</span>`:''}</td><td class="i-${v.interest}">${v.interest}</td></tr>`}).join('')
+    ||'<tr><td colspan="3" class="muted">Usługi pojawią się po pierwszej zakończonej paczce etapu „Porty i usługi”.</td></tr>';
+  svc.forEach(v=>seenSvc.add(v.key));firstFrame=false;
   const lg=$('log');const stick=lg.scrollTop+lg.clientHeight>=lg.scrollHeight-20;
   lg.textContent=(s.log||[]).join('\n');if(stick)lg.scrollTop=lg.scrollHeight;
   if(u.delta){$('k-dojo').title=JSON.stringify(u.delta)}
 }
+// wskaznik polaczenia: zielony = ramki przychodza (serwer wysyla co najmniej 1/s)
+setInterval(()=>{const ago=(Date.now()-lastFrame)/1000,el=$('live');if(!el)return;
+  const on=lastFrame&&ago<3;el.classList.toggle('on',!!on);
+  el.lastElementChild.textContent=!lastFrame?'łączenie…':on?'na żywo':`brak danych od ${Math.round(ago)} s, łączę ponownie…`},500);
 
 function connect(){
   const es=new EventSource('api/events');

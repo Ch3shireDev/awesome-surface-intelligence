@@ -203,7 +203,8 @@ func Unscanned(all []string, rs []ChunkResult) []string {
 func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *progress.Tracker) ChunkResult {
 	name := fmt.Sprintf("chunk_%04d", id)
 	r := ChunkResult{ID: id, Hosts: hosts, Started: time.Now()}
-	ch := &progress.Chunk{ID: id, Phase: cfg.Name, Hosts: len(hosts), State: "running", Started: time.Now()}
+	ch := &progress.Chunk{ID: id, Phase: cfg.Name, Hosts: len(hosts), State: "running", Started: time.Now(),
+		Expected: expectedSeconds(cfg, len(hosts))}
 	tr.Update(func(s *progress.State) {
 		s.Chunks = append(s.Chunks, ch)
 		tr.Phase(cfg.Name).ChunkSize = len(hosts)
@@ -248,6 +249,14 @@ func runChunk(ctx context.Context, cfg PhaseConfig, id int, hosts []string, tr *
 	stdout, _ := cmd.StdoutPipe()
 	var stdoutBuf strings.Builder // tools that report on stdout (spec.Path == "")
 	pp, hasProgress := cfg.Adapter.(obs.ProgressParser)
+	if hasProgress && cmd.Stdin == nil {
+		// nmap --stats-every prints only with a terminal on stdin in some builds (see openTTY)
+		if master, slave, terr := openTTY(); terr == nil {
+			attachTTY(cmd, slave)
+			defer master.Close()
+			defer slave.Close()
+		}
+	}
 
 	t0 := time.Now()
 	err := cmd.Start()
@@ -332,6 +341,23 @@ func blockedChunk(cfg PhaseConfig, r ChunkResult, ch *progress.Chunk, why string
 	})
 	tr.Logf("POLICY %s chunk_%04d not started: %s", cfg.Name, r.ID, why)
 	return r
+}
+
+// expectedSeconds estimates how long a chunk should take, from the phase's measured seconds per
+// host (adaptive Sizer) or a conservative default. The tracker uses it to keep progress moving
+// for tools that report nothing until they finish (httpx, nuclei) and before nmap's first stats line.
+func expectedSeconds(cfg PhaseConfig, hosts int) float64 {
+	sph := 0.0
+	if cfg.Sizer != nil {
+		sph = cfg.Sizer.SecPerHost()
+	}
+	if sph <= 0 {
+		sph = map[string]float64{"discovery": 0.3, "services": 15, "http": 2, "signatures": 4}[cfg.Name]
+	}
+	if sph <= 0 {
+		sph = 5
+	}
+	return sph * float64(max(1, hosts))
 }
 
 // must be called under tracker lock (inside Update)
