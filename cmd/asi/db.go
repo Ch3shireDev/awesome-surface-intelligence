@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -52,15 +54,93 @@ func (d *dbRecorder) ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 30*time.Second)
 }
 
-func (d *dbRecorder) start(set string, profile any) {
+func (d *dbRecorder) start(set, trigger string, scheduleID int64, resumeOf string, profile any) {
 	if d == nil {
 		return
 	}
 	c, cancel := d.ctx()
 	defer cancel()
-	if err := d.st.CreateRun(c, d.runID, set, "manual", profile); err != nil {
+	if err := d.st.CreateRun(c, d.runID, set, trigger, profile); err != nil {
 		d.logf("db: create run: %v", err)
+		return
 	}
+	if scheduleID > 0 || resumeOf != "" {
+		if err := d.st.SetRunLinks(c, d.runID, scheduleID, resumeOf); err != nil {
+			d.logf("db: run links: %v", err)
+		}
+	}
+	if scheduleID > 0 {
+		d.st.SetScheduleLastRun(c, scheduleID, d.runID)
+	}
+}
+
+func (d *dbRecorder) pending(p []string) {
+	if d == nil {
+		return
+	}
+	c, cancel := d.ctx()
+	defer cancel()
+	if err := d.st.SetPending(c, d.runID, p); err != nil {
+		d.logf("db: pending: %v", err)
+	}
+}
+
+// resumePlan: the plan of a previous run restricted to its pending targets
+// (from the database if available, else from results/<run>/run.json).
+func resumePlan(root, runID string, rec *dbRecorder) (targets.Plan, error) {
+	var plan targets.Plan
+	b, err := os.ReadFile(filepath.Join(root, runID, "plan.json"))
+	if err != nil {
+		return plan, fmt.Errorf("no plan.json of run %s: %w", runID, err)
+	}
+	if err := json.Unmarshal(b, &plan); err != nil {
+		return plan, err
+	}
+	var pending []string
+	if rec != nil {
+		p, by, err := rec.st.RunPending(context.Background(), runID)
+		if err != nil {
+			return plan, err
+		}
+		if by != "" {
+			return plan, fmt.Errorf("already resumed by run %s", by)
+		}
+		pending = p
+	} else {
+		var rj struct {
+			Pending []string `json:"pending"`
+		}
+		rb, _ := os.ReadFile(filepath.Join(root, runID, "run.json"))
+		json.Unmarshal(rb, &rj)
+		pending = rj.Pending
+	}
+	if len(pending) == 0 {
+		return plan, fmt.Errorf("run %s has nothing pending", runID)
+	}
+	want := map[string]bool{}
+	for _, ip := range pending {
+		want[ip] = true
+	}
+	var hosts []targets.Host
+	for _, h := range plan.Hosts {
+		if want[h.IP] {
+			hosts = append(hosts, h)
+		}
+	}
+	plan.Hosts, plan.Skipped, plan.Created = hosts, nil, time.Now()
+	return plan, nil
+}
+
+func uniq(s []string) []string {
+	seen := map[string]bool{}
+	out := s[:0:0]
+	for _, x := range s {
+		if !seen[x] {
+			seen[x] = true
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 func (d *dbRecorder) chunkStart(stage string) func(int, []string) {

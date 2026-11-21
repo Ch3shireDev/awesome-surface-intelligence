@@ -199,6 +199,9 @@ func cmdScan(args []string) {
 	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	recCfg := reconcileFlags(fs)
+	resume := fs.String("resume", "", "continue a partial run: scan only its targets not covered when its window closed")
+	scheduleID := fs.Int64("schedule-id", 0, "set by the scheduler (links the run to a schedule)")
+	trigger := fs.String("trigger", "manual", "manual | schedule (recorded in the database)")
 	upload := fs.String("upload", "off", "DefectDojo: off | end (one reimport) | live (per chunk + final)")
 	product := fs.String("product", envOr("DD_PRODUCT", "ASI PoC"), "DefectDojo product (env DD_PRODUCT)")
 	eng := fs.String("engagement", "discovery", "DefectDojo engagement")
@@ -236,8 +239,21 @@ func cmdScan(args []string) {
 		tr.Logf("db: recording run %s", runID)
 	}
 
-	// --- plan
-	plan := pf.build()
+	// --- plan (or: the not-yet-scanned remainder of a partial run)
+	var plan targets.Plan
+	setLabel := filepath.Base(*pf.targets)
+	if *resume != "" {
+		var err error
+		plan, err = resumePlan(*outRoot, *resume, rec)
+		if err != nil {
+			bar.Stop()
+			log.Fatalf("resume %s: %v", *resume, err)
+		}
+		setLabel = "resume:" + *resume
+		tr.Logf("resume: %d targets left over from %s", len(plan.Hosts), *resume)
+	} else {
+		plan = pf.build()
+	}
 	writeJSON(filepath.Join(dir, "plan.json"), plan)
 	meta := map[string]targets.Host{}
 	ips := make([]string, len(plan.Hosts))
@@ -248,7 +264,7 @@ func cmdScan(args []string) {
 		s.Targets, s.Skipped, s.Status = len(ips), len(plan.Skipped), "running"
 	})
 	tr.Logf("plan: %d IPs, %d targets skipped (see plan.json)", len(ips), len(plan.Skipped))
-	rec.start(filepath.Base(*pf.targets), map[string]any{"parallel": *parallel, "rate_pps": *rate,
+	rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
 		"discovery_args": *discArgs, "nmap_args": *svcArgs, "window": window.String(), "targets": len(ips)})
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
@@ -287,17 +303,21 @@ func cmdScan(args []string) {
 	// --- phase 1: discovery
 	var up []string
 	var upMu sync.Mutex
+	var discRes []scanner.ChunkResult
 	if *skipDisc {
 		up = ips
 		tr.Update(func(s *progress.State) { tr.Phase("discovery").State = "skipped"; s.HostsUp = len(ips) })
 	} else {
 		z := &scanner.Sizer{Fixed: *dChunk, Target: 20 * time.Second, Min: 16, Max: 1024, Start: 64}
 		z.Seed(tune["discovery"])
-		scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", RunID: runID, Adapter: nmapad.Discovery(*discArgs),
+		discRes = scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "discovery", RunID: runID, Adapter: nmapad.Discovery(*discArgs),
 			Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
 			OutDir: filepath.Join(dir, "discovery"), OnStart: rec.chunkStart("discovery")}, ips, tr,
 			func(r scanner.ChunkResult) {
 				keep(r.Observations)
+				if r.State == "killed" && ctx.Err() != nil {
+					r.State = "deferred" // cut by the scan window -> resumes in the next window
+				}
 				rec.chunkDone("discovery", "nmap", "nmap-xml", r)
 				n := 0
 				upMu.Lock()
@@ -329,6 +349,9 @@ func cmdScan(args []string) {
 		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services")}, up, tr,
 		func(r scanner.ChunkResult) {
 			keep(r.Observations)
+			if r.State == "killed" && ctx.Err() != nil {
+				r.State = "deferred"
+			}
 			rec.chunkDone("services", "nmap", "nmap-xml", r)
 			got := findings.FromObservations(r.Observations, meta)
 			svcMu.Lock()
@@ -392,6 +415,15 @@ func cmdScan(args []string) {
 
 	// --- outputs
 	interrupted := ctx.Err() != nil
+	// targets not covered by finished chunks: discovery leftovers + live hosts without a service scan
+	pending := scanner.Unscanned(up, svcRes)
+	if !*skipDisc {
+		pending = append(scanner.Unscanned(ips, discRes), pending...)
+	}
+	pending = sortIPs(uniq(pending))
+	if len(pending) > 0 {
+		tr.Logf("pending: %d targets not covered - resume with: asi scan -resume %s", len(pending), runID)
+	}
 	findings.Sort(svcs)
 	must(findings.Save(filepath.Join(dir, "services.json"), svcs))
 	must(os.WriteFile(filepath.Join(dir, "findings_defectdojo.json"), findings.GenericJSON(svcs), 0o644))
@@ -432,7 +464,7 @@ func cmdScan(args []string) {
 		"targets": len(ips), "skipped": len(plan.Skipped), "hosts_up": len(up), "open": len(svcs),
 		"interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL,
 		"phases": snap.Phases, "parallel": *parallel, "rate_pps": *rate,
-		"discovery_args": *discArgs, "nmap_args": *svcArgs,
+		"discovery_args": *discArgs, "nmap_args": *svcArgs, "pending": pending, "resume_of": *resume,
 	})
 	dbStatus := "completed"
 	if interrupted {
@@ -440,6 +472,7 @@ func cmdScan(args []string) {
 	}
 	rec.finish(dbStatus, map[string]any{"duration_s": snap.Elapsed, "targets": len(ips), "skipped": len(plan.Skipped),
 		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL})
+	rec.pending(pending)
 	rec.reconcile(*recCfg)
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)

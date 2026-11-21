@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -31,6 +32,7 @@ type scanProc struct {
 	Finished time.Time `json:"finished,omitempty"`
 	ExitErr  string    `json:"exit_error,omitempty"`
 	done     chan struct{}
+	cancel   bool
 }
 
 type ScanStatus struct {
@@ -147,6 +149,26 @@ func (a *App) startScan(w http.ResponseWriter, r *http.Request, u store.User) {
 		fail(w, 400, "bad request")
 		return
 	}
+	if err := a.launch(r.Context(), req, u.Username, launchOpts{}); err != nil {
+		code := 400
+		if err == errBusy {
+			code = http.StatusConflict
+		}
+		fail(w, code, err.Error())
+		return
+	}
+	a.St.Audit(r.Context(), &u.ID, "scan_start", "target_set", req.Set, req)
+	writeJSON(w, 200, a.scanStatus())
+}
+
+type launchOpts struct {
+	ResumeRun  string // continue this partial run instead of scanning the whole set
+	ScheduleID int64
+}
+
+// launch starts `asi scan` as a subprocess (one at a time). Used by the GUI,
+// by "resume" and by the scheduler.
+func (a *App) launch(ctx context.Context, req ScanRequest, by string, o launchOpts) error {
 	req.Set = setName(req.Set)
 	if req.Parallel == 0 {
 		req.Parallel = 5
@@ -160,46 +182,52 @@ func (a *App) startScan(w http.ResponseWriter, r *http.Request, u store.User) {
 		select {
 		case <-a.scan.done:
 		default:
-			fail(w, http.StatusConflict, errBusy.Error())
-			return
+			return errBusy
 		}
 	}
-	ts, err := a.St.Targets(r.Context(), req.Set)
-	if err != nil || len(ts) == 0 {
-		fail(w, 400, "zbiór celów "+req.Set+" jest pusty - dodaj cele w zakładce Cele")
-		return
-	}
-	// the scan reads a frozen copy of the set from the database
 	inDir := filepath.Join(a.ResultsDir, "inputs")
 	os.MkdirAll(inDir, 0o700)
 	stamp := time.Now().Format("20060102-150405")
-	tf := filepath.Join(inDir, stamp+"-"+safe(req.Set)+".json")
-	if err := targets.SaveJSON(tf, ts); err != nil {
-		fail(w, 500, err.Error())
-		return
+	tf := ""
+	if o.ResumeRun == "" {
+		ts, err := a.St.Targets(ctx, req.Set)
+		if err != nil || len(ts) == 0 {
+			return fmt.Errorf("zbiór celów %s jest pusty - dodaj cele w zakładce Cele", req.Set)
+		}
+		// the scan reads a frozen copy of the set from the database
+		tf = filepath.Join(inDir, stamp+"-"+safe(req.Set)+".json")
+		if err := targets.SaveJSON(tf, ts); err != nil {
+			return err
+		}
 	}
 	args, err := req.args(tf, a.ResultsDir, a.LiveAddr)
 	if err != nil {
-		fail(w, 400, err.Error())
-		return
+		return err
+	}
+	if o.ResumeRun != "" { // replace "-targets <file>" with "-resume <run>"
+		args[1], args[2] = "-resume", o.ResumeRun
+	}
+	if o.ScheduleID > 0 {
+		args = append(args, "-schedule-id", strconv.FormatInt(o.ScheduleID, 10), "-trigger", "schedule")
 	}
 	logPath := filepath.Join(inDir, stamp+".log")
 	lf, err := os.Create(logPath)
 	if err != nil {
-		fail(w, 500, err.Error())
-		return
+		return err
 	}
-	cmd := exec.CommandContext(context.Background(), a.Self, args...)
+	cmd := exec.Command(a.Self, args...)
 	cmd.Dir = a.WorkDir
 	cmd.Stdout, cmd.Stderr = lf, lf
 	cmd.Env = os.Environ()
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		lf.Close()
-		fail(w, 500, err.Error())
-		return
+		return err
 	}
-	p := &scanProc{cmd: cmd, Started: time.Now(), Set: req.Set, Args: args[1:], By: u.Username, LogPath: logPath, done: make(chan struct{})}
+	p := &scanProc{cmd: cmd, Started: time.Now(), Set: req.Set, Args: args[1:], By: by, LogPath: logPath, done: make(chan struct{})}
+	if o.ResumeRun != "" {
+		p.Set = "wznowienie " + o.ResumeRun
+	}
 	a.scan = p
 	go func() {
 		err := cmd.Wait()
@@ -209,9 +237,36 @@ func (a *App) startScan(w http.ResponseWriter, r *http.Request, u store.User) {
 			p.ExitErr = err.Error()
 		}
 		close(p.done)
+		if p.cancel { // cancelled: the run must not be resumed later
+			c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			id, err := a.St.LatestRunSince(c, p.Started)
+			if err == nil {
+				err = a.St.CancelRun(c, id)
+			}
+			if err != nil {
+				log.Printf("cancel: could not mark run cancelled: %v", err)
+			}
+		}
 	}()
-	a.St.Audit(r.Context(), &u.ID, "scan_start", "target_set", req.Set, req)
-	writeJSON(w, 200, a.statusLocked())
+	return nil
+}
+
+// resumeRun: POST /api/v1/runs/{id}/resume - continue a partial run now.
+func (a *App) resumeRun(w http.ResponseWriter, r *http.Request, u store.User) {
+	var req ScanRequest
+	json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req) // optional parallel/rate/window
+	id := r.PathValue("id")
+	if err := a.launch(r.Context(), req, u.Username, launchOpts{ResumeRun: id}); err != nil {
+		code := 400
+		if err == errBusy {
+			code = http.StatusConflict
+		}
+		fail(w, code, err.Error())
+		return
+	}
+	a.St.Audit(r.Context(), &u.ID, "scan_resume", "run", id, req)
+	writeJSON(w, 200, a.scanStatus())
 }
 
 func (a *App) statusLocked() ScanStatus {
@@ -219,7 +274,9 @@ func (a *App) statusLocked() ScanStatus {
 	return ScanStatus{Running: true, Started: p.Started, Set: p.Set, By: p.By, Args: p.Args}
 }
 
-// stopScan sends SIGINT: asi scan stops gracefully, keeps partial results (run = partial).
+// stopScan (pause) sends SIGINT: asi scan stops gracefully, keeps partial results
+// (run = partial) and its pending targets can be resumed. ?cancel=1 also drops the pending
+// targets (run = cancelled).
 func (a *App) stopScan(w http.ResponseWriter, r *http.Request, u store.User) {
 	a.mu.Lock()
 	p := a.scan
@@ -234,8 +291,12 @@ func (a *App) stopScan(w http.ResponseWriter, r *http.Request, u store.User) {
 		return
 	default:
 	}
+	action := "scan_pause"
+	if r.URL.Query().Get("cancel") == "1" {
+		p.cancel, action = true, "scan_cancel"
+	}
 	p.cmd.Process.Signal(os.Interrupt)
-	a.St.Audit(r.Context(), &u.ID, "scan_stop", "target_set", p.Set, nil)
+	a.St.Audit(r.Context(), &u.ID, action, "target_set", p.Set, nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

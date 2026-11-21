@@ -25,6 +25,7 @@ func cmdServer(args []string) {
 	results := fs.String("results", "results", "results directory")
 	ttl := fs.Duration("session", 12*time.Hour, "session lifetime")
 	secure := fs.Bool("secure-cookie", false, "set Secure on the session cookie (when served over HTTPS)")
+	sched := fs.Duration("scheduler", 20*time.Second, "how often to check scan schedules (0 = scheduler off)")
 	fs.Parse(args)
 	if *url == "" {
 		log.Fatal("asi server needs the database: set ASI_DATABASE_URL")
@@ -54,6 +55,12 @@ func cmdServer(args []string) {
 	wd, _ := os.Getwd()
 	res, _ := filepath.Abs(*results)
 	a := &app.App{St: st, ResultsDir: res, WorkDir: wd, Self: self, LiveAddr: *live, SessionTTL: *ttl, Secure: *secure}
+	sctxRun, stopSched := context.WithCancel(ctx)
+	defer stopSched()
+	if *sched > 0 {
+		go a.RunScheduler(sctxRun, *sched)
+		log.Printf("scheduler: on (every %s, server time %s)", *sched, time.Now().Format("15:04 MST"))
+	}
 	srv := &http.Server{Addr: *addr, Handler: a.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		log.Printf("ASI web: http://%s", *addr)

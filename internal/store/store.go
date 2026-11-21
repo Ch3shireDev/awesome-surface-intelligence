@@ -104,6 +104,10 @@ func (s *Store) Migrate(ctx context.Context) ([]string, error) {
 // ---------------------------------------------------------------- runs & chunks
 
 type Run struct {
+	ScheduleID *int64          `json:"schedule_id,omitempty"`
+	ResumeOf   string          `json:"resume_of,omitempty"`
+	ResumedBy  string          `json:"resumed_by,omitempty"`
+	Pending    int             `json:"pending"`
 	ID         string          `json:"id"`
 	SetName    string          `json:"set_name"`
 	Status     string          `json:"status"`
@@ -129,14 +133,16 @@ func (s *Store) FinishRun(ctx context.Context, id, status string, stats any) err
 }
 
 func (s *Store) Runs(ctx context.Context, limit int) ([]Run, error) {
-	rows, err := s.DB.Query(ctx, `SELECT id, set_name, status, trigger, profile, stats, started_at, finished_at
+	rows, err := s.DB.Query(ctx, `SELECT id, set_name, status, trigger, profile, stats, started_at, finished_at,
+		schedule_id, resume_of, resumed_by, cardinality(pending_targets)
 		FROM runs ORDER BY started_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Run, error) {
 		var x Run
-		err := r.Scan(&x.ID, &x.SetName, &x.Status, &x.Trigger, &x.Profile, &x.Stats, &x.StartedAt, &x.FinishedAt)
+		err := r.Scan(&x.ID, &x.SetName, &x.Status, &x.Trigger, &x.Profile, &x.Stats, &x.StartedAt, &x.FinishedAt,
+			&x.ScheduleID, &x.ResumeOf, &x.ResumedBy, &x.Pending)
 		return x, err
 	})
 }

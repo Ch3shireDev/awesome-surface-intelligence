@@ -107,3 +107,24 @@ func TestTargetsUpsert(t *testing.T) {
 		t.Fatalf("targets: %v %+v", err, got)
 	}
 }
+
+func TestLatestRunSinceAndCancel(t *testing.T) {
+	st := testStore(t, Plain{})
+	ctx := context.Background()
+	start := time.Now()
+	id := fmt.Sprintf("cancel-%d", time.Now().UnixNano())
+	t.Cleanup(func() { st.DB.Exec(ctx, `DELETE FROM runs WHERE id=$1`, id) })
+	st.CreateRun(ctx, id, "t", "manual", nil)
+	st.SetPending(ctx, id, []string{"192.0.2.1"})
+	st.FinishRun(ctx, id, "partial", nil)
+	got, err := st.LatestRunSince(ctx, start)
+	if err != nil || got != id {
+		t.Fatalf("latest: %v %q", err, got)
+	}
+	if err := st.CancelRun(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if r, _, _ := st.Resumable(ctx, 0); r == id {
+		t.Fatal("cancelled run must not be resumable")
+	}
+}

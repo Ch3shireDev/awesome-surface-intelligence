@@ -182,14 +182,35 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
         <div><label for="s-window">Okno czasowe</label><input id="s-window" placeholder="np. 2h" style="width:90px"></div>
         <div><label for="s-upload">DefectDojo</label><select id="s-upload"><option value="off">bez eksportu</option><option value="end" selected>na końcu</option><option value="live">na żywo</option></select></div>
       </div>
-      <div class="row" style="margin-top:14px"><button class="btn" id="s-start">Uruchom skan</button><button class="btn danger hidden" id="s-stop">Zatrzymaj</button></div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="s-start">Uruchom skan</button><button class="btn sec hidden" id="s-pause" title="Zatrzymaj teraz; niezeskanowane cele można wznowić później">Wstrzymaj</button><button class="btn danger hidden" id="s-stop" title="Zatrzymaj i nie wznawiaj">Anuluj</button></div>
       <div id="s-msg" class="msg"></div>
       <p class="muted" style="margin-bottom:0">Skan uruchamia polecenie <span class="mono">asi scan</span> (jak w MISP: GUI jest nakładką na CLI). Zatrzymanie zachowuje częściowe wyniki, a przebieg dostaje status <i>partial</i>, który nie generuje fałszywych zniknięć.</p>
     </div>
     <div class="card"><h2>Stan</h2><div id="s-status"></div><pre class="log mono muted" id="s-log"></pre></div>
   </div>
+  <div class="card"><h2>Harmonogram</h2>
+    <p class="muted" style="margin-top:0">Skan startuje według crona i ma <b>okno czasowe</b>. Jeśli okno się skończy, zanim skan obejmie wszystkie cele, przebieg dostaje status <i>częściowy</i>, a w <b>następnym oknie</b> harmonogram najpierw dokończy niezeskanowane cele. Czas serwera: <span id="sc-tz" class="mono"></span>.</p>
+    <div class="scroll"><table><thead><tr><th>nazwa</th><th>zbiór</th><th>cron</th><th>okno</th><th>następny start</th><th>ostatni</th><th>aktywny</th><th></th></tr></thead><tbody id="sc-rows"></tbody></table></div>
+    <div data-role="operator">
+      <h2 style="margin-top:18px">Nowy harmonogram</h2>
+      <div class="row">
+        <div><label for="sc-name">Nazwa</label><input id="sc-name" placeholder="np. nocny DMZ"></div>
+        <div><label for="sc-set">Zbiór celów</label><select id="sc-set"></select></div>
+        <div><label for="sc-preset">Kiedy</label><select id="sc-preset">
+          <option value="0 2 * * *">codziennie 02:00</option><option value="30 22 * * 1-5">dni robocze 22:30</option>
+          <option value="0 * * * *">co godzinę</option><option value="*/15 * * * *">co 15 minut</option>
+          <option value="0 3 * * 0">w niedzielę 03:00</option><option value="">własny cron…</option></select></div>
+        <div><label for="sc-cron">cron (min godz dzień mies dzień_tyg)</label><input id="sc-cron" class="mono" value="0 2 * * *" style="width:150px"></div>
+        <div><label for="sc-win">Okno (minuty)</label><input id="sc-win" type="number" min="1" max="1440" value="120" style="width:90px"></div>
+        <div><button class="btn" id="sc-add">Zapisz</button></div>
+      </div>
+      <div class="muted" id="sc-preview" style="margin-top:8px;font-size:13px"></div>
+      <p class="muted" style="font-size:12.5px">Parametry skanu (równoległość, limit pps, porty, DefectDojo) biorą się z formularza „Nowy skan” powyżej.</p>
+      <div id="sc-msg" class="msg"></div>
+    </div>
+  </div>
   <div class="card"><h2>Postęp na żywo</h2><iframe class="live" id="s-live" title="Postęp skanu na żywo"></iframe></div>
-  <div class="card"><h2>Przebiegi</h2><div class="scroll"><table><thead><tr><th>przebieg</th><th>status</th><th>zbiór</th><th>czas</th><th>hosty</th><th>porty</th><th>zmiany</th></tr></thead><tbody id="s-runs"></tbody></table></div></div>
+  <div class="card"><h2>Przebiegi</h2><div class="scroll"><table><thead><tr><th>przebieg</th><th>status</th><th>zbiór</th><th>czas</th><th>hosty</th><th>porty</th><th>zmiany</th><th></th></tr></thead><tbody id="s-runs"></tbody></table></div></div>
 </section>
 
 <!-- ADMIN -->
@@ -217,7 +238,7 @@ const LV={viewer:1,analyst:2,operator:3,admin:4};
 const TYPES=['new','reappeared','changed','missing','gone','flapping'];
 const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)'};
 const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',active:'aktywny',
-  running:'w toku',completed:'zakończony',partial:'częściowy',failed:'błąd',cancelled:'anulowany'};
+  running:'w toku',completed:'zakończony',partial:'częściowy',failed:'błąd',cancelled:'anulowany',deferred:'odłożony'};
 let me=null, curSet='default', timer=null;
 
 async function api(path,opt={}){
@@ -352,9 +373,17 @@ $('s-ports').onchange=()=>$('s-custom-w').classList.toggle('hidden',$('s-ports')
 async function loadScans(){
   await loadSets($('s-set'));
   const runs=await api('api/v1/runs');
-  $('s-runs').innerHTML=runs.map(r=>{const s=r.stats||{};return `<tr class="click" data-run="${esc(r.id)}"><td class="mono">${esc(r.id)}</td><td>${badge(r.status,'s')}</td><td>${esc(r.set_name)}</td>
-    <td>${s.duration_s?Math.round(s.duration_s)+' s':'–'}</td><td>${s.hosts_up??'–'}/${s.targets??'–'}</td><td>${s.open??'–'}</td><td><button class="link">zmiany →</button></td></tr>`}).join('')||'<tr><td class="empty" colspan="7">Brak przebiegów.</td></tr>';
+  $('s-runs').innerHTML=runs.map(r=>{const s=r.stats||{};
+    const canResume=can('operator')&&r.status==='partial'&&r.pending>0&&!r.resumed_by;
+    const note=[r.trigger==='schedule'?'z harmonogramu':'',r.resume_of?'wznawia '+r.resume_of:'',r.resumed_by?'dokończony w '+r.resumed_by:'',r.pending&&!r.resumed_by?r.pending+' celów niezeskanowanych':''].filter(Boolean).join(' · ');
+    return `<tr class="click" data-run="${esc(r.id)}"><td class="mono">${esc(r.id)}${note?`<br><span class="muted" style="font-family:system-ui">${esc(note)}</span>`:''}</td><td>${badge(r.status,'s')}</td><td>${esc(r.set_name)}</td>
+    <td>${s.duration_s?Math.round(s.duration_s)+' s':'–'}</td><td>${s.hosts_up??'–'}/${s.targets??'–'}</td><td>${s.open??'–'}</td><td><button class="link">zmiany →</button></td>
+    <td>${canResume?`<button class="btn sec r-res" data-id="${esc(r.id)}">Wznów (${r.pending})</button>`:''}</td></tr>`}).join('')||'<tr><td class="empty" colspan="8">Brak przebiegów.</td></tr>';
   document.querySelectorAll('tr[data-run]').forEach(tr=>tr.onclick=()=>showRun(tr.dataset.run));
+  document.querySelectorAll('.r-res').forEach(b=>b.onclick=async e=>{e.stopPropagation();
+    try{await api('api/v1/runs/'+encodeURIComponent(b.dataset.id)+'/resume',{method:'POST',body:JSON.stringify(scanParams())});$('s-msg').className='msg ok';$('s-msg').textContent='Wznawiam '+b.dataset.id;setTimeout(()=>loadScanStatus(true),1500)}
+    catch(err){$('s-msg').className='msg err';$('s-msg').textContent=err.message}});
+  loadSchedules();
   loadScanStatus(true);
 }
 async function showRun(id){
@@ -366,7 +395,7 @@ async function showRun(id){
 let wasRunning=false;
 async function loadScanStatus(force){
   const s=await api('api/v1/scans/current');
-  $('s-start').disabled=s.running;$('s-stop').classList.toggle('hidden',!s.running||!can('operator'));
+  $('s-start').disabled=s.running;$('s-stop').classList.toggle('hidden',!s.running||!can('operator'));$('s-pause').classList.toggle('hidden',!s.running||!can('operator'));
   $('s-status').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b>, od ${fmtT(s.started)}, uruchomił ${esc(s.by)}</p>`
     :s.started?`<p>Ostatni skan zakończony ${fmtT(s.finished)}${s.exit_error?` <span class="msg err">(${esc(s.exit_error)})</span>`:''}</p>`:'<p class="muted">Brak skanu w tej sesji serwera.</p>';
   $('s-log').textContent=(s.log_tail||[]).join('\n');
@@ -375,12 +404,41 @@ async function loadScanStatus(force){
   if(!s.running&&force&&!$('s-live').src) $('s-live').srcdoc='<p style="font:14px system-ui;color:#888;padding:16px">Brak aktywnego skanu.</p>';
   wasRunning=s.running;
 }
+function scanParams(){const ports=$('s-ports').value==='custom'?$('s-custom').value.trim():$('s-ports').value;
+  return {set:$('s-set').value,parallel:+$('s-par').value,rate:+$('s-rate').value,ports,window:$('s-window').value.trim(),upload:$('s-upload').value}}
 $('s-start').onclick=async()=>{
-  const ports=$('s-ports').value==='custom'?$('s-custom').value.trim():$('s-ports').value;
-  try{await api('api/v1/scans',{method:'POST',body:JSON.stringify({set:$('s-set').value,parallel:+$('s-par').value,rate:+$('s-rate').value,ports,window:$('s-window').value.trim(),upload:$('s-upload').value})});
+  try{await api('api/v1/scans',{method:'POST',body:JSON.stringify(scanParams())});
     $('s-msg').className='msg ok';$('s-msg').textContent='Skan uruchomiony.';setTimeout(()=>loadScanStatus(true),1500)}
   catch(e){$('s-msg').className='msg err';$('s-msg').textContent=e.message}};
-$('s-stop').onclick=async()=>{if(!confirm('Zatrzymać skan? Częściowe wyniki zostaną zapisane.'))return;await api('api/v1/scans/current/stop',{method:'POST'})};
+$('s-pause').onclick=async()=>{if(!confirm('Wstrzymać skan? Wyniki zostaną zapisane, a niezeskanowane cele będzie można wznowić.'))return;await api('api/v1/scans/current/stop',{method:'POST'})};
+$('s-stop').onclick=async()=>{if(!confirm('Anulować skan? Wyniki zostaną zapisane, ale reszta celów nie będzie wznawiana.'))return;await api('api/v1/scans/current/stop?cancel=1',{method:'POST'})};
+
+// ---------- schedules
+async function loadSchedules(){
+  const d=await api('api/v1/schedules');$('sc-tz').textContent=d.tz;
+  await loadSets($('sc-set'));
+  const op=can('operator');
+  $('sc-rows').innerHTML=d.schedules.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.set)}</td><td class="mono">${esc(x.cron)}</td><td>${x.window_minutes} min</td>
+    <td>${x.enabled?fmtT(x.next_run_at):'<span class="muted">wyłączony</span>'}</td>
+    <td>${x.last_run_at?fmtT(x.last_run_at):'–'}${x.last_run_id?`<br><span class="mono muted">${esc(x.last_run_id)}</span>`:''}${x.last_error?`<br><span class="msg err">${esc(x.last_error)}</span>`:''}</td>
+    <td><input type="checkbox" class="sc-en" data-id="${x.id}" ${x.enabled?'checked':''} ${op?'':'disabled'} aria-label="aktywny ${esc(x.name)}"></td>
+    <td>${op?`<button class="link sc-del" data-id="${x.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Brak harmonogramów.</td></tr>';
+  document.querySelectorAll('.sc-en').forEach(cb=>cb.onchange=async()=>{const x=d.schedules.find(s=>s.id==cb.dataset.id);x.enabled=cb.checked;
+    try{await api('api/v1/schedules/'+x.id,{method:'PUT',body:JSON.stringify(x)});loadSchedules()}catch(e){alert(e.message)}});
+  document.querySelectorAll('.sc-del').forEach(b=>b.onclick=async()=>{if(!confirm('Usunąć harmonogram?'))return;await api('api/v1/schedules/'+b.dataset.id,{method:'DELETE'});loadSchedules()});
+  previewCron();
+}
+async function previewCron(){
+  const c=$('sc-cron').value.trim();if(!c){$('sc-preview').textContent='';return}
+  try{const t=await api('api/v1/schedules/preview?cron='+encodeURIComponent(c));$('sc-preview').textContent='Najbliższe starty: '+t.map(fmtT).join(', ')}
+  catch(e){$('sc-preview').innerHTML='<span class="msg err">'+esc(e.message)+'</span>'}
+}
+$('sc-preset').onchange=()=>{if($('sc-preset').value){$('sc-cron').value=$('sc-preset').value}else{$('sc-cron').focus()}previewCron()};
+$('sc-cron').oninput=()=>{clearTimeout(window._cp);window._cp=setTimeout(previewCron,400)};
+$('sc-add').onclick=async()=>{const p=scanParams();delete p.window;delete p.set;
+  try{await api('api/v1/schedules',{method:'POST',body:JSON.stringify({name:$('sc-name').value,set:$('sc-set').value,cron:$('sc-cron').value,window_minutes:+$('sc-win').value,enabled:true,params:p})});
+    $('sc-msg').className='msg ok';$('sc-msg').textContent='Zapisano.';$('sc-name').value='';loadSchedules()}
+  catch(e){$('sc-msg').className='msg err';$('sc-msg').textContent=e.message}};
 
 // ---------- admin
 async function loadAdmin(){
