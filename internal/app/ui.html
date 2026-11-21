@@ -36,7 +36,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute
 .grid3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
 @media (max-width:960px){.grid2,.grid3{grid-template-columns:1fr}}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow)}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow);cursor:pointer;text-align:left;font:inherit;color:inherit}
+.kpi:hover,.kpi:focus-visible{border-color:var(--accent);outline:none}
 .kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.2}
 .kpi span{font-size:12px;color:var(--muted)}
 .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.flap b{color:var(--flap)} .kpi.ok b{color:var(--ok)}
@@ -70,8 +71,11 @@ pre.json{background:var(--soft);padding:10px;border-radius:6px;overflow:auto;max
 .hours{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:6px}
 .hours i{height:14px;border-radius:2px;background:var(--soft)} .hours i.on{background:var(--accent)}
 .hours-l{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
-.bars{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:6px}
-.bar{flex:1;display:flex;flex-direction:column-reverse;min-width:10px;cursor:default}
+.bars{display:flex;align-items:flex-end;gap:6px;padding-top:6px}
+.bcol{flex:1;min-width:34px;display:flex;flex-direction:column;align-items:stretch}
+.bcol small{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.25;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bcol small b{display:block;font-weight:500;color:var(--ink)}
+.bar{height:110px;display:flex;flex-direction:column-reverse;cursor:default}
 .bar i{display:block;width:100%}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -128,7 +132,8 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
   <div class="card">
     <div class="row">
       <div><label for="a-q">Szukaj</label><input id="a-q" placeholder="192.0.2. albo /tcp/443"></div>
-      <div><label for="a-state">Stan</label><select id="a-state"><option value="">wszystkie</option><option>new</option><option>active</option><option>missing</option><option>gone</option></select></div>
+      <div><label for="a-state">Stan</label><select id="a-state"><option value="">wszystkie</option><option value="live">aktywne (new + active)</option><option>new</option><option>active</option><option>missing</option><option>gone</option></select></div>
+      <div><label for="a-int">Ocena</label><select id="a-int"><option value="">wszystkie</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></div>
       <div><label for="a-kind">Rodzaj</label><select id="a-kind"><option value="">wszystkie</option><option value="host">hosty</option><option value="port">porty</option></select></div>
       <div><label><input type="checkbox" id="a-flap"> tylko flapping</label></div>
       <div><button class="btn sec" id="a-go">Filtruj</button></div>
@@ -285,11 +290,14 @@ async function loadDash(){
   const d=await api('api/v1/dashboard');
   const h=d.counts.host||{},p=d.counts.port||{};
   const lastNew=(d.latest_events||[]).filter(e=>e.type==='new'||e.type==='reappeared').length;
-  const k=[['ok',(h.active||0)+(h.new||0),'aktywne hosty'],['',(p.active||0)+(p.new||0),'otwarte usługi'],
-    ['ok',lastNew,'nowe w ostatnim skanie'],['warn',(h.missing||0)+(p.missing||0),'braki (missing)'],
-    ['bad',(h.gone||0)+(p.gone||0),'zniknięte (gone)'],['flap',(h.flapping||0)+(p.flapping||0),'niestabilne (flapping)'],
-    ['bad',(d.interesting||[]).filter(x=>x.interest==='high').length,'krytyczne ekspozycje']];
-  $('kpis').innerHTML=k.map(([c,n,l])=>`<div class="kpi ${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  // [klasa, liczba, opis, filtr w zakladce Assety]
+  const k=[['ok',(h.active||0)+(h.new||0),'aktywne hosty',{kind:'host',state:'live'}],
+    ['',(p.active||0)+(p.new||0),'otwarte usługi',{kind:'port',state:'live'}],
+    ['ok',lastNew,'nowe w ostatnim skanie',{state:'new'}],['warn',(h.missing||0)+(p.missing||0),'braki (missing)',{state:'missing'}],
+    ['bad',(h.gone||0)+(p.gone||0),'zniknięte (gone)',{state:'gone'}],['flap',(h.flapping||0)+(p.flapping||0),'niestabilne (flapping)',{flap:true}],
+    ['bad',(d.interesting||[]).filter(x=>x.interest==='high').length,'krytyczne ekspozycje',{kind:'port',state:'live',interest:'high'}]];
+  $('kpis').innerHTML=k.map(([c,n,l],i)=>`<button type="button" class="kpi ${c}" data-i="${i}" title="Pokaż w zakładce Assety"><b>${n}</b><span>${l}</span></button>`).join('');
+  document.querySelectorAll('#kpis .kpi').forEach(b=>b.onclick=()=>showAssets(k[b.dataset.i][3]));
   const order={high:0,medium:1,low:2};
   const hot=(d.interesting||[]).sort((a,b)=>order[a.interest]-order[b.interest]);
   $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${x.interest}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
@@ -297,10 +305,18 @@ async function loadDash(){
   $('d-ev-title').textContent=lr?`Zmiany w ostatnim przebiegu · ${lr.id} (${PL[lr.status]||lr.status})`:'Zmiany w ostatnim przebiegu';
   $('d-ev').innerHTML=(d.latest_events||[]).map(e=>`<tr class="click" data-k="${esc(e.key)}"><td>${badge(e.type)}</td><td class="mono">${esc(e.key)}</td><td class="muted">${esc(svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">Brak zmian.</td></tr>';
   $('d-unst').innerHTML=(d.unstable||[]).map(x=>`<tr class="click" data-k="${esc(x.key)}"><td>${badge(x.reason==='flapping'?'flapping':x.state,x.reason==='flapping'?'t':'s')}</td><td class="mono">${esc(x.key)}</td><td class="muted">${esc(x.service||'')}</td></tr>`).join('')||'<tr><td class="empty">Wszystko stabilne.</td></tr>';
-  const tl=d.timeline||[];const max=Math.max(1,...tl.map(r=>TYPES.reduce((s,t)=>s+(r.counts[t]||0),0)));
+  const tl=d.timeline||[]; // API: ostatnie N przebiegow, posortowane od najstarszego
+  const max=Math.max(1,...tl.map(r=>TYPES.reduce((s,t)=>s+(r.counts[t]||0),0)));
+  let prevDay='';
   $('d-bars').innerHTML=tl.map(r=>{const tot=TYPES.reduce((s,t)=>s+(r.counts[t]||0),0);
-    return `<div class="bar" title="${esc(r.run_id)}: ${TYPES.filter(t=>r.counts[t]).map(t=>PL[t]+' '+r.counts[t]).join(', ')||'bez zmian'}">${TYPES.map(t=>r.counts[t]?`<i style="height:${110*r.counts[t]/max}px;background:${TCOL[t]}"></i>`:'').join('')}${tot?'':'<i style="height:2px;background:var(--line)"></i>'}</div>`}).join('');
-  $('d-legend').innerHTML=TYPES.map(t=>`<span><i style="background:${TCOL[t]}"></i>${PL[t]}</span>`).join('')+'<span>· oś X: kolejne przebiegi</span>';
+    const dt=r.at?new Date(r.at):null,day=dt?dt.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit'}):'';
+    const hm=dt?dt.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}):esc(r.run_id);
+    const lbl=`${hm}${day&&day!==prevDay?`<br>${day}`:''}`;prevDay=day;
+    const full=dt?dt.toLocaleString('pl-PL'):r.run_id;
+    const what=TYPES.filter(t=>r.counts[t]).map(t=>PL[t]+' '+r.counts[t]).join(', ')||'bez zmian';
+    return `<div class="bcol"><div class="bar" title="${esc(full)} · przebieg ${esc(r.run_id)} (${esc(PL[r.status]||r.status||'')})&#10;${esc(what)}">${TYPES.map(t=>r.counts[t]?`<i style="height:${100*r.counts[t]/max}px;background:${TCOL[t]}"></i>`:'').join('')}${tot?'':'<i style="height:2px;background:var(--line)"></i>'}</div><small><b>${tot||'–'}</b>${lbl}</small></div>`}).join('')||'<p class="muted">Brak przebiegów.</p>';
+  const span=tl.length&&tl[0].at?` · od ${fmtT(tl[0].at)} do ${fmtT(tl[tl.length-1].at)}`:'';
+  $('d-legend').innerHTML=TYPES.map(t=>`<span><i style="background:${TCOL[t]}"></i>${PL[t]}</span>`).join('')+`<span>· słupek = jeden przebieg (godzina startu, liczba zmian)${span}</span>`;
   const s=d.scan||{};
   $('d-scan').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b> od ${fmtT(s.started)} (${esc(s.by)})</p><button class="btn sec" onclick="go('scans')">Podgląd na żywo</button>`
     :`<p class="muted">Brak aktywnego skanu.${lr?` Ostatni: ${esc(lr.id)}, ${PL[lr.status]||lr.status}.`:''}</p>${can('operator')?'<button class="btn" onclick="go(\'scans\')">Nowy skan</button>':''}`;
@@ -311,11 +327,15 @@ function bindRows(){document.querySelectorAll('tr.click[data-k]').forEach(tr=>tr
 // ---------- assets
 async function loadAssets(){
   const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':''});
-  const rows=await api('api/v1/assets?'+q);
+  let rows=await api('api/v1/assets?'+q);
+  const want=$('a-int').value;if(want)rows=rows.filter(a=>(a.interest||'')===want);
   $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
   $('a-count').textContent=rows.length+' assetów';bindRows();
 }
-$('a-go').onclick=loadAssets;$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
+$('a-go').onclick=loadAssets;$('a-int').onchange=loadAssets;
+// przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
+function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kind').value=f.kind||'';
+  $('a-flap').checked=!!f.flap;$('a-int').value=f.interest||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
 
 async function openAsset(key){
   const [rows,ev]=await Promise.all([api('api/v1/assets?q='+encodeURIComponent(key)),api('api/v1/asset/events?key='+encodeURIComponent(key))]);

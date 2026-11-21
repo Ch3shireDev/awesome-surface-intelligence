@@ -31,7 +31,7 @@ type Asset struct {
 }
 
 type AssetFilter struct {
-	State    string // new | active | missing | gone | "" = all
+	State    string // new | active | missing | gone | live (new+active) | "" = all
 	Kind     string // host | port | ""
 	Flapping bool
 	Search   string // substring of key
@@ -46,7 +46,11 @@ func (s *Store) Assets(ctx context.Context, f AssetFilter) ([]Asset, error) {
 		args = append(args, v)
 		q += fmt.Sprintf(" AND "+cond, len(args))
 	}
-	if f.State != "" {
+	switch f.State {
+	case "":
+	case "live": // new + active: wszystko, co teraz odpowiada
+		q += " AND state IN ('new','active')"
+	default:
 		add("state=$%d", f.State)
 	}
 	if f.Kind != "" {
@@ -183,7 +187,7 @@ func (s *Store) Events(ctx context.Context, runID, key string, limit int) ([]Eve
 	})
 }
 
-// EventCounts per run (newest runs first) for the dashboard timeline.
+// EventCounts per run for the dashboard timeline: the newest `runs` runs, ordered oldest first.
 type RunEvents struct {
 	RunID  string         `json:"run_id"`
 	At     time.Time      `json:"at"`
