@@ -60,7 +60,7 @@ staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo]
 | profil portów `auto` + czas HTTP (LAB-T1, LAB-T4) | testy jednostkowe `ApplyPorts` (`≤ 16` hostów → `1-65535` z allowlistą) i `response_time_ms` poza `fp_hash`, kolumna `HTTP ms` i filtr wolnych w GUI |
 | pomijanie własnych portów ASI/DD (LAB-T2) | testy `internal/safety` + `internal/scanner` i e2e na blackarch (`-p 22,5433,8080,8090,8091` na hoście skanera → tylko `22`) |
 | sygnatury IoT i labu (SEC-10, LAB-T3) | `nuclei -validate`, atrapa `scripts/iot-stub.py` (6/9 trafień, 0 fałszywych), lint bezpieczeństwa `TestTemplatesAreSafe` dla wszystkich 33 szablonów |
-| RBAC, konta i tokeny API (DEV-3, DEV-11, DEV-12) | `make test-tokens` 24/24, `make test-users` 35/35, `make test-roles` 28/28 (macierz 4 ról 1:1 z PDF, blokada → 401, ochrona ostatniego admina → 409, audyt) |
+| RBAC, konta i tokeny API (DEV-3, DEV-11, DEV-12) | `make test-tokens` 24/24, `make test-users` 35/35, `make test-roles` 28/28 (macierz 4 ról 1:1 z PDF, blokada → 401, ochrona ostatniego admina → 409, audyt); sprawdzone też na działającym panelu `:8090` (kontener `nmap-scanner`) |
 | szyfrowanie at-rest i schemat (SEC-6) | `make crypto-check` 9/9 (`pg_tde` + WAL + `tde_heap` + 0 trafień jawnych + AES-256-GCM), `asi db reseal`, `make schema-check` 12/12 |
 | integracja DefectDojo (SEC-7) | 4 stałe testy (`ASI discovery`, `asi-changes`, `asi-httpx`, `asi-nuclei`) + `asi-nmap`, bez zamykania przy przebiegu częściowym |
 | skala >10 000 IP (DEV-10) | `127.0.0.0/18` (16 384 IP, 49 152 assety): 86 s end-to-end, 182 MB RAM, eksport CSV 0,31 s |
