@@ -18,6 +18,7 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 | **Assety** | filtry (stan, rodzaj, flapping, szukaj), tabela, panel szczegółów: ostatnia obserwacja, godziny odpowiedzi (24 h), historia zdarzeń, **edycja tagów i notatki** zachowanych przy kolejnych skanach; eksport CSV/JSON | pkt 14, 8–9, eksport |
 | **Cele** | zbiory celów, **formularz ręczny** (IP/CIDR/domena, tagi, właściciel, notatka szyfrowana), **import CSV/JSON/TXT**, włącz/wyłącz, usuń | pkt 1, 11 |
 | **Skany** | start z parametrami (zbiór, równoległość, globalny limit pps, porty, okno czasowe, eksport do DefectDojo), zatrzymanie (przebieg `partial`), **postęp na żywo** (panel skanu przez proxy), lista przebiegów i ich zmian | pkt 2, harmonogram/okno, ograniczanie tempa |
+| **Konto** | **tokeny API** zalogowanego użytkownika: lista (nazwa, data utworzenia, ostatnie użycie, ważność), utworzenie z nazwą i terminem ważności, unieważnienie; wartość tokenu pokazywana **raz** | pkt 12–13, integracja z DD/automatyzacja |
 | **Administracja** | użytkownicy z rolami, dziennik audytu | pkt 12–13 |
 
 ## Role
@@ -52,12 +53,33 @@ asi user add -user jury -password 'haslo-jury' -role viewer
 - Nagłówki: CSP, `X-Frame-Options: SAMEORIGIN`, `nosniff`, `no-referrer`. Panel słucha na `127.0.0.1`.
 - Każda zmiana (logowanie, nieudane logowanie, cele, edycje, skany, eksport, użytkownicy) trafia do `audit_log`.
 
+## Tokeny API (DEV-3)
+
+Zakładka **Konto** wydaje tokeny do automatyzacji (skrypty, cron, integracje). Token działa jak hasło:
+
+```bash
+curl -s -H "Authorization: Bearer asi_…" http://127.0.0.1:8090/api/v1/assets
+```
+
+- Wartość tokenu jest pokazywana **tylko raz**, przy tworzeniu; w bazie leży wyłącznie SHA-256 (`api_tokens`).
+- Zakres ważności: 0 (bez terminu) do 3650 dni, domyślnie 90. Po wygaśnięciu token przestaje działać,
+  ale zostaje na liście z oznaczeniem „wygasł” — można go posprzątać.
+- Token widzi tylko jego właściciel; nie da się unieważnić cudzego (404). Bieżąca sesja też jest tokenem
+  i jest oznaczona jako „ta sesja” — nie ma przycisku unieważnienia, żeby nie wylogować się przez pomyłkę.
+- Uprawnienia wynikają z roli użytkownika, który token utworzył (token nie podnosi roli).
+- Utworzenie i unieważnienie trafiają do `audit_log` (`token_create`, `token_revoke`).
+- Żądania z `Bearer` nie wymagają nagłówka `X-ASI` (CSRF dotyczy tylko ciasteczka).
+
+Test: `BASE=http://127.0.0.1:8090 bash scripts/test-tokens.sh` (24 sprawdzenia: brak sesji, CSRF, Bearer,
+unieważnienie, audyt, walidacja wejścia).
+
 ## API
 
 Wszystko, co robi GUI, jest dostępne pod `/api/v1` (sesja albo `Authorization: Bearer <token>`):
 `login`, `logout`, `me`, `dashboard`, `assets`, `asset` (PATCH), `asset/events`, `runs`, `runs/{id}/events`,
 `target-sets`, `targets` (GET/POST/PUT/DELETE), `targets/import`, `scans`, `scans/current`,
-`scans/current/stop`, `export/assets.csv|json`, `users`, `audit`, a postęp skanu pod `/live/`.
+`scans/current/stop`, `export/assets.csv|json`, `users`, `audit`, `tokens` (GET/POST/DELETE),
+a postęp skanu pod `/live/`.
 
 ## Ocena analityka (DEV-9)
 

@@ -93,6 +93,9 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/audit", a.need("admin", a.audit))
 	m.Handle("GET /api/v1/users", a.need("admin", a.users))
 	m.Handle("POST /api/v1/users", a.need("admin", a.createUser))
+	m.Handle("GET /api/v1/tokens", a.need("viewer", a.tokens))
+	m.Handle("POST /api/v1/tokens", a.need("viewer", a.createToken))
+	m.Handle("DELETE /api/v1/tokens/{id}", a.need("viewer", a.deleteToken))
 	m.Handle("/live/", a.need("viewer", a.live))
 	return securityHeaders(m)
 }
@@ -636,6 +639,82 @@ func (a *App) users(w http.ResponseWriter, r *http.Request, u store.User) {
 		return
 	}
 	writeJSON(w, 200, l)
+}
+
+// ---------------------------------------------------------------- tokens (DEV-3)
+
+// reqToken returns the token that authenticated the request: cookie first, then
+// Bearer (same precedence as need()).
+func reqToken(r *http.Request) string {
+	tok := ""
+	if c, err := r.Cookie(cookieName); err == nil {
+		tok = c.Value
+	}
+	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+		tok = strings.TrimPrefix(h, "Bearer ")
+	}
+	return tok
+}
+
+func (a *App) tokens(w http.ResponseWriter, r *http.Request, u store.User) {
+	l, err := a.St.Tokens(r.Context(), u.ID, reqToken(r))
+	if err != nil {
+		fail(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, l)
+}
+
+// createToken issues an API token for the logged-in user. The plain value is
+// returned once and never stored (only its sha256 hash is).
+func (a *App) createToken(w http.ResponseWriter, r *http.Request, u store.User) {
+	var in struct {
+		Name string
+		Days int
+	}
+	if json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&in) != nil {
+		fail(w, 400, "bad request")
+		return
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		name = "api"
+	}
+	if len(name) > 60 {
+		name = name[:60]
+	}
+	if in.Days < 0 {
+		in.Days = 0
+	}
+	if in.Days > 3650 {
+		in.Days = 3650
+	}
+	tok, err := a.St.NewToken(r.Context(), u.ID, name, time.Duration(in.Days)*24*time.Hour)
+	if err != nil {
+		fail(w, 500, err.Error())
+		return
+	}
+	a.St.Audit(r.Context(), &u.ID, "token_create", "token", name, map[string]int{"days": in.Days})
+	writeJSON(w, 200, map[string]any{"token": tok, "name": name, "days": in.Days})
+}
+
+func (a *App) deleteToken(w http.ResponseWriter, r *http.Request, u store.User) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		fail(w, 400, "bad id")
+		return
+	}
+	ok, err := a.St.DeleteToken(r.Context(), u.ID, id)
+	if err != nil {
+		fail(w, 500, err.Error())
+		return
+	}
+	if !ok {
+		fail(w, 404, "nie ma takiego tokenu")
+		return
+	}
+	a.St.Audit(r.Context(), &u.ID, "token_revoke", "token", strconv.FormatInt(id, 10), nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
 func (a *App) createUser(w http.ResponseWriter, r *http.Request, u store.User) {

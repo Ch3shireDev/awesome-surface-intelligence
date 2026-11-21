@@ -122,6 +122,44 @@ func (s *Store) NewToken(ctx context.Context, userID int64, name string, ttl tim
 	return tok, err
 }
 
+// TokenInfo is a token as shown in the GUI (DEV-3). The plain value exists only
+// once, in the response to NewToken; here we expose metadata only.
+type TokenInfo struct {
+	ID         int64      `json:"id"`
+	Name       string     `json:"name"`
+	CreatedAt  time.Time  `json:"created_at"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	Current    bool       `json:"current"`
+	Expired    bool       `json:"expired"`
+}
+
+// Tokens lists a user's tokens (newest first). current is the token used for the
+// request, so the GUI can warn before revoking the session it is sitting in.
+func (s *Store) Tokens(ctx context.Context, userID int64, current string) ([]TokenInfo, error) {
+	rows, err := s.DB.Query(ctx, `SELECT id, name, created_at, last_used_at, expires_at,
+		token_hash=$2 AND (expires_at IS NULL OR expires_at > now()) AS current,
+		expires_at IS NOT NULL AND expires_at <= now() AS expired
+		FROM api_tokens WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100`, userID, tokenHash(current))
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (TokenInfo, error) {
+		var t TokenInfo
+		return t, r.Scan(&t.ID, &t.Name, &t.CreatedAt, &t.LastUsedAt, &t.ExpiresAt, &t.Current, &t.Expired)
+	})
+}
+
+// DeleteToken revokes one of the user's own tokens. false means "no such token
+// for this user" (someone else's id or already deleted).
+func (s *Store) DeleteToken(ctx context.Context, userID, id int64) (bool, error) {
+	tag, err := s.DB.Exec(ctx, `DELETE FROM api_tokens WHERE id=$1 AND user_id=$2`, id, userID)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 func tokenHash(t string) string {
 	h := sha256.Sum256([]byte(t))
 	return hex.EncodeToString(h[:])

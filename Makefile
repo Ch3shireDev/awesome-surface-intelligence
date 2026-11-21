@@ -16,7 +16,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
 .PHONY: help env env-sync up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
-        build test asi asi-scan asi-serve docs sync \
+        build test test-tokens asi asi-scan asi-serve docs sync \
         lab-up lab-down lab-ps demo env-keys crypto-check slides
 
 help:
@@ -48,6 +48,7 @@ help:
 	@echo "  make asi-serve        - stary panel plikowy z historia/diffem (:8095)"
 	@echo "  make build            - lokalny build ./asi (wymaga Go na hoscie - dev)"
 	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
+	@echo "  make test-tokens      - test tokenow API w GUI (DEV-3, wymaga dzialajacego panelu)"
 	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
 	@echo "  make slides           - prezentacja Beamer -> docs/presentation/asi.pdf (pdflatex w kontenerze)"
 	@echo "  make sync             - git pull --rebase + push do origin (repo blackarch przez ssh)"
@@ -192,6 +193,10 @@ build:
 
 test:
 	go vet ./... && go test ./...
+
+# Test tokenow API w GUI (DEV-3). Wymaga dzialajacego panelu i .env z kontem admina.
+test-tokens:
+	bash scripts/test-tokens.sh
 
 docs:
 	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
