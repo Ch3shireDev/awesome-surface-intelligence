@@ -93,6 +93,8 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/audit", a.need("admin", a.audit))
 	m.Handle("GET /api/v1/users", a.need("admin", a.users))
 	m.Handle("POST /api/v1/users", a.need("admin", a.createUser))
+	m.Handle("PATCH /api/v1/users/{id}", a.need("admin", a.updateUser))
+	m.Handle("DELETE /api/v1/users/{id}", a.need("admin", a.deleteUser))
 	m.Handle("GET /api/v1/tokens", a.need("viewer", a.tokens))
 	m.Handle("POST /api/v1/tokens", a.need("viewer", a.createToken))
 	m.Handle("DELETE /api/v1/tokens/{id}", a.need("viewer", a.deleteToken))
@@ -677,6 +679,58 @@ func (a *App) users(w http.ResponseWriter, r *http.Request, u store.User) {
 		return
 	}
 	writeJSON(w, 200, l)
+}
+
+// updateUser: PATCH /api/v1/users/{id} (DEV-11). Admin changes role, blocks an
+// account or resets its password without knowing the old one. Blocking or a password
+// change revokes every session and API token of that user, so the effect is immediate.
+func (a *App) updateUser(w http.ResponseWriter, r *http.Request, admin store.User) {
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if id <= 0 {
+		fail(w, 400, "bad user id")
+		return
+	}
+	var in struct {
+		Role     string `json:"role"`
+		Disabled *bool  `json:"disabled"`
+		Password string `json:"password"`
+	}
+	if json.NewDecoder(io.LimitReader(r.Body, 8192)).Decode(&in) != nil {
+		fail(w, 400, "bad request")
+		return
+	}
+	u, err := a.St.UpdateUser(r.Context(), id, store.UserUpdate{Role: in.Role, Disabled: in.Disabled, Password: in.Password})
+	if err != nil {
+		status := 400
+		if errors.Is(err, store.ErrLastAdmin) {
+			status = http.StatusConflict
+		}
+		fail(w, status, err.Error())
+		return
+	}
+	details := map[string]any{"role": u.Role, "disabled": u.Disabled, "password_reset": in.Password != ""}
+	a.St.Audit(r.Context(), &admin.ID, "user_update", "user", u.Username, details)
+	writeJSON(w, 200, u)
+}
+
+// deleteUser: DELETE /api/v1/users/{id} (DEV-11). The last active admin cannot be
+// deleted; tokens go with the account.
+func (a *App) deleteUser(w http.ResponseWriter, r *http.Request, admin store.User) {
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if id <= 0 {
+		fail(w, 400, "bad user id")
+		return
+	}
+	if err := a.St.DeleteUser(r.Context(), id); err != nil {
+		status := 400
+		if errors.Is(err, store.ErrLastAdmin) {
+			status = http.StatusConflict
+		}
+		fail(w, status, err.Error())
+		return
+	}
+	a.St.Audit(r.Context(), &admin.ID, "user_delete", "user", strconv.FormatInt(id, 10), nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
 // ---------------------------------------------------------------- tokens (DEV-3)

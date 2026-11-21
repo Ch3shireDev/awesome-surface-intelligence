@@ -28,7 +28,7 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 | `viewer` | czytać wszystko poza administracją |
 | `analyst` | + edytować assety (tagi, notatki) |
 | `operator` | + cele (dodawanie, import, usuwanie), start/stop skanów |
-| `admin` | + użytkownicy, dziennik audytu |
+| `admin` | + użytkownicy i konta (role, blokada, reset hasła, usuwanie), dziennik audytu |
 
 Pierwszy admin powstaje przy starcie z `ASI_ADMIN_USER` / `ASI_ADMIN_PASSWORD`, gdy w bazie nie ma
 użytkowników. Kolejnych dodaje admin w GUI. RBAC jest lokalny, bez synchronizacji z DefectDojo (ustalenie z mentorem).
@@ -41,6 +41,23 @@ asi user list                                   # kto jest w bazie
 asi user passwd -user admin -password 'nowe-haslo'  # reset (min. 10 znaków, zdejmuje blokadę)
 asi user add -user jury -password 'haslo-jury' -role viewer
 ```
+
+## Zarządzanie kontami (DEV-11, pkt 12–13 PDF)
+
+Zakładka **Administracja** (rola `admin`) oprócz dodawania kont pozwala nimi zarządzać:
+
+| operacja | jak | co się dzieje |
+|---|---|---|
+| zmiana roli | lista rozwijana w wierszu | nowe uprawnienia działają od następnego żądania (rola jest czytana z bazy) |
+| blokada / odblokowanie | „zablokuj” / „odblokuj” | **sesje i tokeny API tego konta są unieważnione**, zalogowany użytkownik dostaje 401 |
+| reset hasła | „reset hasła” | nowe hasło (min. 10 znaków) bez znajomości starego; sesje/tokeny unieważnione |
+| usunięcie konta | „usuń” | konto i jego tokeny znikają; operacji nie można cofnąć |
+
+Zabezpieczenia: nie da się odebrać roli, zablokować ani usunąć **ostatniego aktywnego administratora**
+(API zwraca 409) — inaczej panel zostałby bez administracji. Odebranie roli sobie samemu jest dozwolone tylko
+wtedy, gdy istnieje drugi admin, a GUI dodatkowo ostrzega. Wszystkie zmiany trafiają do `audit_log`
+(`user_update`, `user_delete`). API: `PATCH /api/v1/users/{id}` (`role`, `disabled`, `password`),
+`DELETE /api/v1/users/{id}`; test end-to-end: `make test-users` (35 sprawdzeń).
 
 ## Bezpieczeństwo panelu
 

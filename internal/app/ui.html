@@ -254,7 +254,7 @@ iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:1
 <!-- ADMIN -->
 <section id="p-admin" class="hidden">
   <div class="grid2">
-    <div class="card"><h2>Użytkownicy</h2><table><thead><tr><th>login</th><th>rola</th></tr></thead><tbody id="u-rows"></tbody></table>
+    <div class="card"><h2>Użytkownicy</h2><table><thead><tr><th>login</th><th>rola</th><th>stan</th><th></th></tr></thead><tbody id="u-rows"></tbody></table>
       <h2 style="margin-top:18px">Dodaj użytkownika</h2>
       <div class="row"><div><label for="u-name">login</label><input id="u-name"></div>
         <div><label for="u-pass">hasło (min. 10)</label><input id="u-pass" type="password"></div>
@@ -615,9 +615,40 @@ $('sc-add').onclick=async()=>{const p=scanParams();delete p.window;delete p.set;
   catch(e){$('sc-msg').className='msg err';$('sc-msg').textContent=e.message}};
 
 // ---------- admin
+const ROLES=['viewer','analyst','operator','admin'];
 async function loadAdmin(){
   const [us,au]=await Promise.all([api('api/v1/users'),api('api/v1/audit')]);
-  $('u-rows').innerHTML=us.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.role)}</td></tr>`).join('');
+  $('u-rows').innerHTML=us.map(u=>`<tr><td>${esc(u.username)}${u.id===me.id?' <span class="role">Ty</span>':''}</td>
+    <td><select class="u-role" data-id="${u.id}">${ROLES.map(r=>`<option value="${r}"${r===u.role?' selected':''}>${r}</option>`).join('')}</select></td>
+    <td>${u.disabled?'<b style="color:var(--bad)">zablokowany</b>':'aktywny'}</td>
+    <td><button class="link u-pass" data-id="${u.id}" data-n="${esc(u.username)}">reset hasła</button>
+      <button class="link u-block" data-id="${u.id}" data-d="${u.disabled}">${u.disabled?'odblokuj':'zablokuj'}</button>
+      ${u.id===me.id?'':`<button class="link u-del" data-id="${u.id}" data-n="${esc(u.username)}">usuń</button>`}</td></tr>`).join('');
+
+  // Role, blokada i reset hasła (DEV-11, pkt 12-13 PDF). Każda zmiana od razu unieważnia
+  // sesje/tokeny zmienianego konta (blokada i reset hasła), więc działa natychmiast.
+  const patch=async(id,body,msg)=>{try{await api('api/v1/users/'+id,{method:'PATCH',body:JSON.stringify(body)});
+      $('u-msg').className='msg ok';$('u-msg').textContent=msg;loadAdmin()}
+    catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message;loadAdmin()}};
+  document.querySelectorAll('.u-role').forEach(el=>el.onchange=()=>{
+    if(el.value==='admin'&&!confirm('Dać temu kontu uprawnienia administratora?')){loadAdmin();return}
+    if(el.dataset.id===String(me.id)&&el.value!=='admin'&&
+       !confirm('To Twoje konto: po odebraniu sobie roli administratora stracisz dostęp do tej sekcji. Kontynuować?')){loadAdmin();return}
+    patch(el.dataset.id,{role:el.value},'Rola zmieniona.')});
+  document.querySelectorAll('.u-block').forEach(b=>b.onclick=()=>{
+    const disable=b.dataset.d!=='true';
+    if(disable&&!confirm('Zablokować konto? Sesje i tokeny tego użytkownika przestaną działać.'))return;
+    patch(b.dataset.id,{disabled:disable},disable?'Konto zablokowane.':'Konto odblokowane.')});
+  document.querySelectorAll('.u-pass').forEach(b=>b.onclick=()=>{
+    const p=prompt(`Nowe hasło dla "${b.dataset.n}" (min. 10 znaków). Stare sesje i tokeny zostaną unieważnione.`);
+    if(p===null)return;
+    if(p.length<10){$('u-msg').className='msg err';$('u-msg').textContent='Hasło musi mieć min. 10 znaków.';return}
+    patch(b.dataset.id,{password:p},'Hasło zmienione.')});
+  document.querySelectorAll('.u-del').forEach(b=>b.onclick=async()=>{
+    if(!confirm(`Usunąć konto "${b.dataset.n}"? Operacji nie można cofnąć.`))return;
+    try{await api('api/v1/users/'+b.dataset.id,{method:'DELETE'});
+      $('u-msg').className='msg ok';$('u-msg').textContent='Konto usunięte.';loadAdmin()}
+    catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message}});
   $('au-rows').innerHTML=au.map(a=>`<tr><td>${fmtT(a.at)}</td><td>${esc(a.username)}</td><td>${esc(a.action)}</td><td class="mono">${esc(a.object)}</td></tr>`).join('');
 }
 $('u-add').onclick=async()=>{try{await api('api/v1/users',{method:'POST',body:JSON.stringify({username:$('u-name').value,password:$('u-pass').value,role:$('u-role').value})});
