@@ -37,7 +37,9 @@ type AssetFilter struct {
 	State    string // new | active | missing | gone | live (new+active) | "" = all
 	Kind     string // host | port | ""
 	Flapping bool
-	Search   string // substring of key
+	Search   string   // substring of key
+	RunID    string   // only assets with an event of one of Events types in this run
+	Events   []string // new | reappeared | changed | missing | gone | flapping (with RunID)
 	Limit    int
 }
 
@@ -64,6 +66,12 @@ func (s *Store) Assets(ctx context.Context, f AssetFilter) ([]Asset, error) {
 	}
 	if f.Search != "" {
 		add("key ILIKE $%d", "%"+strings.ReplaceAll(f.Search, "%", "")+"%")
+	}
+	if f.RunID != "" && len(f.Events) > 0 {
+		// kafelek "nowe w ostatnim skanie" pokazuje dokładnie te assety, które w tym przebiegu
+		// dostały zdarzenie danego typu (stan assetu bywa już "active", więc filtr po samym stanie kłamie)
+		args = append(args, f.RunID, f.Events)
+		q += fmt.Sprintf(" AND key IN (SELECT a.key FROM asset_events e JOIN assets a ON a.id=e.asset_id WHERE e.run_id=$%d AND e.type = ANY($%d))", len(args)-1, len(args))
 	}
 	if f.Limit <= 0 {
 		f.Limit = 1000
@@ -234,6 +242,20 @@ func (s *Store) EventCounts(ctx context.Context, runs int) ([]RunEvents, error) 
 		}
 	}
 	return out, rows.Err()
+}
+
+// EventAssetKeys: distinct asset keys that had an event of one of the given types in a run.
+// The dashboard uses it so that a KPI tile and the list behind it count the same thing.
+func (s *Store) EventAssetKeys(ctx context.Context, runID string, types []string) ([]string, error) {
+	rows, err := s.DB.Query(ctx, `SELECT DISTINCT a.key FROM asset_events e JOIN assets a ON a.id=e.asset_id
+		WHERE e.run_id=$1 AND e.type = ANY($2) ORDER BY 1`, runID, types)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (string, error) {
+		var k string
+		return k, r.Scan(&k)
+	})
 }
 
 // AssetObservations: the newest observations of the given kinds for one asset

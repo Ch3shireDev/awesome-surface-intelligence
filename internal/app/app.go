@@ -272,9 +272,13 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 	runs, _ := a.St.Runs(ctx, 20)
 	var latest *store.Run
 	var events []store.Event
+	var newKeys []string
+	latestID := ""
 	if len(runs) > 0 {
 		latest = &runs[0]
+		latestID = latest.ID
 		events, _ = a.St.Events(ctx, latest.ID, "", 200)
+		newKeys, _ = a.St.EventAssetKeys(ctx, latest.ID, []string{"new", "reappeared"})
 	}
 	timeline, _ := a.St.EventCounts(ctx, 20)
 	ins := a.buildInsights(ctx, all)
@@ -287,9 +291,22 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 	writeJSON(w, 200, map[string]any{
 		"groups": ins.Groups, "time_patterns": ins.Patterns,
 		"counts": counts, "interesting": hot, "unstable": unstable, "latest_run": latest,
-		"latest_events": events, "timeline": timeline, "scan": a.scanStatus(),
+		"latest_events": events, "latest_new": map[string]any{"run": latestID, "count": len(newKeys), "keys": newKeys},
+		"timeline": timeline, "scan": a.scanStatus(),
 		"slow_http_ms": slowHTTPThresholdMs(),
 	})
+}
+
+// parseEventTypes keeps only the event types the schema allows (asset_events.type CHECK).
+func parseEventTypes(v string) []string {
+	allowed := map[string]bool{"new": true, "reappeared": true, "changed": true, "missing": true, "gone": true, "flapping": true}
+	out := []string{}
+	for _, t := range strings.Split(v, ",") {
+		if t = strings.TrimSpace(t); allowed[t] {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 const defaultSlowHTTPMs = 500
@@ -319,6 +336,13 @@ func assetHTTPMs(as store.Asset) int {
 func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 	q := r.URL.Query()
 	f := store.AssetFilter{State: q.Get("state"), Kind: q.Get("kind"), Search: q.Get("q"), Flapping: q.Get("flapping") == "1", Limit: 5000}
+	// "nowe w ostatnim skanie" to zmiany, nie stan: ?run=<id>&events=new,reappeared
+	if run := strings.TrimSpace(q.Get("run")); run != "" {
+		f.RunID, f.Events = run, parseEventTypes(q.Get("events"))
+		if len(f.Events) == 0 {
+			f.Events = []string{"new", "reappeared"}
+		}
+	}
 	svcQ := strings.ToLower(q.Get("svc")) // group link: service/product text instead of key
 	slowOnly := q.Get("slow") == "1"
 	if svcQ != "" || slowOnly {

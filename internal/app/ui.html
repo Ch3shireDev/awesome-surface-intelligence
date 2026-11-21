@@ -344,11 +344,13 @@ async function loadDash(){
   const d=await api('api/v1/dashboard');
   if(d.slow_http_ms)slowHTTPMs=d.slow_http_ms;
   const h=d.counts.host||{},p=d.counts.port||{};
-  const lastNew=(d.latest_events||[]).filter(e=>e.type==='new'||e.type==='reappeared').length;
+  // "nowe w ostatnim skanie" = zmiany w przebiegu (zdarzenia new/reappeared), nie stan assetu:
+  // liczba i lista poniżej muszą pochodzić z tego samego źródła (latest_new.keys).
+  const ln=d.latest_new||{}, lastNew=ln.count||0, lastNewRun=ln.run||'';
   // [klasa, liczba, opis, filtr w zakladce Assety]
   const k=[['ok',(h.active||0)+(h.new||0),'aktywne hosty',{kind:'host',state:'live'}],
     ['',(p.active||0)+(p.new||0),'otwarte usługi',{kind:'port',state:'live'}],
-    ['ok',lastNew,'nowe w ostatnim skanie',{state:'new'}],['warn',(h.missing||0)+(p.missing||0),'braki (missing)',{state:'missing'}],
+    ['ok',lastNew,'nowe w ostatnim skanie',lastNewRun?{run:lastNewRun,events:'new,reappeared'}:{state:'new'}],['warn',(h.missing||0)+(p.missing||0),'braki (missing)',{state:'missing'}],
     ['bad',(h.gone||0)+(p.gone||0),'zniknięte (gone)',{state:'gone'}],['flap',(h.flapping||0)+(p.flapping||0),'niestabilne (flapping)',{flap:true}],
     ['bad',(d.interesting||[]).filter(x=>x.interest==='high').length,'krytyczne ekspozycje',{kind:'port',state:'live',interest:'high'}]];
   $('kpis').innerHTML=k.map(([c,n,l],i)=>`<button type="button" class="kpi ${c}" data-i="${i}" title="Pokaż w zakładce Assety"><b>${n}</b><span>${l}</span></button>`).join('');
@@ -393,17 +395,22 @@ function fmtHTTPMs(ms,slow){
 async function loadAssets(){
   const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':'',slow:$('a-slow').checked?'1':''});
   if(assetSvc){q.set('svc',assetSvc)}
+  if(assetRun){q.set('run',assetRun);q.set('events',assetEvents||'new,reappeared')}
   let rows=await api('api/v1/assets?'+q);
   const want=$('a-int').value;if(want)rows=rows.filter(a=>(a.interest||'')===want);
   $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Brak assetów. Uruchom skan.</td></tr>';
-  $('a-count').innerHTML=rows.length+' assetów'+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'');
+  $('a-count').innerHTML=rows.length+' assetów'+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'')
+    +(assetRun?` · zmiany z przebiegu <b>${esc(assetRun)}</b> (${esc(PL_EV[assetEvents]||assetEvents)}) <button class="link" id="a-run-x">wyczyść</button>`:'');
+  if($('a-run-x'))$('a-run-x').onclick=()=>{assetRun='';assetEvents='';loadAssets()};
   if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();
 }
 $('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;$('a-slow').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
-let assetSvc='';
+let assetSvc='',assetRun='',assetEvents='';
+const PL_EV={'new,reappeared':'nowe i powracające','new':'nowe','reappeared':'powracające','changed':'zmienione','missing':'braki','gone':'zniknięte'};
 function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kind').value=f.kind||'';
-  $('a-flap').checked=!!f.flap;$('a-slow').checked=!!f.slow;$('a-int').value=f.interest||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
+  $('a-flap').checked=!!f.flap;$('a-slow').checked=!!f.slow;$('a-int').value=f.interest||'';
+  assetRun=f.run||'';assetEvents=f.events||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
 
 async function openAsset(key){
   const [rows,ev]=await Promise.all([api('api/v1/assets?q='+encodeURIComponent(key)),api('api/v1/asset/events?key='+encodeURIComponent(key))]);

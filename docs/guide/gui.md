@@ -15,6 +15,12 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 | zakładka | co jest | wymaganie z treści zadania |
 |---|---|---|
 | **Dashboard** | kafelki (aktywne hosty, usługi, nowe, braki, zniknięte, niestabilne, krytyczne ekspozycje), najważniejsze znaleziska wg oceny ciekawości, zmiany w ostatnim przebiegu, lista niestabilnych i zniknięte, wykres zmian w kolejnych przebiegach, stan skanu | pkt 15, „wizualizacja zmian w czasie”, „ocena ciekawości” |
+
+Każdy kafelek otwiera zakładkę **Assety** z filtrem odpowiadającym swojej liczbie. „Nowe w ostatnim skanie”
+liczy **zmiany z ostatniego przebiegu** (zdarzenia `new` i `reappeared`), a nie stan assetu — taki asset ma
+zwykle stan `active`, więc filtr `state=new` pokazywał 0. Kafelek przekazuje `run=<id przebiegu>&events=new,reappeared`,
+czyli pokazuje dokładnie te assety, które w tym przebiegu się pojawiły; filtr można wyczyścić linkiem
+„wyczyść” przy liczbie assetów. API: `GET /api/v1/assets?run=<id>&events=new,reappeared`.
 | **Assety** | filtry (stan, rodzaj, flapping, szukaj), tabela, panel szczegółów: ostatnia obserwacja, godziny odpowiedzi (24 h), historia zdarzeń, **edycja tagów i notatki** zachowanych przy kolejnych skanach; eksport CSV/JSON | pkt 14, 8–9, eksport |
 | **Cele** | zbiory celów, **formularz ręczny** (IP/CIDR/domena, tagi, właściciel, notatka szyfrowana), **import CSV/JSON/TXT**, włącz/wyłącz, usuń | pkt 1, 11 |
 | **Skany** | start z parametrami (zbiór, równoległość, globalny limit pps, porty, okno czasowe, eksport do DefectDojo), zatrzymanie (przebieg `partial`), **postęp na żywo** (panel skanu przez proxy), lista przebiegów i ich zmian | pkt 2, harmonogram/okno, ograniczanie tempa |
