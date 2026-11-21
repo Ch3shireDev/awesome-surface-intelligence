@@ -336,3 +336,6 @@ func FromObservations(os []obs.Observation, meta map[string]targets.Host) []Serv
 	Sort(out)
 	return out
 }
+
+// Score is the exported interest scoring (high | medium | low + reason).
+func Score(s Service) (string, string) { return score(s) }

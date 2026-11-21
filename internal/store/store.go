@@ -375,3 +375,55 @@ func (s *Store) Targets(ctx context.Context, set string) ([]targets.Target, erro
 		return t, nil
 	})
 }
+
+// ---------------------------------------------------------------- target editing (GUI form)
+
+type TargetRow struct {
+	ID        int64     `json:"id"`
+	Set       string    `json:"set"`
+	Kind      string    `json:"kind"`
+	Value     string    `json:"target"`
+	Asset     string    `json:"asset"`
+	Owner     string    `json:"owner"`
+	Tags      []string  `json:"tags"`
+	Enabled   bool      `json:"enabled"`
+	Note      string    `json:"note"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (s *Store) TargetRows(ctx context.Context, set string) ([]TargetRow, error) {
+	rows, err := s.DB.Query(ctx, `SELECT t.id, ts.name, t.kind, t.value, t.asset, t.owner, t.tags, t.enabled, t.note_enc, t.updated_at
+		FROM targets t JOIN target_sets ts ON ts.id=t.set_id WHERE ts.name=$1 ORDER BY t.id`, set)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (TargetRow, error) {
+		var t TargetRow
+		var note []byte
+		if err := r.Scan(&t.ID, &t.Set, &t.Kind, &t.Value, &t.Asset, &t.Owner, &t.Tags, &t.Enabled, &note, &t.UpdatedAt); err != nil {
+			return t, err
+		}
+		if note != nil {
+			b, err := s.Sealer.Open(note)
+			if err != nil {
+				return t, err
+			}
+			t.Note = string(b)
+		}
+		return t, nil
+	})
+}
+
+func (s *Store) TargetSets(ctx context.Context) ([]string, error) {
+	rows, err := s.DB.Query(ctx, `SELECT name FROM target_sets ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
+}
+
+func (s *Store) DeleteTarget(ctx context.Context, id int64) (string, error) {
+	var v string
+	err := s.DB.QueryRow(ctx, `DELETE FROM targets WHERE id=$1 RETURNING value`, id).Scan(&v)
+	return v, err
+}

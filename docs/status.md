@@ -20,19 +20,19 @@ Stan na 21.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 8 | porównanie przebiegów | ✅ | `asi diff`, panel, automatycznie po skanie; [Porównanie](/guide/diff) |
 | 9 | nowe / znikające / zmienione usługi | ✅ | `new / gone / changed`, plus `created/closed/reactivated` w DefectDojo |
 | 10 | własne sygnatury | ❌ | plan: YAML (nagłówek, cookie, regex HTML, ścieżka GET, favicon mmh3) — po module HTTP |
-| 11 | formularz: ręcznie + CSV/JSON | 🟡 | import plików jest; **brak formularza w UI** |
-| 12–13 | RBAC, 4 role | ❌ | ❓ decyzja architektoniczna (niżej) |
-| 14 | edycja wartości niezależnie od skanu, trwała | 🟡 | ✅ w bazie i CLI: tagi, notatka (szyfrowana), nadpisania na assecie, audit log (`asi asset edit`); ❌ w GUI (DEV-4) |
-| 15 | czytelny interfejs + dashboard | 🟡 | panel postępu + historia + diff; brak dashboardu „najważniejsze znaleziska” |
+| 11 | formularz: ręcznie + CSV/JSON | ✅ | GUI: formularz ręczny + import CSV/JSON/TXT do bazy, walidacja wejścia ([Panel web](/guide/gui)) |
+| 12–13 | RBAC, 4 role | ✅ | lokalne role viewer/analyst/operator/admin na każdej trasie API, użytkownicy w GUI, audit log |
+| 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI: tagi, notatka, nadpisania na assecie (trwałe), edycja celów; audit log |
+| 15 | czytelny interfejs + dashboard | ✅ | dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, wykres zmian w czasie; postęp skanu na żywo |
 | 16 | szyfrowanie at-rest | ❌ | ❓ decyzja (niżej) |
 | — | harmonogram, okna czasowe | 🟡 | `-window` przerywa ✅; brak harmonogramu i wznawiania w kolejnym oknie |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, `-parallel`, timeouty |
-| — | eksport JSON/CSV | 🟡 | JSON ✅ (`services.json`, `findings_defectdojo.json`); CSV ❌ |
+| — | eksport JSON/CSV | ✅ | assety CSV/JSON z GUI/API; `services.json`, `findings_defectdojo.json` |
 | — | import wyników skanów JSON/CSV | ❌ | baza jest; brak importera cudzych wyników (DEV-6) |
 | — | hosty / usługi niestabilne | ✅ | stany `new/active/missing/gone`, `reappeared`, `flapping`, progi braków, zasady pokrycia i hierarchii ([Historia](/guide/history)); skan potwierdzający |
 | — | integracja DefectDojo | ✅ | Generic Findings, reimport do stałego testu, upload na żywo; [DefectDojo](/guide/defectdojo) |
 | — | ocena „ciekawości” | ✅ | `high/medium/low` + powód; mapowanie na severity w DefectDojo |
-| — | tagi | 🟡 | z pliku celów → findings/endpointy; brak edycji w UI |
+| — | tagi | ✅ | tagi celów (formularz/import) i assetów (edycja w GUI, trwałe między skanami) |
 | — | dokumentacja | ✅ | ta strona (VitePress) |
 
 ## Elementy tej iteracji (co i jak przetestowano)

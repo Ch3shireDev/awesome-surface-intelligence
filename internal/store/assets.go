@@ -182,3 +182,42 @@ func (s *Store) Events(ctx context.Context, runID, key string, limit int) ([]Eve
 		return e, nil
 	})
 }
+
+// EventCounts per run (newest runs first) for the dashboard timeline.
+type RunEvents struct {
+	RunID  string         `json:"run_id"`
+	At     time.Time      `json:"at"`
+	Status string         `json:"status"`
+	Counts map[string]int `json:"counts"`
+}
+
+func (s *Store) EventCounts(ctx context.Context, runs int) ([]RunEvents, error) {
+	rows, err := s.DB.Query(ctx, `SELECT r.id, r.started_at, r.status, e.type, count(e.id)
+		FROM (SELECT id, started_at, status FROM runs ORDER BY started_at DESC LIMIT $1) r
+		LEFT JOIN asset_events e ON e.run_id=r.id GROUP BY 1,2,3,4 ORDER BY 2`, runs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RunEvents
+	idx := map[string]int{}
+	for rows.Next() {
+		var id, status string
+		var typ *string
+		var at time.Time
+		var n int
+		if err := rows.Scan(&id, &at, &status, &typ, &n); err != nil {
+			return nil, err
+		}
+		i, ok := idx[id]
+		if !ok {
+			i = len(out)
+			idx[id] = i
+			out = append(out, RunEvents{RunID: id, At: at, Status: status, Counts: map[string]int{}})
+		}
+		if typ != nil {
+			out[i].Counts[*typ] = n
+		}
+	}
+	return out, rows.Err()
+}

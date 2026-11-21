@@ -294,3 +294,11 @@ func IsCloudflare(ip netip.Addr) bool {
 	}
 	return false
 }
+
+// ParseAddrOrPrefix accepts an IP address or a CIDR prefix.
+func ParseAddrOrPrefix(v string) (netip.Prefix, error) {
+	if a, err := netip.ParseAddr(v); err == nil {
+		return netip.PrefixFrom(a, a.BitLen()), nil
+	}
+	return netip.ParsePrefix(v)
+}

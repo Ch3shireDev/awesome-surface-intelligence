@@ -24,6 +24,7 @@ export default defineConfig({
       { text: 'Działanie', items: [
         { text: 'Format celów (CSV/JSON/TXT)', link: '/guide/targets' },
         { text: 'Podział na paczki nmap', link: '/guide/chunking' },
+        { text: 'Panel web (GUI)', link: '/guide/gui' },
         { text: 'Postęp: CLI i panel web', link: '/guide/progress' },
         { text: 'Integracja z DefectDojo', link: '/guide/defectdojo' },
         { text: 'Porównanie przebiegów', link: '/guide/diff' },

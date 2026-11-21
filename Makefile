@@ -38,9 +38,10 @@ help:
 	@echo "  make clean            - usun lokalne wyniki skanow"
 	@echo ""
 	@echo "Silnik asi (Go):"
+	@echo "  make up               - panel web ASI na http://127.0.0.1:8090 (login: ASI_ADMIN_USER/ASI_ADMIN_PASSWORD z .env)"
 	@echo "  make asi ARGS='plan'  - dowolna komenda asi w kontenerze skanera (cele: targets/, wyniki: results/)"
-	@echo "  make asi-scan         - skan targets/targets.csv: panel :8090, upload live do DefectDojo"
-	@echo "  make asi-serve        - panel z historia/diffem bez skanowania (:8090)"
+	@echo "  make asi-scan         - skan targets/targets.csv: panel CLI :8094, upload live do DefectDojo"
+	@echo "  make asi-serve        - stary panel plikowy z historia/diffem (:8095)"
 	@echo "  make build            - lokalny build ./asi (wymaga Go na hoscie - dev)"
 	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
 	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
@@ -54,8 +55,9 @@ env:
 	    -e "s|^DD_CREDENTIAL_AES_256_KEY=.*|DD_CREDENTIAL_AES_256_KEY=$$(openssl rand -hex 16)|" \
 	    -e "s|^DD_ADMIN_PASSWORD=.*|DD_ADMIN_PASSWORD=$$(openssl rand -hex 12)|" \
 	    -e "s|CHANGE_ME_ASI_DB|$$ASI_DBP|g" \
+	    -e "s|CHANGE_ME_ASI_ADMIN|$$(openssl rand -hex 12)|" \
 	    .env.example > .env && chmod 600 .env && \
-	echo "Utworzono .env (haslo admina: grep DD_ADMIN_PASSWORD .env)"
+	echo "Utworzono .env (hasla adminow: grep -E 'DD_ADMIN_PASSWORD|ASI_ADMIN_PASSWORD' .env)"
 
 up:
 	docker compose up -d --build
@@ -150,10 +152,10 @@ asi:
 	docker compose exec nmap-scanner asi $(ARGS)
 
 asi-scan:
-	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -ui 127.0.0.1:8090 -upload live
+	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -ui 127.0.0.1:8094 -upload live
 
 asi-serve:
-	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8090
+	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8095
 
 build:
 	go build -o asi ./cmd/asi

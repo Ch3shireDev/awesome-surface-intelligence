@@ -136,6 +136,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       Wraca, gdy bedzie harmonogram z wieloma workerami (DEV-5).
     - Pliki w `results/` zostaja jako eksport i fallback, gdy bazy nie ma.
 
+13. **Panel web = `asi server` w kontenerze `nmap-scanner`** (21.11, DEV-4).
+    - Kontener skanera ma `entrypoint: ["asi", "server"]` (zmiana w compose wzgledem decyzji 3) i zalezy od
+      `asi-db`. Panel na `127.0.0.1:8090`, postep skanu z GUI na `127.0.0.1:8091` (proxy pod `/live/`).
+      `make asi-scan` (CLI) uzywa `:8094`, `make asi-serve` (stary panel plikowy) `:8095`.
+    - Skan z GUI to podproces `asi scan` (wzorzec MISP z konsultacji), jeden naraz.
+    - RBAC lokalny z 4 rolami od razu (koszt byl niski przy pisaniu API); hasla PBKDF2 ze stdlib,
+      sesje jako tokeny w `api_tokens` (tylko hash), CSRF przez naglowek `X-ASI`.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma

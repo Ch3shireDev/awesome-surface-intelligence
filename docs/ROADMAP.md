@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 21.11.2026, 16:10** (agent blackarch). Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 21.11.2026, 16:20** (agent blackarch). Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -10,10 +10,10 @@ M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)████████░░  80%  🔨  brak: SEC-1 arm64, SEC-2 materiały, SEC-3 lab
 M3 Historia i stany       ██████████ 100%  ✅  DEV-2
-M4 Web GUI                ██░░░░░░░░  20%  🔨  DEV-4 (panel postępu jest, brak formularza/dashboardu)
+M4 Web GUI                █████████░  90%  ✅  DEV-4 (brak: przegląd wizualny w przeglądarce, tokeny API w GUI)
 M5 Fingerprint i sygnatury░░░░░░░░░░   0%  ⬜  SEC-4, SEC-5
-M6 Ochrona danych i role  █░░░░░░░░░  10%  ⬜  SEC-6, DEV-3 (Sealer w bazie gotowy)
-M7 Harmonogram i eksport  ███░░░░░░░  30%  ⬜  DEV-5, DEV-6, SEC-7, SEC-8
+M6 Ochrona danych i role  █████░░░░░  50%  🔨  role+audit ✅ (DEV-4); brak SEC-6: AES-GCM + szyfrowanie PG
+M7 Harmonogram i eksport  ████░░░░░░  40%  ⬜  DEV-5, DEV-6 (eksport CSV/JSON ✅), SEC-7, SEC-8
 M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1, ALL-2 (dokumentacja w VitePress jest)
 ```
 
@@ -25,7 +25,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 | **M1** Silnik skanowania | `asi scan`: plan celów (CSV/JSON/TXT, CIDR, domeny, reguły zakresu), 2 fazy nmapa, adaptacyjne paczki, globalny limit pps, okno czasowe, pasek CLI + panel SSE, diff, skan potwierdzający, reimport Generic Findings (`created/closed/reactivated`) | silnik z `~/asi-poc` | ✅ |
 | **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1, SEC-2, SEC-3 | 🔨 |
 | **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 | ✅ |
-| **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | 🔨 |
+| **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 | ✅ |
 | **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja) | SEC-4, SEC-5, DEV-7 | ⬜ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6, DEV-3 | ⬜ |
 | **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5, DEV-6, SEC-7, SEC-8 | ⬜ |
@@ -34,7 +34,7 @@ M8 Finisz dla jury        ██░░░░░░░░  20%  ⬜  SEC-9, ALL-1
 ## Ścieżka krytyczna
 
 ```
-DEV-0 ✅ → DEV-1 ✅ → DEV-2 ✅ → DEV-4 🔨 ──────────────→ demo (2 przebiegi + GUI)
+DEV-0 ✅ → DEV-1 ✅ → DEV-2 ✅ → DEV-4 ✅ ──────────────→ demo (2 przebiegi + GUI)
                          ↘ SEC-4 → SEC-5 (fingerprint)  ↗
                          ↘ SEC-6 (szyfrowanie)         ↗
 ```
@@ -51,6 +51,7 @@ i DefectDojo; RBAC zostaje jednym kontem admina (mentor to akceptuje).
 | 21.11 14:44 | konsultacja z mentorem: GUI wymagane, Postgres + szyfrowanie, RBAC 10% ([MENTOR](MENTOR.md)) |
 | 21.11 ~15:30 | scalenie repo `~/asi`; DEV-0 kontrakt `Observation`, adaptery nmap |
 | 21.11 ~15:50 | DEV-1 baza `asi-db`, zapis przebiegów, `asi diff -db`; obraz skanera z pgx |
+| 21.11 ~16:20 | DEV-4: panel web `asi server` (login, dashboard, assety z edycją, formularz/import celów, skany z GUI + postęp na żywo, role, audit, eksport CSV/JSON); kontener skanera startuje panel na :8090 |
 | 21.11 ~16:10 | DEV-2: assety ze stanami, flapping, zasady pokrycia (hosty i porty) i hierarchii, edycje trwałe; `asi changes/assets/asset edit` |
 | 21.11 ~16:00 | stary DefectDojo z `~/asi-poc` usunięty; cały stack przez `make up`; skan z kontenera → baza + DD sprawdzony |
 

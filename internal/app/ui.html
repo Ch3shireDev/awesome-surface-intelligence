@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASI · Attack Surface Intelligence</title>
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#fff;--ink:#16202b;--muted:#5b6876;--line:#e2e6eb;--soft:#eef1f5;
+  --accent:#2457d6;--accent-ink:#fff;--ok:#157a3c;--warn:#a35a00;--bad:#b42318;--flap:#7a3cc4;
+  --high:#b42318;--medium:#a35a00;--low:#64748b;--shadow:0 1px 2px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d1117;--panel:#151b23;--ink:#e6edf3;--muted:#8b98a5;--line:#29313c;--soft:#1c232d;
+  --accent:#5b8cff;--accent-ink:#0d1117;--ok:#3fb969;--warn:#e3a33b;--bad:#f2675d;--flap:#b78cf2;
+  --high:#f2675d;--medium:#e3a33b;--low:#8b98a5;--shadow:none;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header .brand{font-weight:700;letter-spacing:.01em}
+header .brand span{color:var(--muted);font-weight:500}
+nav{display:flex;gap:2px;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--muted);padding:8px 12px;border-radius:6px;font:inherit;cursor:pointer}
+nav button.on{background:var(--soft);color:var(--ink);font-weight:600}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px}
+.role{font-size:11px;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line);padding:2px 7px;border-radius:99px;color:var(--muted)}
+main{max-width:1280px;margin:0 auto;padding:18px 20px 40px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 12px;font-weight:650}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media (max-width:960px){.grid2,.grid3{grid-template-columns:1fr}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.flap b{color:var(--flap)} .kpi.ok b{color:var(--ok)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--soft)}
+.scroll{max-height:460px;overflow:auto}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.t-new,.t-reappeared,.s-new{color:var(--ok)} .t-changed{color:var(--warn)} .t-missing,.s-missing{color:var(--warn)}
+.t-gone,.s-gone{color:var(--bad)} .t-flapping{color:var(--flap)} .s-active{color:var(--muted)}
+.i-high{color:var(--high);font-weight:600} .i-medium{color:var(--medium);font-weight:600} .i-low{color:var(--low)}
+.tag{display:inline-block;background:var(--soft);border-radius:4px;padding:0 6px;margin:1px 3px 1px 0;font-size:12px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+textarea{width:100%;min-height:110px;resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row > *{flex:0 0 auto}
+button.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.btn.sec{background:var(--soft);color:var(--ink)}
+button.btn.danger{background:var(--bad);color:#fff}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+button.link{background:none;border:0;color:var(--accent);cursor:pointer;font:inherit;padding:0}
+.msg{margin-top:10px;font-size:13px}
+.msg.err{color:var(--bad)} .msg.ok{color:var(--ok)}
+.login{max-width:360px;margin:12vh auto}
+.login input{width:100%}
+.drawer{position:fixed;top:0;right:0;width:min(560px,100%);height:100%;background:var(--panel);border-left:1px solid var(--line);z-index:20;overflow:auto;padding:20px;box-shadow:-8px 0 24px rgba(0,0,0,.12)}
+.drawer h3{margin:0 0 4px;font-size:16px}
+pre.json{background:var(--soft);padding:10px;border-radius:6px;overflow:auto;max-height:220px;margin:0}
+.hours{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:6px}
+.hours i{height:14px;border-radius:2px;background:var(--soft)} .hours i.on{background:var(--accent)}
+.hours-l{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:6px}
+.bar{flex:1;display:flex;flex-direction:column-reverse;min-width:10px;cursor:default}
+.bar i{display:block;width:100%}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+iframe.live{width:100%;height:820px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.log{white-space:pre-wrap;max-height:240px;overflow:auto;margin:0}
+.empty{color:var(--muted);padding:14px 0}
+</style>
+</head>
+<body>
+<section id="v-login" class="login hidden">
+  <div class="card">
+    <div class="brand" style="font-size:18px;font-weight:700;margin-bottom:4px">Attack Surface Intelligence</div>
+    <div class="muted" style="margin-bottom:12px">Zaloguj się, aby zarządzać skanami.</div>
+    <form id="f-login">
+      <label for="l-user">Użytkownik</label><input id="l-user" autocomplete="username" required>
+      <label for="l-pass">Hasło</label><input id="l-pass" type="password" autocomplete="current-password" required>
+      <div style="margin-top:14px"><button class="btn" type="submit">Zaloguj</button></div>
+      <div id="l-msg" class="msg err"></div>
+    </form>
+  </div>
+</section>
+
+<div id="v-app" class="hidden">
+<header>
+  <div class="brand">ASI <span>Attack Surface Intelligence</span></div>
+  <nav id="nav">
+    <button data-p="dash" class="on">Dashboard</button>
+    <button data-p="assets">Assety</button>
+    <button data-p="targets">Cele</button>
+    <button data-p="scans">Skany</button>
+    <button data-p="admin" data-role="admin">Administracja</button>
+  </nav>
+  <div class="who"><span id="who"></span><span id="role" class="role"></span><button class="link" id="logout">Wyloguj</button></div>
+</header>
+<main>
+
+<!-- DASHBOARD -->
+<section id="p-dash">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid3">
+    <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
+    <div class="card"><h2>Skan</h2><div id="d-scan"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2 id="d-ev-title">Zmiany w ostatnim przebiegu</h2><div class="scroll"><table><tbody id="d-ev"></tbody></table></div></div>
+    <div class="card"><h2>Niestabilne i zniknięte</h2><div class="scroll"><table><tbody id="d-unst"></tbody></table></div></div>
+  </div>
+  <div class="card"><h2>Zmiany w czasie (ostatnie przebiegi)</h2><div class="bars" id="d-bars"></div>
+    <div class="legend" id="d-legend"></div></div>
+</section>
+
+<!-- ASSETS -->
+<section id="p-assets" class="hidden">
+  <div class="card">
+    <div class="row">
+      <div><label for="a-q">Szukaj</label><input id="a-q" placeholder="192.0.2. albo /tcp/443"></div>
+      <div><label for="a-state">Stan</label><select id="a-state"><option value="">wszystkie</option><option>new</option><option>active</option><option>missing</option><option>gone</option></select></div>
+      <div><label for="a-kind">Rodzaj</label><select id="a-kind"><option value="">wszystkie</option><option value="host">hosty</option><option value="port">porty</option></select></div>
+      <div><label><input type="checkbox" id="a-flap"> tylko flapping</label></div>
+      <div><button class="btn sec" id="a-go">Filtruj</button></div>
+      <div style="margin-left:auto"><a href="api/v1/export/assets.csv" class="btn sec" style="text-decoration:none;display:inline-block;padding:8px 14px;border-radius:6px;background:var(--soft);color:var(--ink)">Eksport CSV</a>
+        <a href="api/v1/export/assets.json" style="margin-left:6px">JSON</a></div>
+    </div>
+  </div>
+  <div class="card"><div class="scroll" style="max-height:none"><table><thead><tr><th>asset</th><th>usługa</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
+    <div id="a-count" class="muted" style="margin-top:8px"></div></div>
+</section>
+
+<!-- TARGETS -->
+<section id="p-targets" class="hidden">
+  <div class="card">
+    <div class="row">
+      <div><label for="t-set">Zbiór celów</label><select id="t-set"></select></div>
+      <div><label for="t-newset">albo nowy zbiór</label><input id="t-newset" placeholder="np. lab"></div>
+      <div><button class="btn sec" id="t-useset">Użyj</button></div>
+    </div>
+  </div>
+  <div class="grid2" data-role="operator">
+    <div class="card"><h2>Dodaj ręcznie</h2>
+      <label for="t-text">IP, zakresy CIDR albo domeny, po jednym w linii</label>
+      <textarea id="t-text" placeholder="192.0.2.10&#10;198.51.100.0/28&#10;www.example.org"></textarea>
+      <div class="row"><div><label for="t-tags">tagi (po przecinku)</label><input id="t-tags" placeholder="lab, dmz"></div>
+        <div><label for="t-owner">właściciel</label><input id="t-owner"></div>
+        <div style="flex:1"><label for="t-note">notatka (szyfrowana)</label><input id="t-note" style="width:100%"></div></div>
+      <div style="margin-top:12px"><button class="btn" id="t-add">Dodaj cele</button></div>
+      <div id="t-msg" class="msg"></div>
+    </div>
+    <div class="card"><h2>Import z pliku</h2>
+      <p class="muted" style="margin-top:0">CSV (<span class="mono">target,asset,owner,tags,enabled,note</span>), JSON (<span class="mono">{"targets":[…]}</span>) albo TXT. Ponowny import aktualizuje wpisy o tej samej wartości.</p>
+      <input type="file" id="t-file" accept=".csv,.json,.txt">
+      <div style="margin-top:12px"><button class="btn" id="t-import">Importuj</button></div>
+      <div id="t-imsg" class="msg"></div>
+    </div>
+  </div>
+  <div class="card"><h2 id="t-title">Cele</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>cel</th><th>rodzaj</th><th>asset</th><th>właściciel</th><th>tagi</th><th>notatka</th><th>skanuj</th><th></th></tr></thead><tbody id="t-rows"></tbody></table></div></div>
+</section>
+
+<!-- SCANS -->
+<section id="p-scans" class="hidden">
+  <div class="grid3">
+    <div class="card" data-role="operator"><h2>Nowy skan</h2>
+      <div class="row">
+        <div><label for="s-set">Zbiór celów</label><select id="s-set"></select></div>
+        <div><label for="s-par">Równoległość</label><input id="s-par" type="number" min="1" max="32" value="5" style="width:90px"></div>
+        <div><label for="s-rate">Limit pps (łącznie)</label><input id="s-rate" type="number" min="1" max="5000" value="300" style="width:110px"></div>
+        <div><label for="s-ports">Porty</label><select id="s-ports"><option value="top100">top 100</option><option value="top1000" selected>top 1000</option><option value="custom">własne…</option></select></div>
+        <div id="s-custom-w" class="hidden"><label for="s-custom">lista portów</label><input id="s-custom" placeholder="22,80,443,8000-8100"></div>
+        <div><label for="s-window">Okno czasowe</label><input id="s-window" placeholder="np. 2h" style="width:90px"></div>
+        <div><label for="s-upload">DefectDojo</label><select id="s-upload"><option value="off">bez eksportu</option><option value="end" selected>na końcu</option><option value="live">na żywo</option></select></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="s-start">Uruchom skan</button><button class="btn danger hidden" id="s-stop">Zatrzymaj</button></div>
+      <div id="s-msg" class="msg"></div>
+      <p class="muted" style="margin-bottom:0">Skan uruchamia polecenie <span class="mono">asi scan</span> (jak w MISP: GUI jest nakładką na CLI). Zatrzymanie zachowuje częściowe wyniki, a przebieg dostaje status <i>partial</i>, który nie generuje fałszywych zniknięć.</p>
+    </div>
+    <div class="card"><h2>Stan</h2><div id="s-status"></div><pre class="log mono muted" id="s-log"></pre></div>
+  </div>
+  <div class="card"><h2>Postęp na żywo</h2><iframe class="live" id="s-live" title="Postęp skanu na żywo"></iframe></div>
+  <div class="card"><h2>Przebiegi</h2><div class="scroll"><table><thead><tr><th>przebieg</th><th>status</th><th>zbiór</th><th>czas</th><th>hosty</th><th>porty</th><th>zmiany</th></tr></thead><tbody id="s-runs"></tbody></table></div></div>
+</section>
+
+<!-- ADMIN -->
+<section id="p-admin" class="hidden">
+  <div class="grid2">
+    <div class="card"><h2>Użytkownicy</h2><table><thead><tr><th>login</th><th>rola</th></tr></thead><tbody id="u-rows"></tbody></table>
+      <h2 style="margin-top:18px">Dodaj użytkownika</h2>
+      <div class="row"><div><label for="u-name">login</label><input id="u-name"></div>
+        <div><label for="u-pass">hasło (min. 10)</label><input id="u-pass" type="password"></div>
+        <div><label for="u-role">rola</label><select id="u-role"><option value="viewer">viewer: odczyt</option><option value="analyst">analyst: modyfikacja i odczyt</option><option value="operator">operator: dodawanie, usuwanie, modyfikacja</option><option value="admin">admin</option></select></div>
+        <div><button class="btn" id="u-add">Dodaj</button></div></div>
+      <div id="u-msg" class="msg"></div></div>
+    <div class="card"><h2>Dziennik audytu</h2><div class="scroll"><table><thead><tr><th>kiedy</th><th>kto</th><th>akcja</th><th>obiekt</th></tr></thead><tbody id="au-rows"></tbody></table></div></div>
+  </div>
+</section>
+</main>
+</div>
+
+<aside id="drawer" class="drawer hidden" aria-label="Szczegóły assetu"></aside>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LV={viewer:1,analyst:2,operator:3,admin:4};
+const TYPES=['new','reappeared','changed','missing','gone','flapping'];
+const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)'};
+const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',active:'aktywny',
+  running:'w toku',completed:'zakończony',partial:'częściowy',failed:'błąd',cancelled:'anulowany'};
+let me=null, curSet='default', timer=null;
+
+async function api(path,opt={}){
+  opt.headers=Object.assign({'X-ASI':'1'},opt.body&&!(opt.body instanceof FormData)?{'Content-Type':'application/json'}:{},opt.headers||{});
+  opt.credentials='same-origin';
+  const r=await fetch(path,opt);
+  if(r.status===401){showLogin();throw new Error('login')}
+  const ct=r.headers.get('content-type')||'';
+  const body=ct.includes('json')?await r.json():await r.text();
+  if(!r.ok) throw new Error(body.error||body||r.statusText);
+  return body;
+}
+const fmtT=s=>s?new Date(s).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–';
+const tags=a=>(a||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+const badge=(t,cls='t')=>`<span class="badge ${cls}-${esc(t)}">${esc(PL[t]||t)}</span>`;
+const can=r=>me&&LV[me.role]>=LV[r];
+function svcOf(cur){try{const d=typeof cur==='string'?JSON.parse(cur):cur;if(!d)return'';if(d.up)return'host aktywny';return[d.name,d.product,d.version].filter(Boolean).join(' ')}catch{return''}}
+
+// ---------- auth
+function showLogin(){$('v-app').classList.add('hidden');$('v-login').classList.remove('hidden');clearInterval(timer)}
+$('f-login').onsubmit=async e=>{e.preventDefault();$('l-msg').textContent='';
+  try{me=await api('api/v1/login',{method:'POST',body:JSON.stringify({username:$('l-user').value,password:$('l-pass').value})});$('l-pass').value='';start()}
+  catch(err){$('l-msg').textContent=err.message}};
+$('logout').onclick=async()=>{await api('api/v1/logout',{method:'POST'}).catch(()=>{});me=null;showLogin()};
+
+async function start(){
+  $('v-login').classList.add('hidden');$('v-app').classList.remove('hidden');
+  $('who').textContent=me.username;$('role').textContent=me.role;
+  document.querySelectorAll('[data-role]').forEach(el=>el.classList.toggle('hidden',!can(el.dataset.role)));
+  go('dash');
+}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
+function go(p){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  ['dash','assets','targets','scans','admin'].forEach(x=>$('p-'+x).classList.toggle('hidden',x!==p));
+  clearInterval(timer);
+  ({dash:loadDash,assets:loadAssets,targets:loadTargets,scans:loadScans,admin:loadAdmin})[p]();
+  if(p==='dash')timer=setInterval(loadDash,10000);
+  if(p==='scans')timer=setInterval(()=>loadScanStatus(),3000);
+}
+
+// ---------- dashboard
+async function loadDash(){
+  const d=await api('api/v1/dashboard');
+  const h=d.counts.host||{},p=d.counts.port||{};
+  const lastNew=(d.latest_events||[]).filter(e=>e.type==='new'||e.type==='reappeared').length;
+  const k=[['ok',(h.active||0)+(h.new||0),'aktywne hosty'],['',(p.active||0)+(p.new||0),'otwarte usługi'],
+    ['ok',lastNew,'nowe w ostatnim skanie'],['warn',(h.missing||0)+(p.missing||0),'braki (missing)'],
+    ['bad',(h.gone||0)+(p.gone||0),'zniknięte (gone)'],['flap',(h.flapping||0)+(p.flapping||0),'niestabilne (flapping)'],
+    ['bad',(d.interesting||[]).filter(x=>x.interest==='high').length,'krytyczne ekspozycje']];
+  $('kpis').innerHTML=k.map(([c,n,l])=>`<div class="kpi ${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  const order={high:0,medium:1,low:2};
+  const hot=(d.interesting||[]).sort((a,b)=>order[a.interest]-order[b.interest]);
+  $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${x.interest}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
+  const lr=d.latest_run;
+  $('d-ev-title').textContent=lr?`Zmiany w ostatnim przebiegu · ${lr.id} (${PL[lr.status]||lr.status})`:'Zmiany w ostatnim przebiegu';
+  $('d-ev').innerHTML=(d.latest_events||[]).map(e=>`<tr class="click" data-k="${esc(e.key)}"><td>${badge(e.type)}</td><td class="mono">${esc(e.key)}</td><td class="muted">${esc(svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">Brak zmian.</td></tr>';
+  $('d-unst').innerHTML=(d.unstable||[]).map(x=>`<tr class="click" data-k="${esc(x.key)}"><td>${badge(x.reason==='flapping'?'flapping':x.state,x.reason==='flapping'?'t':'s')}</td><td class="mono">${esc(x.key)}</td><td class="muted">${esc(x.service||'')}</td></tr>`).join('')||'<tr><td class="empty">Wszystko stabilne.</td></tr>';
+  const tl=d.timeline||[];const max=Math.max(1,...tl.map(r=>TYPES.reduce((s,t)=>s+(r.counts[t]||0),0)));
+  $('d-bars').innerHTML=tl.map(r=>{const tot=TYPES.reduce((s,t)=>s+(r.counts[t]||0),0);
+    return `<div class="bar" title="${esc(r.run_id)}: ${TYPES.filter(t=>r.counts[t]).map(t=>PL[t]+' '+r.counts[t]).join(', ')||'bez zmian'}">${TYPES.map(t=>r.counts[t]?`<i style="height:${110*r.counts[t]/max}px;background:${TCOL[t]}"></i>`:'').join('')}${tot?'':'<i style="height:2px;background:var(--line)"></i>'}</div>`}).join('');
+  $('d-legend').innerHTML=TYPES.map(t=>`<span><i style="background:${TCOL[t]}"></i>${PL[t]}</span>`).join('')+'<span>· oś X: kolejne przebiegi</span>';
+  const s=d.scan||{};
+  $('d-scan').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b> od ${fmtT(s.started)} (${esc(s.by)})</p><button class="btn sec" onclick="go('scans')">Podgląd na żywo</button>`
+    :`<p class="muted">Brak aktywnego skanu.${lr?` Ostatni: ${esc(lr.id)}, ${PL[lr.status]||lr.status}.`:''}</p>${can('operator')?'<button class="btn" onclick="go(\'scans\')">Nowy skan</button>':''}`;
+  bindRows();
+}
+function bindRows(){document.querySelectorAll('tr.click[data-k]').forEach(tr=>tr.onclick=()=>openAsset(tr.dataset.k))}
+
+// ---------- assets
+async function loadAssets(){
+  const q=new URLSearchParams({q:$('a-q').value,state:$('a-state').value,kind:$('a-kind').value,flapping:$('a-flap').checked?'1':''});
+  const rows=await api('api/v1/assets?'+q);
+  $('a-rows').innerHTML=rows.map(a=>`<tr class="click" data-k="${esc(a.key)}"><td class="mono">${esc(a.key)}</td><td>${esc(a.service||(a.kind==='host'?'host':''))}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`).join('')||'<tr><td class="empty" colspan="7">Brak assetów. Uruchom skan.</td></tr>';
+  $('a-count').textContent=rows.length+' assetów';bindRows();
+}
+$('a-go').onclick=loadAssets;$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};
+
+async function openAsset(key){
+  const [rows,ev]=await Promise.all([api('api/v1/assets?q='+encodeURIComponent(key)),api('api/v1/asset/events?key='+encodeURIComponent(key))]);
+  const a=rows.find(x=>x.key===key);if(!a)return;
+  const hrs=[...Array(24)].map((_,h)=>`<i class="${a.hours_seen&(1<<h)?'on':''}" title="${h}:00 UTC"></i>`).join('');
+  const dr=$('drawer');dr.classList.remove('hidden');
+  dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(a.key)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
+  <p>${badge(a.state,'s')} ${a.flapping?badge('flapping'):''} ${a.interest?`<span class="i-${a.interest}">ocena ${a.interest}</span> <span class="muted">${esc(a.reason||'')}</span>`:''}</p>
+  <table><tr><th>pierwszy raz</th><td>${fmtT(a.first_seen)}</td></tr><tr><th>ostatnio</th><td>${fmtT(a.last_seen)} (${esc(a.last_seen_run)})</td></tr>
+  <tr><th>widziany</th><td>${a.seen_count}× · kolejne braki: ${a.consecutive_misses}</td></tr></table>
+  <label>Godziny, w których odpowiadał (UTC)</label><div class="hours">${hrs}</div><div class="hours-l"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div>
+  <label>Ostatnia obserwacja</label><pre class="json mono">${esc(JSON.stringify(a.current,null,2))}</pre>
+  <h2 style="margin-top:16px">Twoje dane (zachowane przy kolejnych skanach)</h2>
+  <label for="dr-tags">tagi (po przecinku)</label><input id="dr-tags" style="width:100%" value="${esc((a.user_tags||[]).join(', '))}" ${can('analyst')?'':'disabled'}>
+  <label for="dr-note">notatka (szyfrowana w bazie)</label><textarea id="dr-note" ${can('analyst')?'':'disabled'}>${esc(a.user_note||'')}</textarea>
+  ${can('analyst')?'<div style="margin-top:10px"><button class="btn" id="dr-save">Zapisz</button> <span id="dr-msg" class="msg"></span></div>':'<p class="muted">Rola viewer: tylko odczyt.</p>'}
+  <h2 style="margin-top:18px">Historia</h2><table>${ev.map(e=>`<tr><td>${badge(e.type)}</td><td>${fmtT(e.at)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">brak</td></tr>'}</table>`;
+  $('dr-x').onclick=()=>dr.classList.add('hidden');
+  if($('dr-save'))$('dr-save').onclick=async()=>{
+    const t=$('dr-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+    try{await api('api/v1/asset?key='+encodeURIComponent(key),{method:'PATCH',body:JSON.stringify({user_tags:t,user_note:$('dr-note').value})});$('dr-msg').className='msg ok';$('dr-msg').textContent='zapisano'}
+    catch(e){$('dr-msg').className='msg err';$('dr-msg').textContent=e.message}};
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('drawer').classList.add('hidden')});
+
+// ---------- targets
+async function loadSets(sel){
+  const sets=await api('api/v1/target-sets');if(!sets.includes(curSet))sets.push(curSet);
+  sel.innerHTML=sets.map(s=>`<option ${s===curSet?'selected':''}>${esc(s)}</option>`).join('');
+}
+async function loadTargets(){
+  await loadSets($('t-set'));
+  const rows=await api('api/v1/targets?set='+encodeURIComponent(curSet));
+  $('t-title').textContent=`Cele w zbiorze „${curSet}” (${rows.length})`;
+  const op=can('operator');
+  $('t-rows').innerHTML=rows.map(t=>`<tr><td class="mono">${esc(t.target)}</td><td>${esc(t.kind)}</td><td>${esc(t.asset)}</td><td>${esc(t.owner)}</td><td>${tags(t.tags)}</td><td class="muted">${esc(t.note)}</td>
+    <td><input type="checkbox" data-id="${t.id}" class="t-en" ${t.enabled?'checked':''} ${op?'':'disabled'} aria-label="skanuj ${esc(t.target)}"></td>
+    <td>${op?`<button class="link t-del" data-id="${t.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Zbiór jest pusty.</td></tr>';
+  document.querySelectorAll('.t-en').forEach(cb=>cb.onchange=async()=>{const t=rows.find(x=>x.id==cb.dataset.id);t.enabled=cb.checked;t.set=curSet;
+    await api('api/v1/targets/'+t.id,{method:'PUT',body:JSON.stringify(t)})});
+  document.querySelectorAll('.t-del').forEach(b=>b.onclick=async()=>{if(!confirm('Usunąć cel?'))return;await api('api/v1/targets/'+b.dataset.id,{method:'DELETE'});loadTargets()});
+}
+$('t-set').onchange=()=>{curSet=$('t-set').value;loadTargets()};
+$('t-useset').onclick=()=>{const v=$('t-newset').value.trim();if(v){curSet=v;$('t-newset').value='';loadTargets()}};
+function showRes(el,r){el.className='msg '+(r.rejected&&r.rejected.length?'err':'ok');el.innerHTML=`Zapisano ${r.written}.`+(r.rejected&&r.rejected.length?` Odrzucone: ${r.rejected.map(esc).join('; ')}`:'')}
+$('t-add').onclick=async()=>{try{const r=await api('api/v1/targets',{method:'POST',body:JSON.stringify({set:curSet,text:$('t-text').value,
+  tags:$('t-tags').value.split(',').map(s=>s.trim()).filter(Boolean),owner:$('t-owner').value,note:$('t-note').value})});showRes($('t-msg'),r);$('t-text').value='';loadTargets()}
+  catch(e){$('t-msg').className='msg err';$('t-msg').textContent=e.message}};
+$('t-import').onclick=async()=>{const f=$('t-file').files[0];if(!f){$('t-imsg').className='msg err';$('t-imsg').textContent='Wybierz plik.';return}
+  const fd=new FormData();fd.append('file',f);fd.append('set',curSet);
+  try{const r=await api('api/v1/targets/import',{method:'POST',body:fd});showRes($('t-imsg'),r);loadTargets()}catch(e){$('t-imsg').className='msg err';$('t-imsg').textContent=e.message}};
+
+// ---------- scans
+$('s-ports').onchange=()=>$('s-custom-w').classList.toggle('hidden',$('s-ports').value!=='custom');
+async function loadScans(){
+  await loadSets($('s-set'));
+  const runs=await api('api/v1/runs');
+  $('s-runs').innerHTML=runs.map(r=>{const s=r.stats||{};return `<tr class="click" data-run="${esc(r.id)}"><td class="mono">${esc(r.id)}</td><td>${badge(r.status,'s')}</td><td>${esc(r.set_name)}</td>
+    <td>${s.duration_s?Math.round(s.duration_s)+' s':'–'}</td><td>${s.hosts_up??'–'}/${s.targets??'–'}</td><td>${s.open??'–'}</td><td><button class="link">zmiany →</button></td></tr>`}).join('')||'<tr><td class="empty" colspan="7">Brak przebiegów.</td></tr>';
+  document.querySelectorAll('tr[data-run]').forEach(tr=>tr.onclick=()=>showRun(tr.dataset.run));
+  loadScanStatus(true);
+}
+async function showRun(id){
+  const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');const dr=$('drawer');dr.classList.remove('hidden');
+  dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(id)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
+  <p class="muted">${ev.length} zmian</p><table>${ev.map(e=>`<tr class="click" data-k="${esc(e.key)}"><td>${badge(e.type)}</td><td class="mono">${esc(e.key)}</td><td class="muted">${esc(e.type==='changed'?svcOf(e.before)+' → '+svcOf(e.after):svcOf(e.after||e.before))}</td></tr>`).join('')||'<tr><td class="empty">Bez zmian.</td></tr>'}</table>`;
+  $('dr-x').onclick=()=>dr.classList.add('hidden');bindRows();
+}
+let wasRunning=false;
+async function loadScanStatus(force){
+  const s=await api('api/v1/scans/current');
+  $('s-start').disabled=s.running;$('s-stop').classList.toggle('hidden',!s.running||!can('operator'));
+  $('s-status').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b>, od ${fmtT(s.started)}, uruchomił ${esc(s.by)}</p>`
+    :s.started?`<p>Ostatni skan zakończony ${fmtT(s.finished)}${s.exit_error?` <span class="msg err">(${esc(s.exit_error)})</span>`:''}</p>`:'<p class="muted">Brak skanu w tej sesji serwera.</p>';
+  $('s-log').textContent=(s.log_tail||[]).join('\n');
+  if(s.running&&(!wasRunning||force)) $('s-live').src='live/';
+  if(!s.running&&wasRunning){loadScans()}
+  if(!s.running&&force&&!$('s-live').src) $('s-live').srcdoc='<p style="font:14px system-ui;color:#888;padding:16px">Brak aktywnego skanu.</p>';
+  wasRunning=s.running;
+}
+$('s-start').onclick=async()=>{
+  const ports=$('s-ports').value==='custom'?$('s-custom').value.trim():$('s-ports').value;
+  try{await api('api/v1/scans',{method:'POST',body:JSON.stringify({set:$('s-set').value,parallel:+$('s-par').value,rate:+$('s-rate').value,ports,window:$('s-window').value.trim(),upload:$('s-upload').value})});
+    $('s-msg').className='msg ok';$('s-msg').textContent='Skan uruchomiony.';setTimeout(()=>loadScanStatus(true),1500)}
+  catch(e){$('s-msg').className='msg err';$('s-msg').textContent=e.message}};
+$('s-stop').onclick=async()=>{if(!confirm('Zatrzymać skan? Częściowe wyniki zostaną zapisane.'))return;await api('api/v1/scans/current/stop',{method:'POST'})};
+
+// ---------- admin
+async function loadAdmin(){
+  const [us,au]=await Promise.all([api('api/v1/users'),api('api/v1/audit')]);
+  $('u-rows').innerHTML=us.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.role)}</td></tr>`).join('');
+  $('au-rows').innerHTML=au.map(a=>`<tr><td>${fmtT(a.at)}</td><td>${esc(a.username)}</td><td>${esc(a.action)}</td><td class="mono">${esc(a.object)}</td></tr>`).join('');
+}
+$('u-add').onclick=async()=>{try{await api('api/v1/users',{method:'POST',body:JSON.stringify({username:$('u-name').value,password:$('u-pass').value,role:$('u-role').value})});
+  $('u-msg').className='msg ok';$('u-msg').textContent='Dodano.';$('u-pass').value='';loadAdmin()}catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message}};
+
+// ---------- boot
+api('api/v1/me').then(u=>{me=u;start()}).catch(()=>showLogin());
+</script>
+</body>
+</html>

@@ -61,6 +61,8 @@ func main() {
 		cmdServe(args)
 	case "db":
 		cmdDB(args)
+	case "server":
+		cmdServer(args)
 	case "changes":
 		cmdChanges(args)
 	case "assets":
@@ -73,7 +75,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <convert|plan|scan|upload|diff|serve|db|changes|assets|asset> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <server|convert|plan|scan|upload|diff|serve|db|changes|assets|asset> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 
@@ -193,6 +195,7 @@ func cmdScan(args []string) {
 	chunkTimeout := fs.Duration("chunk-timeout", 20*time.Minute, "kill a single nmap after this")
 	window := fs.Duration("window", 0, "scan window: stop everything after this (e.g. 2h), 0 = no limit")
 	outRoot := fs.String("out", "results", "results directory")
+	uiWait := fs.Bool("ui-wait", true, "with -ui: keep the panel open after the scan until Ctrl+C")
 	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	recCfg := reconcileFlags(fs)
@@ -450,7 +453,10 @@ func cmdScan(args []string) {
 			printDiff(d)
 		}
 	}
-	if srv != nil {
+	if srv != nil && !*uiWait {
+		time.Sleep(2 * time.Second) // let the panel show the final state
+		srv.Close()
+	} else if srv != nil {
 		fmt.Fprintf(os.Stderr, "panel: http://%s  (Ctrl+C aby zamknąć)\n", *ui)
 		stop()
 		c := make(chan os.Signal, 1)
