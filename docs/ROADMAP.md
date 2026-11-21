@@ -4,7 +4,12 @@ Plan rozwoju etapami: najpierw dzialajacy PoC, potem dokladamy po jednym
 klocku tak, zeby po kazdym etapie stack dalej dzialal i bylo widac efekt w
 DefectDojo.
 
-Zasada: **gotowe narzedzia + DefectDojo zamiast wlasnego kodu**. Wlasny kod
+**Kierunek od 21.11: wlasny system ASI (Go) z eksportem do DefectDojo** -
+architektura i rdzen w [`VISION.md`](VISION.md). Mapa wymagan nizej
+powstala, gdy zakladalismy DD jako UI; wiersze o RBAC, formularzu,
+dashboardzie i diffie realizuje teraz ASI (DD dostaje eksport).
+
+Zasada: **gotowe narzedzia zamiast wlasnego kodu**. Wlasny kod
 tylko tam, gdzie nic istniejacego nie spelnia wymagania albo gdzie nasze
 rozwiazanie jest wyraznie lepsze (to jest nasze pole do innowacji).
 
@@ -78,38 +83,44 @@ bo parser Nmapa w DD tworzy findingi tylko z otwartych portow.
 - Ograniczenie: zamkniecie nastepuje juz po jednym braku - hosty niestabilne
   to etap 6.
 
-### Etap 2 - identyfikacja uslug i skala
-- `nmap -sV` na znalezionych portach; szybkie odkrywanie portow naabu/masscan
-  z limitem `--rate`.
-- Podzial celow na podgrupy + rownolegle uruchomienia, czas trwania z
-  `runstats` nmapa / pol start-end testu w DD.
+Etapy 0-1 to PoC na Makefile + skryptach (zostaje jako test dymny).
+Dalej budujemy ASI wg `VISION.md`:
 
-### Etap 3 - fingerprint HTTP/HTTPS
-- httpx na uslugach HTTP -> `httpx Scan`. Sprawdzic, czy naglowki/cookies/cert
-  laduja w DD; jesli nie - nuclei/nmap NSE (`http-headers`, `ssl-cert`,
-  `http-cookie-flags`) jako uzupelnienie.
+### Etap 2 - rdzen ASI
+- `asi-postgres`, migracje, model danych (VISION 4.2), szkielet `asi`
+  (server / worker / CLI), tokeny + pierwszy admin.
+- Import celow (CSV/JSON/recznie), rozwijanie zakresu, wykluczenia,
+  chunking (staly rozmiar), kolejka River.
+- Worker: etapy `discovery` + `ports` na nmapie, obserwacje w bazie.
+- Postep runu (`asi run status --watch`).
+- Eksport do DD (przeniesiona logika z `import-defectdojo.sh`).
+- Demo: to samo co `make poc`, ale przez `asi` i na chunkach.
 
-### Etap 4 - technologie, panele, wlasne sygnatury
-- nuclei tylko z bezpiecznymi szablonami (`-tags tech,panel`, wykluczone
-  `intrusive,dos,fuzz`), katalog `signatures/` z naszymi szablonami.
-- Przyklady sygnatur od organizatora przepisujemy na szablony nuclei.
+### Etap 3 - historia i diff
+- Assety, reconcile (VISION 4.7): new/missing/gone/reappeared/changed,
+  zasada pokrycia i hierarchii, flapping, `asi changes` / `asi diff`.
+- Eksport eventow do DD jako `Generic Findings` (`asi-changes`).
 
-### Etap 5 - harmonogram, okna czasowe, limity
-- Scheduler w compose, `timeout` do konca okna, wznowienie w kolejnym oknie.
+### Etap 4 - RBAC i audit
+- 4 role, uprawnienia per trasa API, audit log, edycja assetow (tagi,
+  notatki) zachowywana miedzy runami.
 
-### Etap 6 - niestabilne hosty i zmiany w czasie (innowacja)
-- Host/usluga "nieaktywny" dopiero po N kolejnych brakach (np. tagi w DD,
-  wlasny reconciler przez API), roznice zalezne od pory dnia, ocena
-  "ciekawosci" findingow.
+### Etap 5 - wiecej skanerow
+- naabu (`ports`), `nmap -sV` (`services`), httpx (`http`), nuclei + nasze
+  sygnatury (`signatures`).
 
-### Etap 7 - role, cele z DD, szyfrowanie, prezentacja
-- Mapowanie 4 rol z briefu na role DD + uzytkownicy demo.
-- Cele zarzadzane w DD (endpointy produktu) zamiast `scans/targets.txt`.
-- Szyfrowanie w spoczynku, dokumentacja, prezentacja do 10 slajdow.
+### Etap 6 - harmonogram i limity
+- Profile z cronem i oknem czasowym, `deferred` chunki, globalny limit pps,
+  dozwolone porty, adaptacyjny rozmiar chunkow.
+
+### Etap 7 - szyfrowanie, web UI, prezentacja
+- Szyfrowanie pol (VISION 6), web UI na API, dokumentacja, slajdy.
 
 ## Do potwierdzenia z mentorami (wazne dla architektury)
-- Czy UI DefectDojo (formularze, RBAC, dashboard) moze byc "interfejsem
-  rozwiazania", czy jury oczekuje wlasnego UI. Od tego zalezy, czy etap 7
-  to konfiguracja DD, czy wlasna aplikacja.
+- ~~Czy UI DefectDojo moze byc interfejsem rozwiazania~~ - rozstrzygniete:
+  DD to cel eksportu, budujemy wlasny system (DECISIONS 8).
 - Lista dozwolonych portow, limity ruchu, zakres labu (patrz zasoby z briefu).
+- Kiedy i gdzie (Discord / stanowisko AGH) dostaniemy materialy z briefu:
+  konfiguracje labu, przykladowe sygnatury, format eksportu/importu JSON/CSV,
+  wyniki referencyjne, liste "ciekawych artefaktow".
 - Wymaganie szyfrowania: czy wystarczy szyfrowany wolumen, czy chca TDE w bazie.

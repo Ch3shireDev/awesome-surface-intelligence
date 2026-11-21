@@ -60,14 +60,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
    repo: konfiguracja bind-mountami z `./docker/...`, dane runtime w nazwanych
    wolumenach (`make nuke` czysci).
 
-4. **DefectDojo = dashboard.** Nie budujemy wlasnego UI/frontendu -
+4. **[ZASTAPIONA przez 8]** **DefectDojo = dashboard.** Nie budujemy wlasnego UI/frontendu -
    DefectDojo juz ma pelny interfejs (findings, severity, engagements,
    metryki, raporty). Nasz wklad to pipeline: skan -> XML -> import do
    DefectDojo (`/api/v2/import-scan/`, `scan_type=Nmap Scan` - wbudowany
    parser, nic nie trzeba pisac recznie).
    Brief wymaga tez formularza celow, RBAC z 4 rolami i dashboardu - zakladamy,
    ze pokrywa to DefectDojo (endpointy produktu, role Owner/Maintainer/Writer/
-   Reader, dashboard). **Do potwierdzenia z mentorami** (patrz ROADMAP.md).
+   Reader, dashboard). Nieaktualne - patrz decyzja 8.
 
 5. **Nmap w osobnym, malym kontenerze** (alpine + nmap + curl + jq,
    `network_mode: host` - skanuje z perspektywy VM, bez NAT-u dockera),
@@ -87,6 +87,19 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
    konwertujemy na `Generic Findings Import` (kilka linii awk+jq), bo parser
    Nmapa ignoruje hosty bez otwartych portow.
 
+8. **Wlasny system ASI w Go; DefectDojo tylko jako cel eksportu**
+   (21.11, po doprecyzowaniu z zespolem). CBI AGH ma DefectDojo, ale
+   skanowanie duzych sieci z jego poziomu jest niewygodne - budujemy
+   brakujacy "detektor" przed DD: wlasna baza (PostgreSQL), chunking
+   zakresow, kolejka zadan (River), gotowe skanery jako adaptery,
+   historia/diff, RBAC (4 role), eksport do DD przez `reimport-scan`. Na
+   razie API + CLI, web UI pozniej. Go: sugestia briefu i ekosystem
+   ProjectDiscovery. Szczegoly: `docs/VISION.md`.
+
+9. **Szyfrowanie w spoczynku: pola szyfrowane w aplikacji (AES-256-GCM)**.
+   Zwykly PostgreSQL nie ma TDE (`pgcrypto` przepuszcza klucz przez SQL).
+   Szyfrowanie wolumenu / `pg_tde` jako opcjonalna druga warstwa.
+
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
@@ -104,6 +117,10 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
   Testssl, Generic Findings Import (JSON/CSV).
 - `reimport-scan` zwraca diff created/closed/reactivated/untouched - porownanie
   przebiegow robi DD.
+- Pierwszy `make up` na VM zawiesil sie bez outputu (nic sie nie pobieralo
+  przez ~10 min, pojedynczy `docker pull` tez wisial). Po ubiciu compose
+  drugi `make up` przeszedl normalnie. Przyczyna nieustalona - jesli sie
+  powtorzy: ubic i odpalic ponownie.
 - Ponowny `import-scan` tego samego pliku duplikuje findingi (dedup domyslnie
   wylaczony) - do cyklicznych skanow uzywac `reimport-scan`.
 

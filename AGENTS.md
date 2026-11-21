@@ -5,12 +5,16 @@ Kontekst dla agentow AI pracujacych w tym repo (Claude Code / inne).
 ## Co to jest
 
 Projekt hackathonowy na HackNation 2026, wyzwanie **Attack Surface
-Intelligence** (partner: AGH/CBI AGH). Cel: pipeline do automatycznego
-skanowania bezpieczenstwa (Nmap) z importem wynikow do DefectDojo
-(dostarczone przez organizatora narzedzie do zarzadzania podatnosciami).
-Pelny kontekst decyzji: `docs/DECISIONS.md` - przeczytaj go PRZED
-wprowadzaniem zmian architektonicznych, zawiera uzasadnienia (np. dlaczego
-SecureCodeBox zostal swiadomie odrzucony na rzecz wlasnego rozwiazania).
+Intelligence** (partner: AGH/CBI AGH). Budujemy wlasny system (Go) do
+cyklicznego discovery scanu duzych sieci: chunking zakresow, gotowe skanery
+(nmap, naabu, httpx, nuclei), postep, historia i diff, RBAC, eksport do
+DefectDojo (system koncowy CBI AGH - eksportujemy do niego, nie budujemy na
+nim).
+
+Przeczytaj PRZED wieksza zmiana:
+- `docs/VISION.md` - architektura, rdzen, model danych, schemat dzialania,
+- `docs/DECISIONS.md` - log decyzji z uzasadnieniami,
+- `docs/ROADMAP.md` - brief w skrocie i etapy.
 
 ## Twarde zasady
 
@@ -29,18 +33,24 @@ SecureCodeBox zostal swiadomie odrzucony na rzecz wlasnego rozwiazania).
 - **Nie commituj `.env`, `scans/targets.txt` ani plikow wynikowych
   `scans/results/*.xml`** - sa w `.gitignore` celowo (dane ze srodowiska
   sandbox, API key DefectDojo).
-- DefectDojo jest dashboardem docelowym - nie buduj wlasnego frontendu/UI
-  do wizualizacji wynikow, to zdublowana praca wzgledem tego, co juz daje
-  DefectDojo.
+- DefectDojo to **cel eksportu**, nie nasze UI ani baza. Nasze dane zyja w
+  `asi-postgres`. Web UI ASI powstanie pozniej - na razie tylko API + CLI,
+  nie zaczynaj frontendu bez ustalenia.
+- Skanery uruchamiamy jako gotowe narzedzia (adaptery w
+  `internal/scanner/`). Nie piszemy wlasnych skanerow portow/HTTP.
+- Repo lezy w katalogu synchronizowanym przez Syncthing (`~/sync`).
+  `.gitignore` nie chroni przed Syncthingiem - `.env` (hasla, klucze) i
+  `scans/results/` rozchodza sie na inne urzadzenia, chyba ze sa w
+  `.stignore`.
 - `docker-compose.yml` jest wyrownany do upstreamowego compose DefectDojo
   3.5.202. Jesli cos w nim poprawiasz, zaktualizuj rowniez
   `docs/DECISIONS.md` (sekcja decyzji nr 3).
 
 ## Konwencje
 
-- Wszystkie inwokacje nmapa ida przez `Makefile` - to jedyne miejsce, gdzie
-  trzymamy konkretne flagi/opcje skanu. Nie dodawaj ad-hoc wywolan nmapa w
-  skryptach obok.
+- Etap przejsciowy (PoC): dopoki nie ma `asi`, inwokacje nmapa ida przez
+  `Makefile`. Docelowo flagi skanerow zyja w adapterach i profilach ASI
+  (`docs/VISION.md`, 4.3), a `make poc` zostaje jako test dymny.
 - Nowe cele `make` dopisuj w sekcji odpowiadajacej istniejacemu wzorcowi
   (patrz `scan-fast` jako referencja) i dodaj je do listy w `help:`.
 - Sekrety/klucze (`DD_API_KEY`, hasla) tylko w `.env` (gitignored), nigdy w
@@ -56,6 +66,8 @@ SecureCodeBox zostal swiadomie odrzucony na rzecz wlasnego rozwiazania).
 - `Makefile` - sterowanie skanami i importem do DefectDojo.
 - `scans/targets.example.txt` - szablon listy celow (skopiuj do
   `scans/targets.txt` PO potwierdzeniu zakresu).
+- `docs/VISION.md` - wizja, architektura i rdzen (zrodlo prawdy dla
+  projektu systemu).
 - `docs/ROADMAP.md` - streszczenie briefu, mapa wymaganie -> narzedzie,
   plan etapow. Przed nowym etapem sprawdz, co pokrywa gotowe narzedzie/DD.
 - `docs/DECISIONS.md` - log decyzji, otwarte pytania, TODO wedlug
