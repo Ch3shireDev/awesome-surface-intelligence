@@ -246,6 +246,21 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       i paczki "wykryto filtrowanie ruchu - wynik niepelny", traktowana jak `timedout` (bez brakow,
       `close_old=false`); (4) w DD finding `info` "host filtruje ruch / wynik niepelny" zamiast znikania uslug.
 
+21. **Adres w pasku = stan panelu: ścieżki, nie `#hash`** (DEV-14, 21.11).
+    - Wybór: `/assets/<klucz>`, `/scans/<id>` i filtry w query stringu (`?state=live&kind=host`). Hash routing nie
+      wymagałby zmian w serwerze, ale daje brzydkie linki i nie działa przy „otwórz w nowej karcie” w części
+      narzędzi; mentor patrzy na GUI, więc adres ma być normalny.
+    - Koszt: serwer musi zwracać SPA także pod ścieżkami widoków. Rejestrujemy **tylko znane widoki**
+      (`GET /assets`, `/assets/`, `/targets`, `/scans`, `/scans/`, `/account`, `/admin`), a nie `/{path...}`,
+      bo wildcard koliduje z `/live/` (dowolne metody) i wyłapywałby literówki w `/api/…`.
+    - Klucz assetu zawiera `/` (`192.0.2.15/tcp/80`), więc w ścieżce jest `%2F`. Przeglądarki nie dekodują `%2F`
+      w `location.pathname`, serwer dekoduje, ale i tak trafia w subtree `/assets/` — dlatego obie strony widzą
+      poprawny klucz. Sprawdzone testem `Q1–Q3`.
+    - Skutek uboczny: wszystkie `fetch` w panelu muszą być bezwzględne (`/api/v1/…`), bo względne `api/…`
+      rozwiązywałyby się pod `/assets/…`. Ten sam powód dla `/live/` w iframe.
+    - Zamykanie panelu szczegółów: klik w wiersz dokłada wpis historii, „✕”/`Esc` robi krok wstecz; wejście
+      z linku (bez wpisu w historii) tylko czyści adres `replaceState`, żeby nie wypychać użytkownika z panelu.
+
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan
