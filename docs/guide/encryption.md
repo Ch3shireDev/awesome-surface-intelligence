@@ -79,6 +79,12 @@ Dane przeniesione z jawnej bazy (`pg_dump`/`pg_restore`) mają w kolumnach `_enc
 aktywny klucz w jednej transakcji; rekordy już zaszyfrowane pomija, więc można go uruchamiać wielokrotnie.
 `asi db reseal -dry-run` tylko liczy. Bez `ASI_ENCRYPTION_KEYS` komenda odmawia pracy.
 
+Odbudowa schematu (`DROP SCHEMA public CASCADE` + `pg_restore`) usuwa rozszerzenie `pg_tde`, a wraz z nim
+szyfrowanie tabel: tabele wracają z dumpa na `heap`, mimo że baza ma `default_table_access_method = tde_heap`.
+Po takiej operacji uruchom idempotentny `scripts/tde-reenable.sql` (rozszerzenie, istniejący key provider
+i klucz z wolumenu `asi_db_keys`, `ALTER TABLE ... SET ACCESS METHOD tde_heap`, raport `pg_tde_is_encrypted`).
+Potem `make crypto-check` musi wrócić do 9 OK / 0 FAIL, a `asi db reseal` domknąć kolumny `_enc`.
+
 ## Weryfikacja (do demo): `make crypto-check`
 
 Skrypt `docker/asi-db/crypto-check.sh` uruchamiany w kontenerze `asi-db` (tylko odczyt + `CHECKPOINT`):
