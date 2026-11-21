@@ -106,6 +106,20 @@ func TestEnforceDefaultsPass(t *testing.T) {
 	}
 }
 
+// LAB-2: drugi przebieg identyfikacji (--version-all) musi przechodzić allowlistę -
+// nmap z --version-light nie probkuje nieznanych portów (PostgreSQL na 15432 zostawał bez usługi).
+func TestEnforceVersionAll(t *testing.T) {
+	p := Default()
+	a := "-sT -sV --version-all -Pn -T3 --max-retries 2 --host-timeout 2m --max-rate 50 -p 15432,8888"
+	if _, err := p.Enforce(strings.Fields(a), Opts{}); err != nil {
+		t.Fatalf("--version-all odrzucone: %v", err)
+	}
+	// to nadal detekcja, nie exploitacja: skrypty NSE poza allowlistą zostają zablokowane
+	if _, err := p.Enforce(strings.Fields("-sV --version-all --script vuln"), Opts{}); err == nil {
+		t.Fatal("--script vuln przepuszczony")
+	}
+}
+
 func TestEnforceRejects(t *testing.T) {
 	p := Default()
 	for _, a := range []string{

@@ -108,6 +108,37 @@ przebiegu (`plan.json`). Zweryfikowane: 0 obcych warunków, a DD zamknął 2 bł
 Zostaje: LAB-T5 (diff „gone/new” vs baza „missing/reappeared”), LAB-T6 (instalator Gitea), szum usług samej
 VM (SSH, Syncthing, procesy lokalne). To prawdziwe usługi hosta, w labie jury wykluczyć je zakresem/portami.
 
+## Wyniki LAB-2 (21.11, `custom-network` na blackarch, amd64)
+
+Własna, niezależna kopia stacku organizatorów: `lab.zip` → `~/lab-org` (poza repo), `docker compose -f
+docker-compose-custom-network.yml up -d`, jeden stack naraz. Cel `127.0.0.1`, porty podane jawnie
+(`-ports 2223,3001,5673,8787,8888,15432,15673`), `-rate 200 -parallel 2`, przebieg ~60 s.
+
+| wymóg LAB-2 | wynik |
+|---|---|
+| 7 portów | **7/7** otwarte: 2223, 3001, 5673, 8787, 8888, 15432, 15673 |
+| poprawne usługi z `-sV` | ssh OpenSSH 10.3 · http Golang net/http (Gitea) · amqp · nginx 1.31.9 · http gunicorn/19.9.0 (httpbin) · **postgresql PostgreSQL DB 9.6.0 or later** · http Cowboy httpd (RabbitMQ) |
+| Gitea w HTTP | tytuł `Installation - Gitea: Git with a cup of tea`, tech `Gitea`, `Go` |
+| RabbitMQ w HTTP | tytuł `RabbitMQ Management`, tech `Bootstrap`, `Cowboy`, `Erlang`, `jQuery:3.5.1` |
+| httpbin | tytuł `httpbin.org`, `gunicorn/19.9.0`, `Python`, `Swagger UI` |
+| nginx | tytuł `Welcome to nginx!`, `Nginx:1.31.9` |
+
+**Dwie luki wykryte tym testem (naprawione w tym samym dniu):**
+
+1. **PostgreSQL na 15432 bez usługi.** `--version-light` probkuje tylko porty znane nmapowi, więc niestandardowe
+   porty wracały bez identyfikacji (puste `service`). Dodany etap *version probe*: po fazie usług ASI robi drugi,
+   wąski przebieg `-sV --version-all` tylko na porty bez rozpoznania (≤512 par host-port), z tą samą polityką
+   i limitem tempa (`--max-rate`), a wynik zastępuje słaby wpis (licznik usług się nie zmienia).
+   Efekt: `15432 → postgresql PostgreSQL DB 9.6.0 or later`.
+2. **httpbin na 8888 jako `tcpwrapped`** — nmap zamyka sondę, ale httpx pobiera stronę. Teraz po fazie HTTP porty
+   z `tcpwrapped`/`unknown`, dla których httpx ma odpowiedź, dostają `http` + `product` z nagłówka `Server`
+   (tu `gunicorn/19.9.0`) i przeliczoną ocenę. `--version-all` jest na allowliście `internal/safety` jako flaga
+   wyłącznie detekcyjna (`TestEnforceVersionAll`, skrypty NSE poza allowlistą nadal blokowane).
+
+**Do decyzji przy LAB-3:** stack `modern` wiąże WordPressa na 8080, a u nas na 8080 stoi DefectDojo — lokalną
+kopię uruchamiamy z remapem portu (np. `18080:80`), żeby nie zatrzymywać naszego stacku. Wynik LAB-3 opisze
+faktyczne porty.
+
 ## Wyniki LAB-5 (21.11, Toxiproxy, `modern-proxy`)
 
 Domyślne ustawienia skanera (pełne TCP przez `-ports auto`, pomijanie portów ASI/DD), cel `127.0.0.1`,

@@ -52,6 +52,7 @@ var nmapFlags = map[string]flagSpec{
 	"-p": {value: true, check: anyValue}, "--top-ports": {value: true, check: intIn(1, 65535)}, "-r": {},
 	// version detection
 	"--version-light": {}, "--version-intensity": {value: true, check: intIn(0, 9)},
+	"--version-all": {}, // detection only: full probe set for ports --version-light skipped (e.g. PostgreSQL on 15432)
 	// timing and limits (no --min-rate: it would push past the rate limit)
 	"--max-rate":            {value: true, check: intIn(1, 100000)},
 	"--max-retries":         {value: true, check: intIn(0, 10)},

@@ -459,11 +459,85 @@ func cmdScan(args []string) {
 			}
 		}
 	}
+	// --- version probe: ports nmap left without identification (--version-light probes only
+	// well-known ones, so e.g. PostgreSQL on 15432 comes back with no service at all).
+	// Small, targeted second pass with the full probe set; replaces the weak entries.
+	if ctx.Err() == nil {
+		weak := map[string][]int{}
+		nWeak := 0
+		for _, s := range svcs {
+			if s.Proto != "tcp" || pol.IsSelfPort(s.IP, s.Proto, s.Port) {
+				continue
+			}
+			if strings.TrimSpace(s.Name) == "" || s.Name == "tcpwrapped" || s.Name == "unknown" {
+				weak[s.IP] = append(weak[s.IP], s.Port)
+				nWeak++
+			}
+		}
+		if nWeak > 0 && nWeak <= 512 {
+			tr.Logf("version: %d service(s) without identification - deeper probe (--version-all)", nWeak)
+			args := append(strings.Fields("-sT -sV --version-all -Pn -T3 --max-retries 2 --host-timeout 2m"), "--max-rate", perProc)
+			hosts := scanner.Confirm(ctx, weak, args, *parallel, filepath.Join(dir, "version"), pol, perProcN, tr.Logf)
+			better := nmapad.FromHosts(hosts)
+			if len(better) > 0 {
+				keep(better)
+				rec.observations("version", better)
+				idx := map[string]int{}
+				for i, s := range svcs {
+					idx[s.Key()] = i
+				}
+				n := 0
+				for _, s := range findings.FromObservations(better, meta) {
+					i, ok := idx[s.Key()]
+					if !ok || (s.Name == "" && s.Product == "") {
+						continue
+					}
+					svcs[i] = s // richer identification replaces the weak one, count stays the same
+					n++
+				}
+				if n > 0 {
+					tr.Logf("version: %d service(s) identified in the second pass", n)
+				}
+			}
+		}
+	}
 	// --- phase 3: HTTP fingerprint (httpx) and phase 4: signatures (nuclei) on web services
 	webSvc := append([]findings.Service(nil), svcs...)
 	webObs := runWebStages(ctx, webStages{runID: runID, dir: dir, httpMode: *httpStage, sigDir: *sigDir,
 		parallel: *parallel, rate: *rate, chunkTimeout: *chunkTimeout, tune: tune, guard: pol}, webSvc, tr, rec)
 	keep(webObs)
+	// HTTP is the identification of last resort: nmap reports some web ports as "tcpwrapped"
+	// (httpbin behind gunicorn does that), while httpx already fetched a page from them.
+	httpKeys := map[string]obs.HTTPData{}
+	for _, o := range webObs {
+		if o.Kind != obs.KindHTTP {
+			continue
+		}
+		var d obs.HTTPData
+		if o.Decode(&d) == nil {
+			httpKeys[o.AssetKey] = d
+		}
+	}
+	enriched := 0
+	for i, s := range svcs {
+		if n := strings.TrimSpace(s.Name); n != "" && n != "tcpwrapped" && n != "unknown" {
+			continue
+		}
+		d, ok := httpKeys[obs.PortKey(s.IP, s.Proto, s.Port)] // asset key "IP/proto/port", not Service.Key()
+		if !ok {
+			continue
+		}
+		svcs[i].Name = "http"
+		svcs[i].TLS = strings.HasPrefix(d.URL, "https://")
+		if svcs[i].Product == "" && d.WebServer != "" {
+			svcs[i].Product = d.WebServer
+		}
+		svcs[i].Interest, svcs[i].Reason = findings.Score(svcs[i])
+		enriched++
+	}
+	if enriched > 0 {
+		tr.Logf("http: %d port(s) identified as HTTP by httpx (nmap said tcpwrapped/unknown)", enriched)
+	}
 	writeJSON(tunePath, tune)
 	close(upQ)
 	upWG.Wait()
