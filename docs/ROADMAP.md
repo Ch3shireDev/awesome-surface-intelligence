@@ -95,6 +95,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 21.11 ~22:15 | LAB-4 zaliczony (`vulnerable`: 0 prób logowania w logach usług); poprawione fałszywe trafienia sygnatur IoT; testy LAB-* równolegle na kilku VM + nakładki `docker/lab-org/*.bind.yml` |
 | 21.11 ~21:45 | LAB-6 zaliczony (zmiana stacku labu organizatorów, 5 przebiegów, 0 duplikatów w DD); ALL-2: czysty start na czystej VM (`make up` 3 min 49 s, `make demo` 150 s); nowe LAB-T10 (PostgreSQL przy `--version-light`) |
 | 21.11 ~20:20 | LAB-T2: skaner nie skanuje własnych portów ASI/DD na hoście skanera (osobna paczka z `--exclude-ports`, porty z `.env`) |
 | 21.11 ~20:00 | LAB-T3: 10 bezpiecznych sygnatur pod lab organizatorów (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, NPM, Traefik dashboard, Toxiproxy API, httpbin, WordPress < 6.0) + poprawka `asi-iot-camera-hikvision` (usunięty nagłówek Dahua `DNVRS-Webs`), `nuclei -validate` i test na 12 usługach OK; uporządkowane `TASKS.md` (SEC-2 🟡, DEV-13, OPS-1) |

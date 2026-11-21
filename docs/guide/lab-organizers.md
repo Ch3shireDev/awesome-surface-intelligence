@@ -205,6 +205,30 @@ zamyka i reaktywuje finding (DD dopasowuje po hashu opisu), to zachowanie Defect
 **Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
 przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 
+## Wyniki LAB-4 (21.11, `vulnerable`, VM fatusia-hacknation-1)
+
+Własna kopia labu, stack **z nakładką** `docker/lab-org/vulnerable.bind.yml` (wszystkie 15 portów tylko na
+`127.0.0.1`, sprawdzone `ss -ltn`). Panel ASI przeniesiony na `ASI_WEB_ADDR=127.0.0.1:18090` (DVWA zajmuje 8090),
+DD na 18080. Domyślne ustawienia skanera (`-ports auto`, pełne TCP), jeden przebieg 124 s.
+
+| kryterium | wynik |
+|---|---|
+| WordPress 4.7 przestarzały i wysoko w ocenie | ✅ `asi-cms-wordpress` 4.7.5, **`asi-wordpress-outdated` (medium)**, `asi-php-outdated` PHP 5.6.30; w panelu **75/100 (high)** |
+| Adminer rozpoznany | ✅ `asi-adminer`, `asi-admin-panel` („Login - Adminer”), 55/100 |
+| DVWA rozpoznane | ✅ `asi-dvwa` (medium, „DVWA v1.10”), ciasteczka `PHPSESSID`, `security`, 75/100 (high) |
+| vsftpd z wersją | ✅ `vsftpd 3.0.2` (nmap), 60/100; pasywne porty FTP 21000–21010 widoczne jako otwarte |
+| **brak prób logowania** | ✅ logi usług od chwili przed skanem: HTTP **111 GET, 2 OPTIONS, 0 POST**; do logowania tylko `GET /wp-login.php` (wykrycie strony, bez danych); vsftpd: same `CONNECT`, **0 `LOGIN` / `FAIL LOGIN`** |
+
+**Znalezione i poprawione (fałszywe trafienia sygnatur IoT):** `asi-iot-router-openwrt` trafiał w Adminera,
+a `asi-iot-router-mikrotik` w DVWA. Przyczyna: dopasowanie słowa z **własnej ścieżki żądania odbitej w
+odpowiedzi** (Adminer wstawia nazwę skryptu do linków: `href="luci?file=…"`, strona 404 Apache cytuje
+`/webfig/`). Teraz obie sygnatury szukają słowa tylko w `<title>`. Sprawdzone nucleiem w kontenerze: strona
+LuCI z atrapy i WebFig („RouterOS router configuration page”) dalej trafiają, Adminer i DVWA już nie.
+
+**Do poprawy (LAB-T12):** `asi-admin-panel` zgłasza Adminera 5 razy (po jednym na każdą sprawdzaną ścieżkę, bo
+Adminer odpowiada stroną logowania pod każdym URL-em); `services.json` w pliku przebiegu ma starą ocenę z samego
+nmapa (`low` dla WordPressa), a panel i DD liczą ją z sygnaturami (75, high).
+
 ## Wyniki LAB-6 (21.11, zmiana stacku, VM fatusia-hacknation-1)
 
 Własna kopia labu (`~/lab`) na fatusia-1 (x86_64), aktualny `main`, domyślne ustawienia skanera: `-ports auto`

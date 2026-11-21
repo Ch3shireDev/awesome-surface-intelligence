@@ -16,7 +16,9 @@ http:
         status: [200, 301, 302, 401, 403]
       - type: regex
         part: body
-        regex: ['(?i)(luci|openwrt|lede)']
+        # tylko w <title>: aplikacje, ktore odbijaja sciezke zadania w linkach (np. Adminer: href="luci?file=...")
+        # dawaly falszywe trafienie na sam URL /cgi-bin/luci (LAB-4)
+        regex: ['(?i)<title>[^<]*(luci|openwrt|lede)[^<]*</title>']
     extractors:
       - type: regex
         part: body

@@ -14,7 +14,9 @@ http:
     matchers:
       - type: regex
         part: body
-        regex: ['(?i)(routeros|webfig|mikrotik)']
+        # tylko w <title> (WebFig: "RouterOS router configuration page"): strona 404 Apache cytuje zadany URL
+        # "/webfig/" w tresci i dawala falszywe trafienie (LAB-4, DVWA)
+        regex: ['(?i)<title>[^<]*(routeros|webfig|mikrotik)[^<]*</title>']
       - type: regex
         part: header
         regex: ['(?im)^server:\s*mikrotik']
