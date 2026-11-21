@@ -214,7 +214,7 @@ docs:
 	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
 
 # Prezentacja Beamer (ALL-1): pdflatex w kontenerze TeX Live, nic na hoscie. Wynik: docs/presentation/asi.pdf
-TEXLIVE_IMAGE ?= texlive/texlive:latest-medium
+TEXLIVE_IMAGE ?= texlive/texlive@sha256:3a3949a847929f989eb70a4c92ba43b38dcd4242e08a8a6a0b6f5ef3db1525ee
 slides:
 	docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR)/docs/presentation":/w -w /w $(TEXLIVE_IMAGE) \
 		sh -c 'pdflatex -interaction=nonstopmode -halt-on-error asi.tex >/dev/null && pdflatex -interaction=nonstopmode -halt-on-error asi.tex | tail -1' \
