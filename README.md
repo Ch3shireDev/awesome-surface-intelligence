@@ -1,4 +1,7 @@
-# ASI - Attack Surface Intelligence (HackNation 2026, CBI AGH)
+# Asia - Attack Surface Intelligence Aggregator
+
+**HackNation 2026, zadanie CBI AGH: Attack Surface Intelligence.** Nazwa projektu w zgłoszeniu: *Asia -
+Attack Surface Intelligence Aggregator*. W kodzie i dokumentacji skrót **ASI**.
 
 System do cyklicznego discovery scanu dużych sieci (10 000+ IP). Wczytuje listę celów, skanuje ją
 nmapem w adaptacyjnych paczkach, pokazuje postęp na żywo (CLI i panel web), porównuje przebiegi
