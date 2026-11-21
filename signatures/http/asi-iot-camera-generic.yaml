@@ -1,0 +1,25 @@
+id: asi-iot-camera-generic
+info:
+  name: Ogolne urzadzenie wizyjne (kamera IP, DVR, NVR)
+  author: asi
+  severity: low
+  description: Strona opisuje sie jako kamera IP / rejestrator / system nadzoru. Wykrycie po tresci strony (GET), bez prob logowania.
+  tags: asi,iot,camera,surveillance
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/index.htm"
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)(ip camera|network camera|net ?cam|video server|dvr|nvr|video surveillance|surveillance system)']
+      - type: regex
+        part: body
+        regex: ['(?i)(login|password|username|haslo)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

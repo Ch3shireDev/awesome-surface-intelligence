@@ -1,0 +1,23 @@
+id: asi-iot-embedded-server
+info:
+  name: Wbudowany serwer WWW urzadzenia (GoAhead, Boa, uc-httpd, thttpd)
+  author: asi
+  severity: info
+  description: Naglowek Server typowy dla firmware'u urzadzen embedded (kamery, routery, drukarki, sterowniki). Sam serwer to fakt techniczny, nie podatnosc - wskazuje urzadzenie IoT.
+  tags: asi,iot,embedded,tech
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: header
+        regex: ['(?im)^server:\s*(goahead-webs|boa\/|uc-httpd|thttpd|mini_httpd|alphapd|app-webs|dnvrs-webs|lighttpd\/[0-9.]+debian|micro_httpd|httpd\/[0-9.]+ \(linux\))']
+      - type: status
+        status: [200, 301, 302, 401, 403]
+    extractors:
+      - type: regex
+        part: header
+        group: 1
+        regex: ['(?im)^server:\s*([^\r\n]{1,60})']

@@ -1,0 +1,25 @@
+id: asi-iot-router-mikrotik
+info:
+  name: Router MikroTik (RouterOS / WebFig)
+  author: asi
+  severity: low
+  description: Panel WebFig RouterOS. Router brzegowy - if wystawiony na zewnatrz, to zwykle blad konfiguracji; sprawdzic wersje i dostep do zarzadzania.
+  tags: asi,iot,router,mikrotik,panel
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/webfig/"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)(routeros|webfig|mikrotik)']
+      - type: regex
+        part: header
+        regex: ['(?im)^server:\s*mikrotik']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)(routeros\s*v?[0-9]+\.[0-9]+(?:\.[0-9]+)?)']

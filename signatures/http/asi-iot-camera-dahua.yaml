@@ -1,0 +1,25 @@
+id: asi-iot-camera-dahua
+info:
+  name: Kamera / rejestrator IP Dahua
+  author: asi
+  severity: low
+  description: Strona logowania Dahua (kamery, DVR, NVR). Charakterystyczny naglowek DNVRS-Webs albo stopka Dahua Technology.
+  tags: asi,iot,camera,dahua
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/RPC2_Login"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: header
+        regex: ['(?im)^server:\s*dnvrs-webs']
+      - type: regex
+        part: body
+        regex: ['(?i)(dahua technology|dh-ipc|dh-nvr|dh-xvr)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)(DH-[A-Z0-9-]{4,20})']

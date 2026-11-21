@@ -1,0 +1,27 @@
+id: asi-iot-printer
+info:
+  name: Drukarka sieciowa z panelem WWW
+  author: asi
+  severity: low
+  description: Panel drukarki (HP, Epson, Brother, Canon, Xerox, Konica, Kyocera, Ricoh, Lexmark). Drukarki czesto udostepniaja skanowanie i dane dokumentow - do dalszej analizy.
+  tags: asi,iot,printer,panel
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/hp/device/DeviceInformation/View"
+      - "{{BaseURL}}/PRESENTATION/HTML/TOP/PRTINFO.HTML"
+      - "{{BaseURL}}/general/status.html"
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)(hp laserjet|hewlett[- ]packard|epson|brother industries|lexmark|xerox|konica minolta|kyocera|ricoh|canon (inc|usa))']
+      - type: regex
+        part: body
+        regex: ['(?i)(printer|printing|toner|cartridge|fuser|paper tray|scanner)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

@@ -1,0 +1,25 @@
+id: asi-iot-nas
+info:
+  name: NAS / serwer plikow z panelem (Synology, QNAP, TrueNAS)
+  author: asi
+  severity: low
+  description: Panel urzadzenia NAS. Zwykle trzyma kopie zapasowe i dane firmowe - ekspozycja panelu zarzadzania to punkt do dalszej analizy.
+  tags: asi,iot,nas,panel,storage
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/webman/index.cgi"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)(synology|diskstation|qnap|qts|truenas|freenas|openmediavault)']
+      - type: regex
+        part: header
+        regex: ['(?im)^server:\s*(nginx\/[0-9.]+ \(synology\)|webman)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

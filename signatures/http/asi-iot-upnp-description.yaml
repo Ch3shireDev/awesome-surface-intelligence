@@ -1,0 +1,25 @@
+id: asi-iot-upnp-description
+info:
+  name: Opis urzadzenia UPnP (router, kamera, telewizor, drukarka)
+  author: asi
+  severity: info
+  description: Publiczny plik opisu urzadzenia UPnP (/rootDesc.xml). Ujawnia producenta i model urzadzenia - fakt techniczny, przydatny przy identyfikacji IoT.
+  tags: asi,iot,upnp,tech
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/rootDesc.xml"
+      - "{{BaseURL}}/description.xml"
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words: ["urn:schemas-upnp-org:device-1-0"]
+      - type: regex
+        part: body
+        regex: ['(?i)<(friendlyName|modelName|manufacturer)>']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<modelName>([^<]{1,60})</modelName>']

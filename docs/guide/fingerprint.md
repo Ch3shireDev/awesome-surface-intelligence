@@ -36,6 +36,30 @@ instrukcja „jak dodać sygnaturę” są w `signatures/README.md` w repo.
 Flagi: `-ni` (bez interactsh i zewnętrznych callbacków), `-etags intrusive,dos,fuzz,brute-force,exploit,rce,sqli,xss,lfi`,
 `-rl ≤ 50`, `-timeout 5`, `-mhe 3`.
 
+### Sygnatury IoT (SEC-10)
+
+Punkt 6 zadania wymienia **urządzenie IoT** obok CMS, frameworka i serwera aplikacyjnego. Doszło 9 sygnatur
+detekcyjnych (tylko GET, bez prób logowania) w `signatures/http/`:
+
+| id | wykrywa |
+|---|---|
+| `asi-iot-camera-hikvision` | kamera/rejestrator Hikvision (treść strony albo nagłówek `App-webs`/`DVRs-Webs`) |
+| `asi-iot-camera-dahua` | kamera/rejestrator Dahua (nagłówek `DNVRS-Webs`, model `DH-…`) |
+| `asi-iot-camera-generic` | ogólne urządzenie wizyjne: „IP camera”, DVR/NVR, system nadzoru + ekran logowania |
+| `asi-iot-router-mikrotik` | RouterOS / WebFig |
+| `asi-iot-router-openwrt` | LuCI na OpenWrt |
+| `asi-iot-printer` | drukarka z panelem WWW (HP, Epson, Brother, Xerox, Konica, Kyocera, Ricoh, Lexmark) |
+| `asi-iot-nas` | Synology DSM, QNAP QTS, TrueNAS/FreeNAS, OpenMediaVault |
+| `asi-iot-embedded-server` | wbudowany serwer WWW firmware'u (`GoAhead-Webs`, `Boa`, `uc-httpd`, `thttpd`, `mini_httpd`, …) |
+| `asi-iot-upnp-description` | publiczny opis urządzenia UPnP (`/rootDesc.xml`) z producentem i modelem |
+
+Dlaczego tak: same nazwy modeli/producentów to fakt techniczny (severity `low`/`info`), a nie podatność —
+panel urządzenia to sygnał „sprawdź to ręcznie”, bo IoT często ma domyślne konta i nieaktualny firmware.
+Wzorce są zawężone (np. „printer” **i** nazwa producenta), żeby nie łapać zwykłych stron o druku.
+Sprawdzone na atrapie 7 urządzeń pod `127.0.0.1` (`nuclei -validate` + przebieg na atrapie: 6/9 trafień
+pozytywnych, brak fałszywych trafień Dahua/MikroTik/NAS), a lint `go test ./internal/scanner/nuclei`
+pilnuje, że żadna sygnatura nie wysyła POST-a i nie ma wykluczonych tagów.
+
 ## Porty wysokiego ryzyka spoza top 1000
 
 Lista „top 1000” nmapa **nie zawiera** m.in. Redis 6379, MongoDB 27017, Memcached 11211, Docker API 2375/2376,

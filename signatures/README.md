@@ -71,3 +71,12 @@ TCP (`tcp: inputs/data`).
 | `asi-favicon-known` | info | znane hashe favicony (Jenkins, Tomcat, Spring Boot) |
 | `asi-git-exposed` | medium | publiczny `/.git/HEAD` |
 | `asi-redis-noauth` | high | Redis odpowiada na `PING` bez hasła (tylko PING) |
+| `asi-iot-camera-hikvision` | low | kamera/rejestrator Hikvision (treść albo nagłówek `App-webs`/`DNVRS-Webs`) |
+| `asi-iot-camera-dahua` | low | kamera/rejestrator Dahua (nagłówek `DNVRS-Webs`, model `DH-…`) |
+| `asi-iot-camera-generic` | low | „IP camera” / DVR / NVR / system nadzoru z ekranem logowania |
+| `asi-iot-router-mikrotik` | low | RouterOS / WebFig |
+| `asi-iot-router-openwrt` | low | LuCI na OpenWrt |
+| `asi-iot-printer` | low | panel drukarki (HP, Epson, Brother, Xerox, Konica, Kyocera, Ricoh, Lexmark) |
+| `asi-iot-nas` | low | Synology DSM, QNAP QTS, TrueNAS/FreeNAS, OpenMediaVault |
+| `asi-iot-embedded-server` | info | wbudowany serwer WWW firmware'u (`GoAhead-Webs`, `Boa`, `uc-httpd`, `thttpd`, `mini_httpd`…) |
+| `asi-iot-upnp-description` | info | opis urządzenia UPnP (`/rootDesc.xml`): producent i model |

@@ -1,0 +1,25 @@
+id: asi-iot-camera-hikvision
+info:
+  name: Kamera / rejestrator IP Hikvision
+  author: asi
+  severity: low
+  description: Strona logowania Hikvision (kamery, DVR, NVR). Urzadzenia IoT czesto maja domyslne konta i nieaktualny firmware - do dalszej analizy, bez prob logowania.
+  tags: asi,iot,camera,hikvision
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+      - "{{BaseURL}}/doc/page/login.asp"
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: body
+        regex: ['(?i)(hikvision|ds-2cd|ds-7[0-9]{2,3})']
+      - type: regex
+        part: header
+        regex: ['(?im)^server:\s*(app-webs|webs|dnvrs-webs)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)((?:DS-[A-Z0-9-]{4,20})|Hikvision[^<\n]{0,40})']

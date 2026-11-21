@@ -1,0 +1,24 @@
+id: asi-iot-router-openwrt
+info:
+  name: Router OpenWrt / LuCI
+  author: asi
+  severity: low
+  description: Panel LuCI na routerze z OpenWrt. Sprawdzic, czy panel zarzadzania powinien byc widoczny z tej sieci.
+  tags: asi,iot,router,openwrt,panel
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/cgi-bin/luci"
+      - "{{BaseURL}}/luci/"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200, 301, 302, 401, 403]
+      - type: regex
+        part: body
+        regex: ['(?i)(luci|openwrt|lede)']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']
