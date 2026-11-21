@@ -108,6 +108,31 @@ przebiegu (`plan.json`). Zweryfikowane: 0 obcych warunków, a DD zamknął 2 bł
 Zostaje: LAB-T5 (diff „gone/new” vs baza „missing/reappeared”), LAB-T6 (instalator Gitea), szum usług samej
 VM (SSH, Syncthing, procesy lokalne). To prawdziwe usługi hosta, w labie jury wykluczyć je zakresem/portami.
 
+## Wyniki LAB-5 (21.11, Toxiproxy, `modern-proxy`)
+
+Domyślne ustawienia skanera (pełne TCP przez `-ports auto`, pomijanie portów ASI/DD), cel `127.0.0.1`,
+przełączanie zakłóceń przez `.env` labu jak w README organizatorów. Przebieg trwa około 97 s.
+
+| przebieg | zakłócenie (8085: Traefik → Toxiproxy → WordPress) | curl 8085 | ASI | wynik |
+|---|---|---|---|---|
+| 1 | brak (tuż po starcie stacku) | 302, 36 ms | **0 portów**, 10× `missing` + `flapping` | ❌ błąd LAB-T7 (opis niżej) |
+| 1' | brak (powtórka) | 302, 6 ms | 8 usług, WordPress (sygnatury), 6 ms | ✅ |
+| 2 | `latency` 500 ms ±50 | 302, 537 ms | bez zmian, **czas odpowiedzi 493 ms** | ✅ (próg „wolna” 500 ms - LAB-T9) |
+| 3 | `timeout` 1000 ms | 502, 1,0 s | 8085: `changed` (Apache → Go/Traefik, TLS, 404), DD closed/created | ⚠️ LAB-T8 |
+| 4 | brak | 302 | 8085: znowu `changed`, DD closed/reactivated | ⚠️ LAB-T8 |
+| 5 | `bandwidth` 100 KB/s | 200 | bez zmian | ✅ |
+| 6 | `slow_close` 1000 ms | 200 | bez zmian | ✅ |
+
+**Przebieg 1 (LAB-T7, krytyczne).** Przebieg ruszył tuż po starcie stacku. W trakcie `-sV` zegar ścienny
+przeskoczył o ~20 min (VM wstrzymana: ASI zmierzył zegarem monotonicznym 92 s, nmap zegarem ściennym
+1303 s), więc nmap uznał przekroczenie `--host-timeout 10m` i zwrócił `<host timedout="true">` **bez portów**
+(kod wyjścia `success`). ASI nie czyta `timedout`, uznał host za w pełni przeskanowany i oznaczył wszystkie
+usługi jako `missing`. Powtórka bez wstrzymania: 97 s, poprawnie. Wyzwalacz był środowiskowy, ale ten sam
+skutek da każdy host, który przekroczy `--host-timeout` (wolny host, wisząca usługa przy `-sV`).
+
+**Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
+przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
+
 ## Jak testować
 
 Wspólne przygotowanie (LAB-0):
