@@ -122,7 +122,7 @@ Każdy test kończy się wpisem wyniku (OK / FAIL + liczby) w tej tabeli i w `st
 | LAB-3 | SEC | `modern`: WordPress latest, phpMyAdmin, Redis bez hasła, Nginx Proxy Manager (80/81/443). | WordPress z wersją, `asi-redis-noauth` high, panele phpMyAdmin i NPM rozpoznane (po LAB-T3), TLS na 443 |
 | LAB-4 | SEC | `vulnerable`: WordPress 4.7, Adminer, DVWA, vsftpd. **Bez prób logowania** (domyślne hasła w compose). | WordPress 4.7 oznaczony jako przestarzały i wysoko w ocenie, Adminer/DVWA rozpoznane, vsftpd z wersją; w logach skanera brak żądań logowania |
 | LAB-5 | SEC ✅ *przetestowany (agent fatusia, 21.11 19:37-20:15): opóźnienie/wolne łącze/wolne zamykanie OK; wyszły LAB-T7 (krytyczne), LAB-T8, LAB-T9; wyniki: `docs/guide/lab-organizers.md`* | `modern-proxy` + Toxiproxy: przebiegi z `ENABLE_LATENCY` 500 ms, potem `ENABLE_TIMEOUT`, `ENABLE_BANDWIDTH`, `ENABLE_SLOW_CLOSE`. | skan kończy się w oknie, brak fałszywych `gone` przy opóźnieniu, timeout odnotowany jako brak odpowiedzi HTTP (nie zniknięcie portu); czas odpowiedzi widoczny (po LAB-T4); dashboard Traefika i API Toxiproxy (8474) wykryte jako panele bez uwierzytelniania |
-| LAB-6 | SEC | Zmiana stacku między przebiegami (`custom-network` → `modern`) i powrót. | masowe `missing` → `gone` po progu, nowe usługi, powrót = `reappeared`; DD bez duplikatów; czas przebiegów w normie |
+| LAB-6 | SEC 🔨 *w toku: agent fatusia (fatusia-1, własna kopia labu)* | Zmiana stacku między przebiegami (`custom-network` → `modern`) i powrót. | masowe `missing` → `gone` po progu, nowe usługi, powrót = `reappeared`; DD bez duplikatów; czas przebiegów w normie |
 
 Zadania kodu wynikające z analizy (przed LAB-1…5):
 
