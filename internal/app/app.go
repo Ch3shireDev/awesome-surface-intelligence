@@ -370,7 +370,7 @@ func (a *App) saveTargets(w http.ResponseWriter, r *http.Request, u store.User, 
 		}
 		ok = append(ok, t)
 	}
-	n, err := a.St.UpsertTargets(r.Context(), set, ok)
+	n, err := a.St.MergeTargets(r.Context(), set, ok) // add/import never wipes tags or notes
 	if err != nil {
 		fail(w, 500, err.Error())
 		return

@@ -13,7 +13,7 @@ TARGETS ?= scans/targets.txt
 OUT_DIR := scans/results
 STAMP   := $(shell date +%Y%m%d-%H%M%S)
 
-.PHONY: help env up down nuke ps logs nmap-shell \
+.PHONY: help env env-sync up down nuke ps logs nmap-shell \
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
         build test asi asi-scan asi-serve docs sync \
@@ -21,6 +21,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
 
 help:
 	@echo "Cele:"
+	@echo "  make env-sync         - dopisz do istniejacego .env brakujace klucze z .env.example (robi to tez make up)"
 	@echo "  make env              - utworz .env z .env.example z wygenerowanymi sekretami"
 	@echo "  make up               - odpal caly stack (DefectDojo + scanner)"
 	@echo "  make down             - zatrzymaj stack"
@@ -75,8 +76,15 @@ env-keys:
 	@if grep -q '^ASI_ENCRYPTION_KEYS=.\+' .env; then echo "ASI_ENCRYPTION_KEYS juz ustawione"; \
 	else sed -i '/^ASI_ENCRYPTION_KEYS=$$/d' .env; echo "ASI_ENCRYPTION_KEYS=k1:$$(openssl rand -base64 32)" >> .env; echo "dopisano ASI_ENCRYPTION_KEYS (klucz k1)"; fi
 
-up:
+# Dopisuje brakujace klucze z .env.example do istniejacego .env (bez zmiany istniejacych).
+env-sync:
+	@sh scripts/env-sync.sh
+
+# nginx DD trzyma IP upstreamu uwsgi z chwili startu; gdy `up` odtworzy uwsgi, nginx daje 502,
+# wiec restartujemy go po kazdym up (tani, ~1 s).
+up: env-sync
 	docker compose up -d --build
+	@docker compose restart nginx >/dev/null 2>&1 && echo "nginx DD zrestartowany (bez 502 po odtworzeniu uwsgi)" || true
 
 down:
 	docker compose down

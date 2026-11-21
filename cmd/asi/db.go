@@ -248,7 +248,7 @@ func cmdDB(args []string) {
 	case "import-targets":
 		ts, err := targets.Load(*file)
 		must(err)
-		n, err := st.UpsertTargets(ctx, *set, ts)
+		n, err := st.MergeTargets(ctx, *set, ts)
 		must(err)
 		log.Printf("db: %d targets upserted into set %q", n, *set)
 	case "targets":

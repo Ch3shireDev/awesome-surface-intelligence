@@ -128,3 +128,24 @@ func TestLatestRunSinceAndCancel(t *testing.T) {
 		t.Fatal("cancelled run must not be resumable")
 	}
 }
+
+func TestMergeKeepsTagsAndNotes(t *testing.T) {
+	st := testStore(t, xorSealer{})
+	ctx := context.Background()
+	set := fmt.Sprintf("merge-%d", time.Now().UnixNano())
+	t.Cleanup(func() { st.DB.Exec(ctx, `DELETE FROM target_sets WHERE name=$1`, set) })
+	st.MergeTargets(ctx, set, []targets.Target{{Target: "192.0.2.10", Tags: []string{"web"}, Note: "z CSV", Owner: "secops", Enabled: true}})
+	// bare .txt import of the same target
+	st.MergeTargets(ctx, set, []targets.Target{{Target: "192.0.2.10", Enabled: true}, {Target: "192.0.2.11", Enabled: true}})
+	st.MergeTargets(ctx, set, []targets.Target{{Target: "192.0.2.10", Tags: []string{"lab"}, Enabled: true}})
+	got, _ := st.Targets(ctx, set)
+	if len(got) != 2 || got[0].Note != "z CSV" || got[0].Owner != "secops" || len(got[0].Tags) != 2 {
+		t.Fatalf("merge lost data: %+v", got)
+	}
+	// explicit edit can clear
+	st.UpsertTargets(ctx, set, []targets.Target{{Target: "192.0.2.10", Enabled: true}})
+	got, _ = st.Targets(ctx, set)
+	if got[0].Note != "" || len(got[0].Tags) != 0 {
+		t.Fatalf("explicit edit must replace: %+v", got[0])
+	}
+}

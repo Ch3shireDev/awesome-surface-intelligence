@@ -95,8 +95,9 @@ i `make sync`.
 
 | bloker | blokuje | kto | stan |
 |---|---|---|---|
-| `make env` nie dopisuje nowych kluczy do istniejącego `.env` (compose nie startuje po DEV-1) | każdy `make up` po pullu | agent blackarch | 🔨 |
-| nginx DD daje 502 po odtworzeniu `uwsgi` przy `make up` (stary IP upstreamu) | upload do DD, demo | agent blackarch | 🔨 |
+| `make env` nie dopisuje nowych kluczy do istniejącego `.env` (compose nie startuje po DEV-1) | każdy `make up` po pullu | agent blackarch | ✅ `make env-sync` (wołane przez `make up`) |
+| nginx DD daje 502 po odtworzeniu `uwsgi` przy `make up` (stary IP upstreamu) | upload do DD, demo | agent blackarch | ✅ `make up` restartuje nginx |
+| import celów (.txt) kasował tagi i notatki wcześniej wgranych celów (zgłosił agent #2) | pkt 14 PDF | agent blackarch | ✅ import/dodawanie scala (`MergeTargets`), jawna edycja dalej zastępuje |
 
 ## Ryzyka
 

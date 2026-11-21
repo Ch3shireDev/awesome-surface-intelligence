@@ -321,8 +321,20 @@ func kindOf(v string) string {
 	return "domain"
 }
 
-// UpsertTargets adds or updates targets of a set (by value). Returns rows written.
+// UpsertTargets adds or updates targets of a set (by value), replacing all fields
+// (explicit edit). Returns rows written.
 func (s *Store) UpsertTargets(ctx context.Context, set string, ts []targets.Target) (int, error) {
+	return s.upsertTargets(ctx, set, ts, false)
+}
+
+// MergeTargets adds targets; for existing ones it only fills in what the input has:
+// empty tags/note/asset/owner in the input never erase stored values (an import of a
+// bare .txt list must not wipe tags and notes added earlier - PDF pkt 14).
+func (s *Store) MergeTargets(ctx context.Context, set string, ts []targets.Target) (int, error) {
+	return s.upsertTargets(ctx, set, ts, true)
+}
+
+func (s *Store) upsertTargets(ctx context.Context, set string, ts []targets.Target, merge bool) (int, error) {
 	n := 0
 	err := pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
 		sid, err := s.ensureSet(ctx, tx, set)
@@ -346,8 +358,7 @@ func (s *Store) UpsertTargets(ctx context.Context, set string, ts []targets.Targ
 			}
 			if _, err := tx.Exec(ctx, `INSERT INTO targets (set_id, kind, value, asset, owner, tags, enabled, note_enc)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-				ON CONFLICT (set_id, value) DO UPDATE SET kind=EXCLUDED.kind, asset=EXCLUDED.asset, owner=EXCLUDED.owner,
-				  tags=EXCLUDED.tags, enabled=EXCLUDED.enabled, note_enc=EXCLUDED.note_enc, updated_at=now()`,
+				ON CONFLICT (set_id, value) DO UPDATE SET `+onConflict(merge),
 				sid, kindOf(v), v, t.Asset, t.Owner, tags, t.Enabled, note); err != nil {
 				return fmt.Errorf("target %s: %w", v, err)
 			}
@@ -432,4 +443,17 @@ func (s *Store) DeleteTarget(ctx context.Context, id int64) (string, error) {
 	var v string
 	err := s.DB.QueryRow(ctx, `DELETE FROM targets WHERE id=$1 RETURNING value`, id).Scan(&v)
 	return v, err
+}
+
+func onConflict(merge bool) string {
+	if !merge {
+		return `kind=EXCLUDED.kind, asset=EXCLUDED.asset, owner=EXCLUDED.owner,
+			tags=EXCLUDED.tags, enabled=EXCLUDED.enabled, note_enc=EXCLUDED.note_enc, updated_at=now()`
+	}
+	return `kind=EXCLUDED.kind,
+			asset=CASE WHEN EXCLUDED.asset='' THEN targets.asset ELSE EXCLUDED.asset END,
+			owner=CASE WHEN EXCLUDED.owner='' THEN targets.owner ELSE EXCLUDED.owner END,
+			tags=(SELECT coalesce(array_agg(DISTINCT t), '{}') FROM unnest(targets.tags || EXCLUDED.tags) t),
+			enabled=EXCLUDED.enabled,
+			note_enc=coalesce(EXCLUDED.note_enc, targets.note_enc), updated_at=now()`
 }
