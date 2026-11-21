@@ -393,6 +393,43 @@ func (s *Store) Targets(ctx context.Context, set string) ([]targets.Target, erro
 	})
 }
 
+// DeleteTargetSet removes a target set with its targets and returns how many targets went
+// with it. It refuses without `force` when the set is not empty or when something still
+// points at it (runs by set name, schedules). Deleting a set that was scanned leaves runs
+// without their starting list, hence the explicit flag.
+func (s *Store) DeleteTargetSet(ctx context.Context, name string, force bool) (int, error) {
+	var id int64
+	if err := s.DB.QueryRow(ctx, `SELECT id FROM target_sets WHERE name=$1`, name).Scan(&id); err != nil {
+		if err == pgx.ErrNoRows {
+			return 0, fmt.Errorf("nie ma zbioru celów %q", name)
+		}
+		return 0, err
+	}
+	var targetsN, runsN, schedN int
+	if err := s.DB.QueryRow(ctx, `SELECT
+			(SELECT count(*) FROM targets WHERE set_id=$1),
+			(SELECT count(*) FROM runs WHERE set_name=$2),
+			(SELECT count(*) FROM schedules WHERE set_name=$2)`, id, name).
+		Scan(&targetsN, &runsN, &schedN); err != nil {
+		return 0, err
+	}
+	if !force && (targetsN > 0 || runsN > 0 || schedN > 0) {
+		return 0, fmt.Errorf("zbiór %q nie jest pusty (cele: %d, przebiegi: %d, harmonogramy: %d) - dodaj -force",
+			name, targetsN, runsN, schedN)
+	}
+	deleted := 0
+	err := pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `DELETE FROM targets WHERE set_id=$1`, id)
+		if err != nil {
+			return err
+		}
+		deleted = int(tag.RowsAffected())
+		_, err = tx.Exec(ctx, `DELETE FROM target_sets WHERE id=$1`, id)
+		return err
+	})
+	return deleted, err
+}
+
 // ---------------------------------------------------------------- target editing (GUI form)
 
 type TargetRow struct {

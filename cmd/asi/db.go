@@ -225,7 +225,7 @@ func (d *dbRecorder) finish(status string, stats any) {
 
 func cmdDB(args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: asi db <migrate|import-targets|targets|runs|reconcile RUN|reseal> [flags]")
+		fmt.Fprintln(os.Stderr, "usage: asi db <migrate|import-targets|targets|runs|drop-set|reconcile RUN|reseal> [flags]")
 		os.Exit(2)
 	}
 	sub, args := args[0], args[1:]
@@ -234,6 +234,7 @@ func cmdDB(args []string) {
 	set := fs.String("set", "default", "target set name")
 	file := fs.String("targets", "targets/targets.csv", "targets file (.csv/.json/.txt) for import-targets")
 	dry := fs.Bool("dry-run", false, "reseal: only count plaintext values, change nothing")
+	force := fs.Bool("force", false, "drop-set: delete even if the set has runs (history stays without its target list)")
 	rc := reconcileFlags(fs)
 	fs.Parse(args)
 	if *url == "" {
@@ -258,6 +259,10 @@ func cmdDB(args []string) {
 		for _, t := range ts {
 			fmt.Printf("%-32s %-6v %-14s %v %s\n", t.Target, t.Enabled, t.Asset, t.Tags, t.Note)
 		}
+	case "drop-set": // asi db drop-set -set NAME [-force]
+		n, err := st.DeleteTargetSet(ctx, *set, *force)
+		must(err)
+		log.Printf("db: set %q deleted with %d targets", *set, n)
 	case "runs":
 		rs, err := st.Runs(ctx, 50)
 		must(err)

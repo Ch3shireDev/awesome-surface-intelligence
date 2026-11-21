@@ -22,6 +22,7 @@ Gdy `ASI_DATABASE_URL` jest ustawione, `asi scan` zapisuje przebieg do bazy auto
 | `asi db migrate` | stosuje brakujące migracje |
 | `asi db import-targets -targets targets/targets.csv -set default` | wczytuje cele (CSV/JSON/TXT) do zbioru; ponowny import aktualizuje istniejące wpisy po wartości |
 | `asi db targets -set default` | lista celów zbioru (notatki odszyfrowane) |
+| `asi db drop-set -set NAME [-force]` | usuwa zbiór celów razem z celami; bez `-force` odmawia, gdy zbiór ma cele, przebiegi albo harmonogramy (sprzątanie zbiorów testowych) |
 | `asi db runs` | przebiegi ze statusem i liczbą paczek w każdym stanie |
 | `asi db reseal [-dry-run]` | zaszyfruj wartości `_enc` zapisane wcześniej jawnie (idempotentne; [Szyfrowanie](/guide/encryption#włączenie)) |
 | `asi diff -db [A B]` | diff dwóch przebiegów liczony z bazy (domyślnie dwa ostatnie `completed`) |

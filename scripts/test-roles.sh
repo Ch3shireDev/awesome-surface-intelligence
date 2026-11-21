@@ -89,6 +89,13 @@ done
 code -b "$J" "$BASE/api/v1/targets?set=$SET" >/dev/null
 for id in $(jqv '[t["id"] for t in d]' | tr -d '[],'); do DEL "/api/v1/targets/$id" >/dev/null; done
 chk "konta testowe usunięte" "" "$(code -b "$J" "$BASE/api/v1/users" >/dev/null; jqv '[u["username"] for u in d if u["username"].startswith("test-roles-")]' | tr -d "[]' ")"
+# pusty zbiór celów też po sobie (GUI nie ma usuwania zbiorów, CLI ma: asi db drop-set)
+if [ -x "$ROOT/asi" ] && [ -n "${ASI_DATABASE_URL:-}" ]; then
+  "$ROOT/asi" db drop-set -db "$ASI_DATABASE_URL" -set "$SET" -force >/dev/null 2>&1 \
+    && echo "  OK   zbiór celów $SET usunięty (asi db drop-set)"
+else
+  echo "  --   zbiór $SET zostaje; usuń: asi db drop-set -set $SET -force"
+fi
 rm -f "$J"
 echo
 echo "Wynik: $ok OK, $bad FAIL"
