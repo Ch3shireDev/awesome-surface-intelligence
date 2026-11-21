@@ -6,7 +6,7 @@ Na hoście tylko docker + compose, `make`, `openssl`. nmap i `asi` są w kontene
 (`network_mode: host`, `NET_RAW`).
 
 ```bash
-git clone daniel@blackarch:repos/asi.git ~/asi && cd ~/asi
+git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git asi && cd asi
 make env                                # .env: sekrety + hasło admina DefectDojo
 make up                                 # DefectDojo 3.5.202 :8080 + nmap-scanner
 cp targets/example.csv targets/targets.csv
@@ -42,7 +42,7 @@ set -a; . ./.env; set +a                # DD_* dla uploadu
 ./asi scan -parallel 10 -rate 1000                # więcej workerów, globalny limit 1000 pps
 ./asi scan -chunk 8                               # stała paczka zamiast adaptacyjnej
 ./asi scan -skip-discovery                        # sieć tnie sondy discovery -> skanuj wszystko
-./asi upload -format nmap                         # surowy XML nmapa do DefectDojo (bez historii)
+./asi upload -format nmap                         # surowy XML nmapa do DefectDojo (stały test asi-nmap)
 ```
 
 ## Dokumentacja lokalnie

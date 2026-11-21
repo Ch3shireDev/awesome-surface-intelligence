@@ -216,6 +216,12 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
 
 ## Otwarte pytania / do potwierdzenia z CBI AGH
 
+- [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 (`~/lab`, poza repo), analiza i plan
+      testów w `docs/guide/lab-organizers.md`, zadania `LAB-*` w `TASKS.md`. Wniosek: usługi na niestandardowych
+      portach (np. 8787 w ich quickstarcie) są poza domyślnym zestawem portów ASI.
+- [ ] **Lista dozwolonych portów i limity ruchu** w labie jury (brief, pkt 7.2-7.3) - od tego zależy profil
+      portów (LAB-T1). Nadal brak.
+
 - [ ] **Dokladny zakres skanu** (CIDR/hostname'y sandboxa) - bez tego nie ma
       czego wpisac do `scans/targets.txt`.
 - [ ] Czy zalozenie "plaski intranet bez firewalli/segmentacji do omijania"

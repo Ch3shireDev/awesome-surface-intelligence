@@ -89,4 +89,5 @@ Przeczytaj PRZED wieksza zmiana:
 | `Makefile` | `make help`: stack, PoC, `asi`, `build`, `test`, `docs`, `sync` |
 | `targets/example.csv` | szablon celow (kopiuj do `targets/targets.csv`) |
 | `docker/lab/`, `targets/lab.csv` | lab testowy (8 hostow, 2 stany) i jego cele; `make demo`, `docs/guide/lab.md` |
+| `README.md` / `CONTRIBUTING.md` | opis dla jury (bez spraw zespołowych) / praca zespołu: sync, build, testy, zadania |
 | `docs/` | VitePress: VISION, status, DECISIONS, ROADMAP, TASKS, przewodniki |

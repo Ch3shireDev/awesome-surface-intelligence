@@ -23,3 +23,13 @@ scans/results/*.json
 /docs/node_modules
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
+
+# prezentacja (make slides): pliki posrednie i PDF budowany z asi.tex
+/docs/presentation/*.aux
+/docs/presentation/*.log
+/docs/presentation/*.nav
+/docs/presentation/*.out
+/docs/presentation/*.snm
+/docs/presentation/*.toc
+/docs/presentation/*.vrb
+/docs/presentation/*.pdf

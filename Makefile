@@ -17,7 +17,7 @@ STAMP   := $(shell date +%Y%m%d-%H%M%S)
         scan-discover scan-fast scan-full scan-service scan-udp \
         import-defectdojo import-latest poc clean \
         build test asi asi-scan asi-serve docs sync \
-        lab-up lab-down lab-ps demo env-keys crypto-check
+        lab-up lab-down lab-ps demo env-keys crypto-check slides
 
 help:
 	@echo "Cele:"
@@ -49,6 +49,7 @@ help:
 	@echo "  make build            - lokalny build ./asi (wymaga Go na hoscie - dev)"
 	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
 	@echo "  make docs             - dokumentacja VitePress na :4173 (wymaga pnpm - dev)"
+	@echo "  make slides           - prezentacja Beamer -> docs/presentation/asi.pdf (pdflatex w kontenerze)"
 	@echo "  make sync             - git pull --rebase + push do origin (repo blackarch przez ssh)"
 	@echo ""
 	@echo "Lab i demo (docker/lab, siec 192.0.2.0/24, cele targets/lab.csv):"
@@ -194,6 +195,13 @@ test:
 
 docs:
 	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
+
+# Prezentacja Beamer (ALL-1): pdflatex w kontenerze TeX Live, nic na hoscie. Wynik: docs/presentation/asi.pdf
+TEXLIVE_IMAGE ?= texlive/texlive:latest-medium
+slides:
+	docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR)/docs/presentation":/w -w /w $(TEXLIVE_IMAGE) \
+		sh -c 'pdflatex -interaction=nonstopmode -halt-on-error asi.tex >/dev/null && pdflatex -interaction=nonstopmode -halt-on-error asi.tex | tail -1' \
+		|| { echo "blad kompilacji - log: docs/presentation/asi.log"; exit 1; }
 
 # Jedno repo, synchronizacja przez git po ssh (origin = blackarch:~/repos/asi.git).
 sync:

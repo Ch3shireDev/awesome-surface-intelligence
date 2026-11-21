@@ -1,0 +1,245 @@
+% Prezentacja ASI dla jury HackNation 2026 (wymóg: do 10 slajdów + działające demo).
+% Budowanie: make slides  ->  docs/presentation/asi.pdf  (pdflatex w kontenerze texlive, nic na hoście).
+% Miejsca do uzupełnienia są oznaczone \TODO{...} (na slajdzie widoczne na czerwono).
+% Liczby na slajdach pochodzą z dokumentacji repo (docs/guide/*.md) - aktualizuj razem z nią.
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric}
+
+% --- wygląd: neutralny, bez logotypów organizatorów ---
+\usetheme{default}
+\definecolor{asiDark}{HTML}{1F2A44}
+\definecolor{asiAccent}{HTML}{0F7B6C}
+\definecolor{asiWarn}{HTML}{B3261E}
+\setbeamercolor{frametitle}{fg=white,bg=asiDark}
+\setbeamercolor{title}{fg=asiDark}
+\setbeamercolor{structure}{fg=asiAccent}
+\setbeamercolor{alerted text}{fg=asiWarn}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{frametitle}{\nointerlineskip\begin{beamercolorbox}[wd=\paperwidth,ht=2.4ex,dp=1.2ex,leftskip=1em]{frametitle}\usebeamerfont{frametitle}\insertframetitle\end{beamercolorbox}}
+\setbeamertemplate{footline}{\hfill\scriptsize\color{gray}\insertframenumber/\inserttotalframenumber\hspace{1em}\vspace{0.6em}}
+\setbeamertemplate{itemize items}[circle]
+
+\newcommand{\TODO}[1]{\textcolor{asiWarn}{\textbf{[TODO: #1]}}}
+\newcommand{\cmd}[1]{\texttt{\small #1}}
+
+\title{ASI -- Attack Surface Intelligence}
+\subtitle{Cykliczny discovery scan dużych sieci jako źródło danych dla DefectDojo}
+\author{\TODO{nazwa zespołu i skład}}
+\institute{HackNation 2026 \textbullet{} wyzwanie CBI AGH}
+\date{22.11.2026}
+
+\begin{document}
+
+% 1 --------------------------------------------------------------------------
+\begin{frame}
+  \titlepage
+  \centering\small
+  \url{https://github.com/Ch3shireDev/awesome-surface-intelligence}
+\end{frame}
+
+% 2 --------------------------------------------------------------------------
+\begin{frame}{Problem}
+  \begin{columns}[T]
+    \column{0.55\textwidth}
+    \begin{itemize}
+      \item Rozległa sieć: \textbf{10 000+ adresów}, część hostów widoczna tylko okresowo.
+      \item Jednorazowy skan nie daje pełnego obrazu powierzchni ataku.
+      \item Liczy się nie tylko otwarty port, ale \emph{co tam działa}: CMS, panel admina,
+            środowisko testowe, stary komponent.
+      \item DefectDojo zarządza podatnościami, ale skanowanie dużych sieci z jego poziomu jest niewygodne.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \textbf{Pytania z treści zadania:}
+    \begin{itemize}\small
+      \item Jak raportować zmianę?
+      \item Jak określić pewność identyfikacji?
+      \item Po ilu brakach host jest nieaktywny?
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% 3 --------------------------------------------------------------------------
+\begin{frame}{Rozwiązanie: ASI jako feed dla DefectDojo}
+  \centering
+  \begin{tikzpicture}[
+      node distance=6mm and 9mm,
+      box/.style={draw=asiDark,rounded corners=2pt,fill=asiDark!6,minimum height=8mm,align=center,font=\small},
+      tool/.style={box,fill=asiAccent!12,draw=asiAccent},
+      arr/.style={-{Stealth[length=2mm]},thick,asiDark}]
+    \node[box] (gui) {panel web\\(role)};
+    \node[box,below=of gui] (cli) {CLI \cmd{asi}\\harmonogram};
+    \node[tool,right=12mm of gui,yshift=-7mm] (chunks) {paczki celów\\(adaptacyjne)};
+    \node[tool,right=of chunks] (nmap) {nmap\\hosty, usługi};
+    \node[tool,right=of nmap] (httpx) {httpx\\HTTP/TLS};
+    \node[tool,right=of httpx] (nuclei) {nuclei\\sygnatury};
+    \node[box,below=11mm of nmap,minimum width=48mm] (db) {PostgreSQL ASI\\TDE + pola AES-256-GCM};
+    \node[box,below=11mm of nuclei,fill=asiAccent!25] (dd) {DefectDojo};
+    \draw[arr] (gui) -- (chunks); \draw[arr] (cli) -- (chunks);
+    \draw[arr] (chunks) -- (nmap); \draw[arr] (nmap) -- (httpx); \draw[arr] (httpx) -- (nuclei);
+    \draw[arr] (nmap) -- (db); \draw[arr] (httpx) -- (db); \draw[arr] (nuclei) -- (db);
+    \draw[arr] (db) -- node[above,font=\scriptsize]{reimport} (dd);
+  \end{tikzpicture}
+
+  \vspace{3mm}\small
+  Gotowe skanery jako wymienne adaptery, panel jako nakładka na CLI i bazę (wzorzec MISP).
+  Całość: \cmd{make env \&\& make up}.
+\end{frame}
+
+% 4 --------------------------------------------------------------------------
+\begin{frame}{Discovery w skali}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{itemize}
+      \item Lejek etapów: discovery $\rightarrow$ usługi (\cmd{nmap -sV}) $\rightarrow$ HTTP $\rightarrow$ sygnatury.
+            Każdy etap dostaje tylko to, co znalazł poprzedni.
+      \item Paczki dobierane do zmierzonej prędkości, czas każdej paczki zapisany.
+      \item Okno czasowe: przerwany skan wznawia niezeskanowane cele w kolejnym oknie.
+      \item Potwierdzanie zniknięć ponownym skanem portu.
+    \end{itemize}
+    \column{0.44\textwidth}
+    \begin{block}{Test skali}
+      \textbf{16 384 adresy} (pula loopback):\\
+      \textbf{86 s} od startu do zapisu w bazie,\\
+      dashboard 0,22 s przy 49 tys. assetów.
+    \end{block}
+    \small\TODO{czas i liczby z labu jury}
+  \end{columns}
+\end{frame}
+
+% 5 --------------------------------------------------------------------------
+\begin{frame}{Fingerprint i własne sygnatury}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \textbf{httpx:} tytuł, kod, nagłówki, ciasteczka, certyfikat TLS, przekierowania, technologie, hash favicony.
+
+    \medskip
+    \textbf{nuclei + nasze sygnatury} (\cmd{signatures/}, tylko detekcja): nagłówek, ciasteczko, fragment HTML,
+    favicon, ścieżki \cmd{/admin}, \cmd{/version}, wersja w stopce, CMS, staging.
+    \column{0.48\textwidth}
+    \textbf{Wykryte w labie testowym:}
+    \begin{itemize}\small
+      \item WordPress 6.4.2, Jenkins 2.401.1
+      \item PHP 7.4.33 (przestarzałe)
+      \item Redis bez uwierzytelniania (\alert{high})
+      \item środowisko staging i panel admina
+      \item ciasteczka sesyjne, wersje w stopkach
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% 6 --------------------------------------------------------------------------
+\begin{frame}{Zmiany w czasie i hosty niestabilne}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    Stany assetu (host, host:port):
+    \begin{itemize}\small
+      \item \textbf{new} $\rightarrow$ \textbf{active}
+      \item \textbf{missing}: brak, jeszcze niepotwierdzony
+      \item \textbf{gone}: po $N$ kolejnych brakach
+      \item \textbf{reappeared}, \textbf{changed} (np. wersja)
+      \item \textbf{flapping}: znika i wraca; godziny odpowiedzi
+    \end{itemize}
+    \small Brak liczy się tylko dla faktycznie przeskanowanych adresów.
+    \column{0.46\textwidth}
+    \textbf{Demo: 2 przebiegi na labie}
+    \begin{itemize}\small
+      \item \cmd{legacy} znika $\rightarrow$ \emph{nie odpowiada}, potem \emph{zniknął}
+      \item \cmd{app} zmienia serwer $\rightarrow$ \emph{zmiana} (przed $\rightarrow$ po)
+      \item \cmd{jenkins} dochodzi $\rightarrow$ nowe usługi i sygnatury
+    \end{itemize}
+    \TODO{zrzut: porównanie przebiegów w panelu}
+  \end{columns}
+\end{frame}
+
+% 7 --------------------------------------------------------------------------
+\begin{frame}{Panel web i role}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{itemize}\small
+      \item \textbf{Dashboard}: najważniejsze znaleziska (ocena 0--100 z powodami), zmiany, niestabilne.
+      \item \textbf{Cele}: formularz ręczny, import CSV/JSON/TXT.
+      \item \textbf{Assety}: edycja tagów, notatek i oceny analityka, zachowana przy kolejnych skanach.
+      \item \textbf{Skany}: start, postęp na żywo, harmonogram z oknem.
+      \item Eksport CSV/JSON, import wyników (nmap XML, JSON, CSV).
+    \end{itemize}
+    \column{0.46\textwidth}
+    \small
+    \begin{tabular}{@{}ll@{}}\toprule
+      rola & może \\\midrule
+      \cmd{admin} & administracja, audit log \\
+      \cmd{operator} & dodawanie, usuwanie, modyfikacja \\
+      \cmd{analyst} & modyfikacja i odczyt \\
+      \cmd{viewer} & odczyt \\\bottomrule
+    \end{tabular}
+
+    \medskip
+    \TODO{zrzut: dashboard}
+  \end{columns}
+\end{frame}
+
+% 8 --------------------------------------------------------------------------
+\begin{frame}{Bezpieczeństwo skanowania i danych}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \textbf{Skanowanie}
+    \begin{itemize}\small
+      \item zakres sprawdzany przy planowaniu i ponownie w workerze
+      \item globalny limit pakietów/s, dozwolone porty
+      \item sygnatury bez exploitów i prób logowania; nuclei bez zewnętrznych callbacków
+    \end{itemize}
+    \column{0.48\textwidth}
+    \textbf{Dane w spoczynku}
+    \begin{itemize}\small
+      \item PostgreSQL z TDE (\cmd{pg\_tde}): tabele, indeksy i WAL szyfrowane AES-256
+      \item pola wrażliwe dodatkowo AES-256-GCM w aplikacji, rotacja kluczy
+      \item dowód: \cmd{make crypto-check} -- jawnego tekstu nie ma w plikach bazy
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% 9 --------------------------------------------------------------------------
+\begin{frame}{Integracja z DefectDojo}
+  Każdy przebieg trafia do \textbf{stałych testów} przez \cmd{reimport-scan}: DefectDojo samo liczy
+  nowe, zamknięte i reaktywowane wyniki.
+
+  \medskip\small
+  \begin{tabular}{@{}lll@{}}\toprule
+    test & parser DD & zawartość \\\midrule
+    \cmd{ASI discovery} & Generic Findings & usługi z oceną ciekawości \\
+    \cmd{asi-changes} & Generic Findings & zniknięcia, flapping, zmiany -- otwarte, dopóki trwają \\
+    \cmd{asi-httpx} & httpx Scan & strony WWW, technologie \\
+    \cmd{asi-nuclei} & Nuclei Scan & trafienia sygnatur \\\bottomrule
+  \end{tabular}
+
+  \medskip
+  Przebieg częściowy nigdy niczego nie zamyka. Ocena analityka (fałszywy alarm, akceptacja) trafia do DD.
+\end{frame}
+
+% 10 -------------------------------------------------------------------------
+\begin{frame}{Podsumowanie}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{itemize}
+      \item Discovery 10 000+ IP z kontrolą tempa i oknami czasowymi.
+      \item Historia zmian i hosty niestabilne, raport w panelu i w DefectDojo.
+      \item Fingerprint HTTP, CMS i własne sygnatury.
+      \item Role, audit log, szyfrowanie w spoczynku.
+    \end{itemize}
+    \column{0.46\textwidth}
+    \textbf{Uruchomienie}\\
+    \cmd{make env \&\& make up \&\& make demo}
+
+    \medskip
+    \textbf{Dalej}\\
+    \small\TODO{plan rozwoju, np. sygnatury IoT, źródła pasywne}
+  \end{columns}
+\end{frame}
+
+\end{document}

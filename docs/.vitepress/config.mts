@@ -39,6 +39,7 @@ export default defineConfig({
         { text: 'Bezpieczeństwo skanowania', link: '/guide/safety' },
         { text: 'Szyfrowanie danych w spoczynku', link: '/guide/encryption' },
         { text: 'Lab testowy i demo', link: '/guide/lab' },
+        { text: 'Lab organizatorów: analiza i testy', link: '/guide/lab-organizers' },
       ]},
       { text: 'Referencja', items: [
         { text: 'Komendy CLI', link: '/guide/cli' },

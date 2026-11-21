@@ -105,9 +105,17 @@ i `make sync`.
 |---|---|---|
 | DEV-9 | DEV ✅ *zrobione (agent blackarch)* | GUI: porównanie dwóch dowolnych przebiegów; oznaczanie wyników (fałszywy alarm, zaakceptowane ryzyko, nadpisana ocena) honorowane przez dashboard i eksport; edycja harmonogramu. |
 | DEV-10 | DEV ✅ *zrobione (agent blackarch): docs/guide/scale.md* | Test skali ≥10 000 adresów (127.0.0.0/18, tylko loopback): czas skanu, zapis do bazy, przeliczanie stanów, dashboard; poprawki wydajności. |
+<<<<<<< Updated upstream
 | SEC-10 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
 | SEC-9 | SEC 🔨 *w toku: goose/blackarch (21.11 19:55)* | Publiczne repo dla jury (GitHub) jako drugi remote. Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
 | ALL-1 | oboje | Prezentacja do 10 slajdów: problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
+=======
+| SEC-10 | SEC | Sygnatury IoT (kamery, routery, drukarki, panele urządzeń) do `signatures/` (pkt 6 PDF). |
+| DEV-11 | DEV | **Zarządzanie kontami (pkt 12–13 PDF, „Administracja”).** Dziś admin może w API/GUI tylko tworzyć konta (`POST /api/v1/users`); w CLI jest `asi user list/passwd/add` (4772620). Brak zmiany roli, blokady (`disabled`) i usunięcia, więc nie da się odebrać dostępu. Do zrobienia: `PATCH /api/v1/users/{id}` (rola, `disabled`, nowe hasło) + unieważnienie sesji/tokenów zablokowanego konta, ochrona przed odebraniem sobie ostatniego admina, widok w GUI (Administracja), wpisy w audit logu. Test: zablokowany użytkownik dostaje 401 na istniejącej sesji. |
+| DEV-12 | DEV | **Wyrównanie ról z treścią zadania (pkt 13).** Brief: *Dodawanie, usuwanie, modyfikacja* (`operator`) vs *Modyfikacja i odczyt* (`analyst`). Dziś `analyst` edytuje tylko assety (`PATCH /asset`); edycja istniejących celów i harmonogramów (`PUT /targets/{id}`, `PUT /schedules/{id}`) wymaga `operator`. Do zrobienia: `analyst` = modyfikacja istniejących wartości (cele, harmonogramy, wyniki, konfiguracja skanu) bez tworzenia i usuwania; `operator` = + dodawanie/usuwanie/uruchamianie. Tabela ról w `docs/guide/gui.md` 1:1 z nazwami z PDF + test API per rola (sprawdzone 21.11: viewer 403 na zapis, CSRF działa). |
+| SEC-9 | SEC | Publiczne repo dla jury: https://github.com/Ch3shireDev/awesome-surface-intelligence (drugi remote, origin zespołu zostaje na blackarch). Przed pushem przegląd historii pod kątem sekretów i realnych IP. Czyste uruchomienie od zera: `git clone && make env && make up && make demo`. |
+| ALL-1 | oboje | Prezentacja do 10 slajdów (szablon Beamer: `docs/presentation/asi.tex`, `make slides`): problem, architektura, demo 2 przebiegów, role, szyfrowanie, DD, bezpieczeństwo skanowania. Nagranie demo jako plan B. |
+>>>>>>> Stashed changes
 | ALL-2 | oboje | Dokumentacja: `status.md` na 100%, quickstart przetestowany przez drugą osobę na czystej VM. |
 
 ## Blokery (na bieżąco)
@@ -117,6 +125,31 @@ i `make sync`.
 | `make env` nie dopisuje nowych kluczy do istniejącego `.env` (compose nie startuje po DEV-1) | każdy `make up` po pullu | agent blackarch | ✅ `make env-sync` (wołane przez `make up`) |
 | nginx DD daje 502 po odtworzeniu `uwsgi` przy `make up` (stary IP upstreamu) | upload do DD, demo | agent blackarch | ✅ `make up` restartuje nginx |
 | import celów (.txt) kasował tagi i notatki wcześniej wgranych celów (zgłosił agent #2) | pkt 14 PDF | agent blackarch | ✅ import/dodawanie scala (`MergeTargets`), jawna edycja dalej zastępuje |
+
+## Testy na labie organizatorów (LAB-*), od 21.11 wieczór
+
+Środowisko: `~/lab` na fatusia-hacknation-2 (poza repo). Opis, analiza i sposób testowania:
+[Lab organizatorów](guide/lab-organizers.md). Jeden stack naraz. Cel `127.0.0.1` (`targets/lab-org.csv`).
+Każdy test kończy się wpisem wyniku (OK / FAIL + liczby) w tej tabeli i w `status.md`.
+
+| ID | kto | test | zaliczony, gdy |
+|---|---|---|---|
+| LAB-0 | SEC | Przygotowanie: `targets/lab-org.csv` (127.0.0.1), przeniesienie portów ASI/DD w `.env` przed `modern` i `vulnerable` (konflikt 8080/8090), lista portów skanu bez portów ASI (8080, 8090, 8091, 8094, 5433). | `make asi ARGS='plan -targets targets/lab-org.csv'` pokazuje tylko 127.0.0.1, `make up` działa na nowych portach |
+| LAB-1 | SEC | **Scenariusz quickstart** (`custom-network`, `./quickstart.sh up/change/up`), 3 przebiegi z pełnym zakresem TCP (`-p-`). | przebieg 2: tylko `8787` jako `missing` (pozostałe 4 porty `untouched`), przebieg 3: `8787` `reappeared`; w DD `asi-changes` „nie odpowiada” otwarte, a potem zamknięte; **ten sam test z domyślnym zestawem portów pokazuje lukę** (8787 niewidoczny) |
+| LAB-2 | SEC | `custom-network` w całości: httpbin, PostgreSQL, RabbitMQ (AMQP + panel), Gitea (HTTP + SSH), nginx. | 7 portów, poprawne usługi z `-sV`, Gitea i RabbitMQ rozpoznane w HTTP (tytuł/tech) |
+| LAB-3 | SEC | `modern`: WordPress latest, phpMyAdmin, Redis bez hasła, Nginx Proxy Manager (80/81/443). | WordPress z wersją, `asi-redis-noauth` high, panele phpMyAdmin i NPM rozpoznane (po LAB-T3), TLS na 443 |
+| LAB-4 | SEC | `vulnerable`: WordPress 4.7, Adminer, DVWA, vsftpd. **Bez prób logowania** (domyślne hasła w compose). | WordPress 4.7 oznaczony jako przestarzały i wysoko w ocenie, Adminer/DVWA rozpoznane, vsftpd z wersją; w logach skanera brak żądań logowania |
+| LAB-5 | SEC | `modern-proxy` + Toxiproxy: przebiegi z `ENABLE_LATENCY` 500 ms, potem `ENABLE_TIMEOUT`, `ENABLE_BANDWIDTH`, `ENABLE_SLOW_CLOSE`. | skan kończy się w oknie, brak fałszywych `gone` przy opóźnieniu, timeout odnotowany jako brak odpowiedzi HTTP (nie zniknięcie portu); czas odpowiedzi widoczny (po LAB-T4); dashboard Traefika i API Toxiproxy (8474) wykryte jako panele bez uwierzytelniania |
+| LAB-6 | SEC | Zmiana stacku między przebiegami (`custom-network` → `modern`) i powrót. | masowe `missing` → `gone` po progu, nowe usługi, powrót = `reappeared`; DD bez duplikatów; czas przebiegów w normie |
+
+Zadania kodu wynikające z analizy (przed LAB-1…5):
+
+| ID | kto | zadanie |
+|---|---|---|
+| LAB-T1 | DEV | Zakres portów: pełne TCP (`-p-`) automatycznie dla małych zbiorów celów (np. ≤ 16 hostów, z limitem tempa) albo profil „lab” / „lista portów od organizatorów” w GUI i CLI. Dziś domyślnie top 1000 + 14 ryzykownych, więc 8787, 15432, 5673, 15673, 2223, 8474 są niewidoczne. |
+| LAB-T2 | SEC | Nie skanować samego siebie: wykluczenie portów ASI/DD przy celu = host skanera (wykluczenia per port albo automatyczne). |
+| LAB-T3 | SEC | Sygnatury detekcyjne (`signatures/`): phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ management, Nginx Proxy Manager, Traefik dashboard (`api.insecure`), API Toxiproxy, httpbin. Tylko detekcja, bez logowania. Łączy się z SEC-10 (IoT). |
+| LAB-T4 | DEV | Czas odpowiedzi HTTP z httpx (`time`) jako metryka obserwacji, poza `fp_hash`; w panelu kolumna i próg „wolna odpowiedź”; zmiana opóźnienia nie może dawać `changed`. |
 
 ## Ryzyka
 
