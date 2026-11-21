@@ -19,7 +19,9 @@ func TestDeleteTargetSet(t *testing.T) {
 	if _, err := st.MergeTargets(ctx, name, []targets.Target{{Target: "192.0.2.77", Enabled: true}}); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { st.DB.Exec(ctx, `DELETE FROM targets WHERE set_id=(SELECT id FROM target_sets WHERE name=$1)`, name) })
+	t.Cleanup(func() {
+		st.DB.Exec(ctx, `DELETE FROM targets WHERE set_id=(SELECT id FROM target_sets WHERE name=$1)`, name)
+	})
 	t.Cleanup(func() { st.DB.Exec(ctx, `DELETE FROM target_sets WHERE name=$1`, name) })
 
 	// z celami: bez -force odmowa, z liczbami w komunikacie

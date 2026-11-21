@@ -129,16 +129,16 @@ type Opts struct {
 // Any token that is not a known flag or its value (e.g. a target address) is an error.
 func (p *Policy) Enforce(args []string, o Opts) ([]string, error) {
 	var (
-		out             []string
-		pSpec           string
-		hasP, hasTop    bool
-		hasUDP, hasSn   bool
-		hasUnpriv       bool
-		exclTCP         PortSet
-		exclUDP         PortSet
-		exclUnprefixed  PortSet
-		iL, oX          []string
-		rate            = -1
+		out            []string
+		pSpec          string
+		hasP, hasTop   bool
+		hasUDP, hasSn  bool
+		hasUnpriv      bool
+		exclTCP        PortSet
+		exclUDP        PortSet
+		exclUnprefixed PortSet
+		iL, oX         []string
+		rate           = -1
 	)
 	for i := 0; i < len(args); i++ {
 		a := args[i]
