@@ -16,6 +16,7 @@ import (
 	"asi/internal/nmapxml"
 	"asi/internal/obs"
 	"asi/internal/scanner"
+	"asi/internal/siem"
 	"asi/internal/store"
 	"asi/internal/targets"
 )
@@ -344,6 +345,17 @@ func (d *dbRecorder) reconcile(cfg store.ReconcileConfig) {
 		return
 	}
 	d.logf("reconcile: %d covered hosts, %d live, events %v", r.CoveredHosts, r.LiveHosts, r.Counts)
+	if dest := siem.URL(); dest != "" && len(r.Events) > 0 {
+		evs := make([]siem.Event, 0, len(r.Events))
+		for _, e := range r.Events {
+			evs = append(evs, siem.Event{At: e.At, Type: e.Type, Key: e.Key, RunID: e.RunID})
+		}
+		if err := siem.Send(context.Background(), dest, evs); err != nil {
+			d.logf("siem: %v", err)
+		} else {
+			d.logf("siem: %d events sent", len(evs))
+		}
+	}
 }
 
 func printEvents(ev []store.Event) {

@@ -152,7 +152,11 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
         <a href="/api/v1/export/assets.json" style="margin-left:6px">JSON</a></div>
     </div>
   </div>
-  <div class="card"><div class="scroll" style="max-height:none"><table><thead><tr><th>asset</th><th>usługa</th><th>HTTP ms</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
+  <div class="card"><div class="row" style="margin-bottom:8px"><span class="muted" id="sel-n">zaznaczone: 0</span>
+      <button class="btn sec sel-go" data-to="csv">CSV</button><button class="btn sec sel-go" data-to="json">JSON</button>
+      <span data-role="operator"><button class="btn sec sel-go" data-to="dojo">Wyślij do DefectDojo</button> <button class="btn sec sel-go" data-to="siem">Wyślij do SIEM</button></span>
+      <span id="sel-msg" class="msg"></span></div>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th><input type="checkbox" id="sel-all" aria-label="zaznacz wszystkie"></th><th>asset</th><th>usługa</th><th>HTTP ms</th><th>stan</th><th>ocena</th><th>widziany</th><th>ostatnio</th><th>tagi</th></tr></thead><tbody id="a-rows"></tbody></table></div>
     <div id="a-count" class="muted" style="margin-top:8px"></div></div>
 </section>
 
@@ -185,6 +189,14 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
       <div style="margin-top:12px"><button class="btn" id="t-import">Importuj</button></div>
       <div id="t-imsg" class="msg"></div>
     </div>
+  </div>
+  <div class="card" data-role="operator"><h2>Źródła pasywne</h2>
+    <p class="muted" style="margin-top:0">Nazwy z logów Certificate Transparency i DNS, bez skanowania. Domena jest wysyłana do Cert Spotter / crt.sh. Kandydaci trafiają do zbioru jako wyłączeni, do skanu włączasz ich ręcznie.</p>
+    <div class="row"><div><label for="ps-domain">domena</label><input id="ps-domain" placeholder="example.org"></div>
+      <div><label><input type="checkbox" id="ps-inv"> inwentarz pasywny (wysyła publiczne IP do Shodan InternetDB)</label></div>
+      <div><button class="btn sec" id="ps-find">Szukaj</button> <button class="btn" id="ps-save">Dodaj jako wyłączone</button></div></div>
+    <div id="ps-msg" class="msg"></div>
+    <div class="scroll"><table><thead><tr><th>nazwa</th><th>adresy</th><th>porty wg inwentarza</th><th>źródła</th></tr></thead><tbody id="ps-rows"></tbody></table></div>
   </div>
   <div class="card"><h2 id="t-title">Cele</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>cel</th><th>rodzaj</th><th>porty</th><th>asset</th><th>właściciel</th><th>tagi</th><th>notatka</th><th>skanuj</th><th></th></tr></thead><tbody id="t-rows"></tbody></table></div></div>
 </section>
@@ -490,8 +502,9 @@ async function loadAssets(){
     const svcCell=isH
       ?`<span class="badge k-host">host</span>${portCnt[a.ip]?` <span class="muted" style="font-weight:400">· ${portCnt[a.ip]} ${portWord(portCnt[a.ip])}</span>`:''}`
       :esc(a.service||'');
-    return `<tr class="click${isH?' host-row':''}" data-k="${esc(a.key)}"><td class="mono${!isH&&hasHost[a.ip]?' port-sub':''}">${esc(a.key)}</td><td>${svcCell}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`;
-  }).join('')||'<tr><td class="empty" colspan="8">Brak assetów. Uruchom skan.</td></tr>';
+    return `<tr class="click${isH?' host-row':''}" data-k="${esc(a.key)}"><td onclick="event.stopPropagation()"><input type="checkbox" class="sel" data-sk="${esc(a.key)}" aria-label="zaznacz ${esc(a.key)}"${picked.has(a.key)?' checked':''}></td><td class="mono${!isH&&hasHost[a.ip]?' port-sub':''}">${esc(a.key)}</td><td>${svcCell}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`;
+  }).join('')||'<tr><td class="empty" colspan="9">Brak assetów. Uruchom skan.</td></tr>';
+  bindPicks();
   const hostWord=n=>n===1?'host':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'hosty':'hostów');
   const hostN=Object.keys(hasHost).length, portN=rows.length-hostN;
   const sumTxt=hostN&&portN?`${rows.length} assetów (${hostN} ${hostWord(hostN)}, ${portN} ${portWord(portN)})`:`${rows.length} assetów`;
@@ -500,6 +513,41 @@ async function loadAssets(){
   if($('a-run-x'))$('a-run-x').onclick=()=>{assetRun='';assetEvents='';loadAssets()};
   if($('a-svc-x'))$('a-svc-x').onclick=()=>{assetSvc='';loadAssets()};bindRows();syncAssetURL();
 }
+// eksport zaznaczonych
+const picked=new Set();
+function showPicked(){$('sel-n').textContent='zaznaczone: '+picked.size}
+function bindPicks(){
+  // po zmianie filtra liczy się tylko to, co widać
+  const boxes=[...document.querySelectorAll('input.sel')],vis=new Set(boxes.map(b=>b.dataset.sk));
+  for(const k of [...picked])if(!vis.has(k))picked.delete(k);
+  boxes.forEach(b=>b.onchange=()=>{b.checked?picked.add(b.dataset.sk):picked.delete(b.dataset.sk);showPicked()});
+  $('sel-all').checked=boxes.length>0&&boxes.every(b=>b.checked);showPicked();
+}
+$('sel-all').onchange=e=>{document.querySelectorAll('input.sel').forEach(b=>{b.checked=e.target.checked;b.onchange()})};
+document.querySelectorAll('.sel-go').forEach(b=>b.onclick=async()=>{
+  const m=$('sel-msg'),to=b.dataset.to;m.className='msg';m.textContent='';
+  try{
+    const r=await api('api/v1/export/selected',{method:'POST',body:JSON.stringify({keys:[...picked],to})});
+    if(to==='csv'||to==='json'){
+      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([to==='csv'?r:JSON.stringify(r,null,2)]));
+      a.download='asi-zaznaczone.'+to;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      m.textContent='Pobrano: '+picked.size;
+    }else m.textContent='Wysłano: '+r.sent;
+    m.className='msg ok';
+  }catch(e){m.className='msg err';m.textContent=e.message}
+});
+// źródła pasywne
+async function runPassive(save){
+  const m=$('ps-msg');m.className='msg';m.textContent='Szukam…';
+  try{
+    const r=await api('api/v1/passive',{method:'POST',body:JSON.stringify({domain:$('ps-domain').value,inventory:$('ps-inv').checked,set:curSet,save})});
+    const x=r.result;
+    $('ps-rows').innerHTML=x.records.map(p=>`<tr><td class="mono">${esc(p.name)}</td><td class="mono">${esc((p.ips||[]).join(', '))}</td><td>${esc((p.ports||[]).join(', '))}</td><td>${esc(p.sources.join(', '))}</td></tr>`).join('');
+    if(save)await loadTargets();
+    m.className='msg ok';m.textContent=`${x.records.length} nazw`+(save?`, dodano wyłączonych: ${r.written}`:'')+((x.warnings||[]).length?' · '+x.warnings.join('; '):'');
+  }catch(e){m.className='msg err';m.textContent=e.message}
+}
+$('ps-find').onclick=()=>runPassive(false);$('ps-save').onclick=()=>runPassive(true);
 $('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;$('a-slow').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
 let assetSvc='',assetRun='',assetEvents='';

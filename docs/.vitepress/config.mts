@@ -26,6 +26,7 @@ export default defineConfig({
       ]},
       { text: 'Działanie', items: [
         { text: 'Format celów (CSV/JSON/TXT)', link: '/guide/targets' },
+        { text: 'Źródła pasywne, eksport, SIEM', link: '/guide/integrations' },
         { text: 'Podział na paczki nmap', link: '/guide/chunking' },
         { text: 'Panel web (GUI)', link: '/guide/gui' },
         { text: 'Harmonogram i okna czasowe', link: '/guide/schedule' },

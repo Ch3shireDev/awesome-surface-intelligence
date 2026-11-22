@@ -97,6 +97,8 @@ func (a *App) Handler() http.Handler {
 	m.Handle("POST /api/v1/schedules", a.need("operator", a.saveSchedule))
 	m.Handle("PUT /api/v1/schedules/{id}", a.need("analyst", a.saveSchedule)) // DEV-12: edycja istniejącego harmonogramu
 	m.Handle("DELETE /api/v1/schedules/{id}", a.need("operator", a.deleteSchedule))
+	m.Handle("POST /api/v1/passive", a.need("operator", a.passiveSources))
+	m.Handle("POST /api/v1/export/selected", a.need("viewer", a.exportSelected)) // dojo/siem: operator
 	m.Handle("GET /api/v1/export/{file}", a.need("viewer", a.exportAssets))
 	m.Handle("GET /api/v1/audit", a.need("admin", a.audit))
 	m.Handle("GET /api/v1/users", a.need("admin", a.users))

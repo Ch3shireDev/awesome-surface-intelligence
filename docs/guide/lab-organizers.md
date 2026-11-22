@@ -293,6 +293,10 @@ skaner = VM B `blackarch` (`100.74.28.22`). Połączenie szło **przez relay DER
 (`targets/lab-remote.csv`, `-set lab7-ports`), `-parallel 1 -rate 500`, porty labu jawnie:
 `-ports 2223,3001,5673,8787,15432,15673` (dlaczego nie pełne TCP — luka LAB-T13 niżej).
 
+> **Zastrzeżenie:** żaden z trzech przebiegów nie szedł sam. `091643` nakładał się z drugim skanem tego celu
+> `091214` (do 09:17:13 UTC), a `091750` i `091901` ze skanem `091721` (do 09:20:54 UTC). Wynik wymaga powtórki bez
+> równoległego skanu.
+
 Trzy przebiegi z prawdziwą zmianą w środku (`quickstart.sh up → change → up`):
 
 | przebieg | stan labu | otwarte | zmiany (reconcile) | czas |
