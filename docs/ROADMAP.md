@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 22.11.2026, 10:21 CET, stan `main` = `691406a`.** Oddanie finalne: **11:00 CET**. Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 22.11.2026, 10:26 CET, stan `main` = `835cb9d`.** Oddanie finalne: **11:00 CET**. Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -10,11 +10,11 @@ M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)██████████ 100%  ✅  DEV-0/1 ✅, SEC-1/2/3 ✅
 M3 Historia i stany       █████████░  90%  🔨  działa; LAB-T11 ✅; otwarte: LAB-T13 (gubione porty)
-M4 Web GUI                ██████████ 100%  ✅  kod gotowy (porty per cel, hosty przy portach); panel demo do przebudowy
+M4 Web GUI                ██████████ 100%  ✅  kod gotowy (porty per cel, hosty przy portach, histogram na górze); panel demo do przebudowy
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
 M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
-M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅; selektywny eksport + SIEM ✅
-M8 Finisz dla jury        ████████░░  80%  🔨  zostało: oddanie ALL-1, wdrożenie na demo, LAB-7, kontrola repo
+M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅, źródła pasywne + selektywny eksport + SIEM ✅
+M8 Finisz dla jury        █████████░  90%  🔨  SEC-9 ✅, OPS-1 ✅, LAB-7 🟡; zostało: końcowy PDF + HackTribe, wdrożenie na demo
 ```
 
 ## Etapy
@@ -28,8 +28,8 @@ M8 Finisz dla jury        ████████░░  80%  🔨  zostało: o
 | **M4** Web GUI (najwyżej punktowane) | jeden panel na `:18090` (podgląd na żywo przez Unix socket), logowanie, formularz celów (ręcznie + CSV/JSON, porty per cel), lista assetów z edycją, deep linki, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-9 ✅, DEV-13 ✅, DEV-14 ✅ | ✅ |
 | **M5** Fingerprint i sygnatury | httpx (w tym czas odpowiedzi ms, próg 300 ms): tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z 34 naszymi szablonami (CMS, panel, staging, wersje, 9 IoT, lab organizatorów) | SEC-4 ✅, SEC-5 ✅, SEC-10 ✅, DEV-7 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ | ✅ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (`pg_tde`), RBAC lokalny 4 role (1:1 z PDF), zarządzanie kontami, tokeny API w GUI, audit log | SEC-6 ✅, DEV-3 ✅, DEV-11 ✅, DEV-12 ✅ | ✅ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami (4 testy), twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅, selektywny eksport ✅ | ✅ |
-| **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, testy na labie organizatorów (LAB-0…6 ✅), prezentacja ≤10 slajdów, dokumentacja 100% | DEV-10 ✅, ALL-2 ✅, LAB-0…6 ✅ (LAB-3 poza TLS), SEC-9 🟡, OPS-1 🟡, ALL-1 🔨, LAB-7 🔨 | 🔨 |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami (4 testy), selektywny eksport + SIEM, źródła pasywne (CT/DNS/InternetDB), twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅, integracje (`0ff4e8f`) ✅ | ✅ |
+| **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, testy na labie organizatorów (LAB-0…6 ✅, LAB-7 🟡), prezentacja ≤10 slajdów, dokumentacja 100% | DEV-10 ✅, ALL-2 ✅, SEC-9 ✅, OPS-1 ✅, LAB-0…6 ✅ (LAB-3 poza TLS), LAB-7 🟡, ALL-1 🔨 | 🔨 |
 
 ## Ścieżka krytyczna do 11:00 CET
 
@@ -77,17 +77,19 @@ Właściciele według podziału z 10:13 CET. Zadania zamknięte: [`TASKS.md`](TA
 |---|---|---|---|---|
 | **P0** | ALL-1: oddanie | zrzuty na slajdach tylko z adresami dokumentacyjnymi lub loopback; PDF z końcowego `main` i opis zapisane w HackTribe | daniel-a8 (materiały), Daniel (wysyłka) | 🔨 |
 | **P0** | wdrożenie demo | po LAB-7 `make up` z `origin/main`; migracje 008 i 009; działa: logowanie, dodanie celu z portami, skan, eksport | do przypisania | ⏳ |
-| **P0** | SEC-9: kontrola publicznego repo | przegląd przed oddaniem potwierdzony przez właściciela | Daniel | 🟡 |
-| **P1** | LAB-7: skan zdalny | wstępny wynik 6/6 portów jest w `lab-organizers.md`; do zaliczenia powtórka 3 przebiegów bez drugiego skanu w tle | goose + fatusia-2 | 🟡 |
-| **P2** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | cudzy przebieg jest już chroniony: skan, który przegrał wyścig o ID, nie pisze do bazy. Zostaje: unikalne ID, żeby zapisywały się oba skany | do przypisania | 🟡 |
-| **P1** | LAB-T13: gubione porty przy pełnym TCP | poprawka albo opisane znane ograniczenie | do przypisania | ⏳ |
-| **P2** | OPS-1: dokumentacja tylko lokalnie | działający proces na 4173 słucha na `127.0.0.1` (Makefile już poprawiony) | agy | 🟡 |
+| **P0** | SEC-9: kontrola publicznego repo | przegląd `835cb9d`: 0 sekretów, 0 prawdziwych publicznych IP, brak `LICENSE` / ekstrakcji tekstu, 0 martwych linków VitePress; zostaje końcowy push przed 11:00 | agy (audyt ✅), Daniel (końcowy push) | ✅ |
+| **P1** | LAB-7: skan zdalny | wstępny wynik 6/6 portów jest w `lab-organizers.md` (`e4c4922`, `835cb9d`); do zaliczenia powtórka 3 przebiegów bez drugiego skanu w tle | goose + fatusia-2 | 🟡 |
+| **P2** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | cudzy przebieg jest już chroniony (`0dd62b5`): skan, który przegrał wyścig o ID, nie pisze do bazy. Zostaje: unikalne ID, żeby zapisywały się oba skany | do przypisania | 🟡 |
+| **P1** | LAB-T13: gubione porty przy pełnym TCP | poprawka albo opisane znane ograniczenie (już opisane w `lab-organizers.md`) | do przypisania | ⏳ |
+| **P2** | OPS-1: dokumentacja tylko lokalnie | proces na `:4173` zbindowany wyłącznie na `127.0.0.1` (`vitepress dev --host 127.0.0.1`) | agy | ✅ |
 
 ## Dziennik postępu
 
 | kiedy | co się zmieniło |
 |---|---|
-| 22.11 10:22 | kolizja ID przebiegu: skan bez własnego wiersza `runs` nie pisze do bazy (odtworzone dwoma równoczesnymi skanami loopback, testy z integracyjnymi zielone) |
+| 22.11 10:25 | audyt czystości repo i dokumentacji (`0ff4e8f`): 0 sekretów, 0 prawdziwych publicznych IP, brak `LICENSE` i wzmianek o ekstrakcji z tekstu, `vitepress build` 0 martwych linków; wyrównane `ROADMAP.md`, `status.md`, `README.md` |
+| 22.11 10:23 | integracje (`0ff4e8f`): źródła pasywne (CT, DNS, InternetDB), selektywny eksport zaznaczonych (CSV/JSON/DD `asi-selected`) i powiadomienia SIEM (`guide/integrations.md`) |
+| 22.11 10:22 | LAB-7 (`e4c4922`): skaner blackarch → lab na fatusia-2 przez DERP (6/6 portów, 0 FP, z zastrzeżeniem nakładki); nowe LAB-T13 i LAB-T14; kolizja ID przebiegu (`0dd62b5`): skan bez własnego wiersza `runs` nie pisze do bazy; histogram na górze dashboardu (`3395a45`) |
 | 22.11 10:18 | LAB-T11 (`691406a`): wykryty firewall = wynik niepełny, zdarzenie `filtered`, migracja 009 |
 | 22.11 10:16 | przegląd przed oddaniem: porty per cel (`ad0fc60`), hosty przy portach (`835fbbc`, `19b0913`), zawężony zakres formularza celów (`acf0e23`); `go test` i `go vet` zielone na `acf0e23` (bez testów integracyjnych bazy); M3, M7, M8 skorygowane o otwarte braki |
 | 22.11 ~10:00 | ALL-1: prezentacja `docs/presentation/asi.tex` uzupełniona o wyniki LAB-1…6, prawdziwe zrzuty z `:18090` (dashboard + porównanie przebiegów), zostaje `\author`; DEV-13 potwierdzone na `:18090` (`/live/` 200, 0 błędów JS); OPS-1 (`make docs` na `127.0.0.1`); aktualizacja `ROADMAP.md` i `status.md` |

@@ -74,14 +74,14 @@ Wyniki: panel (Dashboard, Assety, porównanie przebiegów), terminal (`make asi 
 
 | wymaganie z treści zadania | jak | szczegóły |
 |---|---|---|
-| lista IP, CIDR, domen (ręcznie, CSV, JSON) | formularz i import w panelu, pliki CSV/JSON/TXT | [cele](docs/guide/targets.md) |
+| lista IP, CIDR, domen (ręcznie, CSV, JSON) | formularz i import w panelu (z portami per cel), pliki CSV/JSON/TXT | [cele](docs/guide/targets.md) |
 | wielowątkowy skan, czas trwania, podział na podgrupy | pula workerów nmapa, paczki dobierane do zmierzonej prędkości, czas każdej paczki | [podział](docs/guide/chunking.md) |
 | duże zakresy (10 000+ IP) | test 16 384 adresów: 86 s od startu do zapisu w bazie | [skala](docs/guide/scale.md) |
 | aktywne hosty, usługi | discovery sondami TCP na typowych portach (ICMP opcjonalnie), `nmap -sV` na żywych hostach | [architektura](docs/guide/architecture.md) |
 | HTTP: tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania | httpx | [fingerprint](docs/guide/fingerprint.md) |
 | CMS, framework, serwer, staging, panel admina | httpx (technologie) + nuclei z naszymi sygnaturami | [fingerprint](docs/guide/fingerprint.md) |
 | własne sygnatury detekcyjne | szablony nuclei w `signatures/`, tylko detekcja | [`signatures/README.md`](signatures/README.md) |
-| porównanie przebiegów: nowe, znikające, zmienione | stany assetów, potwierdzanie zniknięć, porównanie dowolnych dwóch przebiegów | [historia](docs/guide/history.md), [diff](docs/guide/diff.md) |
+| porównanie przebiegów: nowe, znikające, zmienione | stany assetów (`new/missing/gone/changed/reverted/filtered`), potwierdzanie zniknięć, porównanie dowolnych dwóch przebiegów | [historia](docs/guide/history.md), [diff](docs/guide/diff.md) |
 | hosty niestabilne, różnice zależne od pory dnia | flapping, godziny odpowiedzi | [historia](docs/guide/history.md) |
 | okno czasowe, częstotliwość, wznawianie | harmonogram (cron + okno), niedokończone cele wznawiane w kolejnym oknie | [harmonogram](docs/guide/schedule.md) |
 | ograniczanie tempa, bezpieczeństwo skanowania | globalny limit pps, kontrola zakresu, dozwolone porty, sygnatury bez exploitów | [bezpieczeństwo](docs/guide/safety.md) |
@@ -89,8 +89,9 @@ Wyniki: panel (Dashboard, Assety, porównanie przebiegów), terminal (`make asi 
 | edycja danych trwała między skanami | tagi, notatki, ocena analityka na assecie | [panel](docs/guide/gui.md) |
 | dashboard najważniejszych znalezisk | ocena „ciekawości” 0–100 z powodami, zmiany, niestabilne | [wnioski](docs/guide/insights.md) |
 | szyfrowanie w spoczynku | PostgreSQL z TDE (`pg_tde`) + pola wrażliwe AES-256-GCM, `make crypto-check` | [szyfrowanie](docs/guide/encryption.md) |
-| import i eksport JSON/CSV | import nmap XML/CSV/JSON/JSONL, eksport CSV/JSON | [import](docs/guide/import.md) |
-| integracja z DefectDojo | 4 stałe testy z historią: usługi, zmiany, httpx, nuclei | [DefectDojo](docs/guide/defectdojo.md) |
+| import i eksport JSON/CSV | import nmap XML/CSV/JSON/JSONL, eksport całościowy i zaznaczonych CSV/JSON | [import](docs/guide/import.md), [integracje](docs/guide/integrations.md) |
+| integracja z DefectDojo | 4 stałe testy z historią + selektywny eksport `asi-selected` (`close_old=false`) | [DefectDojo](docs/guide/defectdojo.md), [integracje](docs/guide/integrations.md) |
+| źródła pasywne i powiadomienia SIEM | pasywne CT / DNS / InternetDB, powiadomienia webhook / syslog | [integracje](docs/guide/integrations.md) |
 
 Pełna lista ze stanem każdego punktu: [`docs/status.md`](docs/status.md).
 
