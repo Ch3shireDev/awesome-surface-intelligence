@@ -37,7 +37,7 @@ Stan na 22.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | — | ocena „ciekawości” | ✅ | 0–100 z powodami: port, sygnatury, TLS, świeżość, flapping; ocena analityka wygrywa ([Ocena](/guide/insights)) |
 | — | tagi | ✅ | tagi celów (formularz/import) i assetów (edycja w GUI/CLI, trwałe między skanami) |
 | — | dokumentacja | ✅ | ta strona (VitePress), w tym [Ścieżka testowania (dla jury)](/guide/jury) (ALL-2); publiczne repo: https://github.com/Ch3shireDev/awesome-surface-intelligence |
-| — | repozytorium publiczne (SEC-9) | ✅ | link ze zgłoszenia; historia bez `.env`/`.dd_token`/realnych celów (sprawdzone), instalacja od zera, demo i skany sprawdzane w [GitHub Actions](https://github.com/Ch3shireDev/awesome-surface-intelligence/actions/workflows/clean-start.yml) ([Quickstart](/guide/quickstart#czysty-start-od-zera-sec-9-sprawdzony)) |
+| — | repozytorium publiczne (SEC-9) | ✅ | link ze zgłoszenia; historia bez `.env`/`.dd_token`/realnych celów (sprawdzone), instalacja od zera, demo i skany sprawdzane w [GitHub Actions](https://github.com/Ch3shireDev/awesome-surface-intelligence/actions/workflows/clean-start.yml) ([Quickstart](/guide/quickstart)) |
 
 ## Lab i demo (SEC-3, 21.11)
 
