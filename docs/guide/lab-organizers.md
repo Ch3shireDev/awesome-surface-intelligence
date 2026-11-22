@@ -290,12 +290,30 @@ Swagger UI). `modern`: Apache 2.4.71 (WordPress 8080, phpMyAdmin 8081), Redis 7.
 **Układ (decyzja 19):** stack = VM A `fatusia-hacknation-2` (`<tailscale-ip-A>`, arm64, `custom-network` + `quickstart.sh`),
 skaner = VM B `blackarch` (`<tailscale-ip-B>`). Połączenie szło **przez relay DERP „waw”** (`tailscale ping`: „via DERP
 (waw) in 43 ms, direct connection not established”) — czyli gorszy wariant niż direct. Cel: `<tailscale-ip-A>`
-(`targets/lab-remote.csv`, `-set lab7-ports`), `-parallel 1 -rate 500`, porty labu jawnie:
+(`targets/lab-remote.csv`), `-parallel 1 -rate 500`, porty labu jawnie:
 `-ports 2223,3001,5673,8787,15432,15673` (dlaczego nie pełne TCP — luka LAB-T13 niżej).
 
-> **Zastrzeżenie:** żaden z trzech przebiegów nie szedł sam. `091643` nakładał się z drugim skanem tego celu
-> `091214` (do 09:17:13 UTC), a `091750` i `091901` ze skanem `091721` (do 09:20:54 UTC). Wynik wymaga powtórki bez
-> równoległego skanu.
+> **Zastrzeżenie (pierwsze przejście):** żaden z trzech przebiegów `091643`, `091750`, `091901` nie szedł sam —
+> nakładały się z równoległymi skanami tego celu (`091214`, `091721`). Dlatego wykonano **powtórkę solo** poniżej.
+
+### Powtórka solo (22.11 10:27-10:36 UTC)
+
+Bez równoległych skanów (sprawdzane `pgrep -af 'asi scan'` przed każdym przebiegiem). Skaner uruchomiony jako
+**binarka na hoście** VM B, nie w kontenerze: inne sesje restartowały w tym czasie `nmap-scanner` i zabijały skany
+(pierwsza próba `092601` padła po 37 s). Cel i porty jak wyżej, `quickstart.sh up → change → up`.
+
+| przebieg | stan labu | otwarte | zdarzenia reconcile | czas |
+|---|---|---|---|---|
+| `20261122-092710` | `up` | 12 (6/6 labu) | **brak** (`map[]`) — czysta baza | 68 s |
+| `20261122-093109` | `change` (8787 stop) | 11 (5/6 labu) | **`missing:1` = tylko 8787** | 93 s |
+| `20261122-093446` | `up` | 11 (6/6 labu) | **`reappeared:1` = tylko 8787**; `filtered:1` na `4173` (usługa dokumentacji VM A, LAB-T11: nie liczone jako brak); `flapping:1` na 8787 (historia z wcześniejszych, nakładających się przebiegów) | 107 s |
+
+**Kryteria powtórki:** ✅ wszystkie 6 opublikowanych portów labu widoczne w każdym przebiegu; ✅ jedyna realna
+zmiana to 8787 (`missing` → `reappeared`); ✅ zero adresów `172.x` w `plan.json` i `observations.json` (0/0/0);
+✅ w logu nginx celu **731 GET / 0 POST** z `<tailscale-ip-B>`, tylko ścieżki detekcyjne (`/wp-admin/`,
+`/manager/html`, `/login` — 404) i zero prób logowania. Potwierdzenie: pierwsze przejście pełnego TCP (`092710`)
+zgubiło w pierwszym przebiegu 4 znane porty — **skan potwierdzający LAB-T11 odzyskał wszystkie 4** (tag `unstable`),
+czyli mechanizm „filtered + reproba” działa; nowy port zgubiony w pierwszym przejściu nadal przepadnie (LAB-T13).
 
 Trzy przebiegi z prawdziwą zmianą w środku (`quickstart.sh up → change → up`):
 
