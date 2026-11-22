@@ -60,7 +60,7 @@ szyfrowanie → bezpieczeństwo, z oczekiwanymi wynikami): [`docs/guide/jury.md`
 | panel ASI | http://127.0.0.1:18090 | `admin`, hasło: `grep ASI_ADMIN_PASSWORD .env` |
 | DefectDojo | http://127.0.0.1:8080 | `admin`, hasło: `grep DD_ADMIN_PASSWORD .env` |
 
-**Jeden panel: http://127.0.0.1:18090.** Wszystko jest tam: cele, skany (także uruchomione z terminala przez
+**ASI działa na porcie 18090.** W panelu są: cele, skany (także uruchomione z terminala przez
 `make asi-scan`), postęp na żywo, wyniki, historia, porównanie przebiegów, role, eksport.
 
 Panel słucha domyślnie tylko na `127.0.0.1`. Dostęp z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:18090` w `.env`

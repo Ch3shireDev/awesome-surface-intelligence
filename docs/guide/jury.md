@@ -265,7 +265,7 @@ Plik do importu kładź w `targets/` (albo w `results/`, jeśli należy do ciebi
 
 ## 5. Role (RBAC), zarządzanie kontami i audyt {#krok-5}
 
-Pokrywa punkt walidacji **12** (10% oceny) oraz wymagania 12–13 PDF (wyrównane 1:1 w DEV-12).
+Pokrywa punkt walidacji **12** (10% oceny) oraz wymagania 12–13 PDF.
 
 **Administracja → Użytkownicy**: utwórz `jury-viewer` (`viewer`), `jury-analyst` (`analyst`) i `jury-operator`
 (`operator`), hasła min. 10 znaków. Zaloguj się na nie w oknie prywatnym.
