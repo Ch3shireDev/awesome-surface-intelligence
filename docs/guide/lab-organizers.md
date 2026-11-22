@@ -107,7 +107,7 @@ Poprawione w trakcie: `asi-changes` wysyłał do produktu bieżącego przebiegu 
 bazie (u nas hosty 192.0.2.14/.15 z własnego labu trafiły do `ASI lab-org`). Teraz idą tylko adresy z planu
 przebiegu (`plan.json`). Zweryfikowane: 0 obcych warunków, a DD zamknął 2 błędnie wysłane.
 
-Zostaje: LAB-T5 (diff „gone/new” vs baza „missing/reappeared”), LAB-T6 (instalator Gitea), szum usług samej
+Zostaje: ~~LAB-T5~~ (zrobione: diff używa słów z historii), LAB-T6 (instalator Gitea), szum usług samej
 VM (SSH, Syncthing, procesy lokalne). To prawdziwe usługi hosta, w labie jury wykluczyć je zakresem/portami.
 
 ## Wyniki LAB-2 (21.11, `custom-network` na blackarch, amd64)

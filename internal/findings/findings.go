@@ -177,10 +177,14 @@ func Load(path string) ([]Service, error) {
 // ---- diff between runs (spec 8, 9) ----
 
 type Change struct {
-	Kind   string   `json:"kind"` // new | gone | changed
-	Key    string   `json:"key"`
-	Before *Service `json:"before,omitempty"`
-	After  *Service `json:"after,omitempty"`
+	Kind string `json:"kind"` // new | gone | changed: what the two runs show (file/structure comparison)
+	Key  string `json:"key"`
+	// History (LAB-T5): the asset's event in the newer run from the database (new, reappeared, missing, gone,
+	// changed, reverted). Empty when unknown. A 2-run comparison cannot tell "missing" (1 miss, to be
+	// confirmed) from "gone" (threshold reached) or "new" from "reappeared" - the history can.
+	History string   `json:"history,omitempty"`
+	Before  *Service `json:"before,omitempty"`
+	After   *Service `json:"after,omitempty"`
 }
 
 type Diff struct {
@@ -190,6 +194,60 @@ type Diff struct {
 	HostsGone []string `json:"hosts_gone"`
 	Changes   []Change `json:"changes"`
 	Unchanged int      `json:"unchanged"`
+	// HostHistory: event of each host from HostsNew/HostsGone in the newer run (LAB-T5).
+	HostHistory map[string]string `json:"host_history,omitempty"`
+}
+
+// eventRank orders event types when an asset has several in one run (flapping comes on top of a state event).
+var eventRank = map[string]int{"gone": 6, "missing": 5, "reappeared": 4, "new": 3, "reverted": 2, "changed": 1}
+
+// PickEvent keeps the more meaningful of two event types of one asset in one run.
+func PickEvent(cur, next string) string {
+	if eventRank[next] > eventRank[cur] {
+		return next
+	}
+	return cur
+}
+
+// Annotate fills History/HostHistory from the newer run's events (key -> event type).
+func (d *Diff) Annotate(events map[string]string) {
+	if len(events) == 0 {
+		return
+	}
+	for i := range d.Changes {
+		c := &d.Changes[i]
+		sv := c.After
+		if sv == nil {
+			sv = c.Before
+		}
+		if sv != nil { // history is keyed by asset key "ip/proto/port", the diff by "ip:port/proto"
+			c.History = events[obs.PortKey(sv.IP, sv.Proto, sv.Port)]
+		}
+	}
+	for _, h := range append(append([]string{}, d.HostsNew...), d.HostsGone...) {
+		if e := events[h]; e != "" {
+			if d.HostHistory == nil {
+				d.HostHistory = map[string]string{}
+			}
+			d.HostHistory[h] = e
+		}
+	}
+}
+
+// Label is the wording of one change, consistent with the history (asi changes, panel): with a history event
+// it is that event; without one the neutral "present / absent in this run" (never "gone": that needs the
+// miss threshold, which a two-run comparison does not know).
+func (c Change) Label() string {
+	if c.History != "" && c.History != "flapping" {
+		return c.History
+	}
+	switch c.Kind {
+	case "new":
+		return "pojawiła się"
+	case "gone":
+		return "brak w tym przebiegu"
+	}
+	return c.Kind
 }
 
 func Compare(from, to string, a, b []Service, upA, upB []string) Diff {

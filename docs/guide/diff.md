@@ -12,19 +12,41 @@ i zmienionych usług.
 Po każdym `asi scan` diff względem poprzedniego **zakończonego** przebiegu wypisuje się
 automatycznie. W panelu: zakładka *Historia i diff*.
 
-| rodzaj | warunek |
+| znak | warunek (porównanie dwóch przebiegów) |
 |---|---|
-| `new` | `IP:port/proto` jest w nowszym, nie było w starszym |
-| `gone` | było w starszym, nie ma w nowszym |
-| `changed` | jest w obu, ale różni się `usługa + produkt + wersja` |
+| `+` | `IP:port/proto` jest w nowszym, nie było w starszym |
+| `-` | było w starszym, nie ma w nowszym |
+| `~` | jest w obu, ale różni się `usługa + produkt + wersja` |
 | `+ host` / `- host` | host aktywny w discovery tylko w jednym z przebiegów |
 
-Przykład z testu samosprawdzającego (port 8000 wyłączony między przebiegami):
+### Te same słowa co historia (LAB-T5)
+
+Samo porównanie dwóch przebiegów **nie zna progu braków** ani wcześniejszej historii: nie odróżni pierwszego
+braku (`missing`, do potwierdzenia) od zniknięcia po progu (`gone`), ani usługi nowej (`new`) od powrotu
+(`reappeared`). Dlatego przy każdej różnicy diff pokazuje **zdarzenie z historii nowszego przebiegu**, tak jak
+`asi changes`, zakładka Skany i DefectDojo `asi-changes`. Gdy bazy nie ma (sam plik), pisze neutralnie
+„pojawiła się” / „brak w tym przebiegu”, nigdy „gone”.
+
+| sytuacja | z bazą (CLI po skanie, `asi diff`, `asi diff -db`, GUI) | bez bazy |
+|---|---|---|
+| port zniknął w tym przebiegu pierwszy raz | `- missing` | `- brak w tym przebiegu` |
+| port nie odpowiada drugi raz (próg portów = 2) | brak w diffie (nie ma go w żadnym z dwóch), `gone` w `asi changes` | — |
+| port wrócił po zniknięciu | `+ reappeared` | `+ pojawiła się` |
+| port pierwszy raz w historii | `+ new` | `+ pojawiła się` |
+| cofnięta zmiana (LAB-T8) | `~ reverted` | `~ changed` |
+
+Przykład z LAB-6 (lab organizatorów, powrót `custom-network` po `modern`), `asi diff -db 20261121-203702 20261121-203925`:
 
 ```
-zmiany 20261121-135516 -> 20261121-135523: 1 zmian, 1 bez zmian
-  - gone    127.0.0.1:8000/tcp       http SimpleHTTPServer 0.6
+zmiany 20261121-203702 -> 20261121-203925: 13 zmian, 6 bez zmian
+  - missing                     127.0.0.1:8080/tcp       http Apache httpd 2.4.71
+  + reappeared                  127.0.0.1:8787/tcp       http nginx 1.31.9
+  …
 ```
+
+Ten sam diff bez bazy: `- brak w tym przebiegu 127.0.0.1:8080/tcp …`, `+ pojawiła się 127.0.0.1:8787/tcp …`.
+W JSON (`-json`, API `/api/v1/diff`) pole `kind` zostaje bez zmian (`new` / `gone` / `changed`, struktura
+porównania), a doszły `history` przy każdej różnicy i `host_history` dla hostów.
 
 ## Potwierdzanie zniknięć (hosty i usługi niestabilne)
 

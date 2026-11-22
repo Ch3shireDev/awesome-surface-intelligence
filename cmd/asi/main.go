@@ -634,6 +634,11 @@ func cmdScan(args []string) {
 
 	if prev := previousRun(*outRoot, runID); prev != "" {
 		if d, err := web.DiffRuns(filepath.Join(*outRoot, prev), dir); err == nil {
+			if rec != nil { // LAB-T5: same words as the history of this run (missing vs gone, reappeared)
+				if ev, err := rec.st.RunEventTypes(context.Background(), runID); err == nil {
+					d.Annotate(ev)
+				}
+			}
 			printDiff(d)
 		}
 	}
@@ -821,6 +826,13 @@ func cmdDiff(args []string) {
 	}
 	d, err := web.DiffRuns(a, b)
 	must(err)
+	// LAB-T5: with a database, describe the newer run in the words of its history
+	if st, err := openStore(context.Background(), os.Getenv("ASI_DATABASE_URL")); err == nil && st != nil {
+		if ev, err := st.RunEventTypes(context.Background(), filepath.Base(filepath.Clean(b))); err == nil {
+			d.Annotate(ev)
+		}
+		st.Close()
+	}
 	if *asJSON {
 		out, _ := json.MarshalIndent(d, "", "  ")
 		fmt.Println(string(out))
@@ -836,22 +848,40 @@ func printDiff(d findings.Diff) {
 		return
 	}
 	fmt.Printf("%d zmian, %d bez zmian\n", len(d.Changes), d.Unchanged)
+	hostLabel := func(h, def string) string {
+		if e := d.HostHistory[h]; e != "" {
+			return e
+		}
+		return def
+	}
 	for _, h := range d.HostsNew {
-		fmt.Printf("  \033[32m+ host\033[0m    %s\n", h)
+		fmt.Printf("  \033[32m+ host\033[0m %-22s %s\n", hostLabel(h, "pojawił się"), h)
 	}
 	for _, h := range d.HostsGone {
-		fmt.Printf("  \033[31m- host\033[0m    %s\n", h)
+		fmt.Printf("  \033[31m- host\033[0m %-22s %s\n", hostLabel(h, "brak w tym przebiegu"), h)
 	}
 	for _, c := range d.Changes {
 		switch c.Kind {
 		case "new":
-			fmt.Printf("  \033[32m+ new\033[0m     %-24s %s\n", c.Key, c.After.Fingerprint())
+			fmt.Printf("  \033[32m+\033[0m %-27s %-24s %s\n", c.Label(), c.Key, c.After.Fingerprint())
 		case "gone":
-			fmt.Printf("  \033[31m- gone\033[0m    %-24s %s\n", c.Key, c.Before.Fingerprint())
+			fmt.Printf("  \033[31m-\033[0m %-27s %-24s %s\n", c.Label(), c.Key, c.Before.Fingerprint())
 		case "changed":
-			fmt.Printf("  \033[33m~ changed\033[0m %-24s %s -> %s\n", c.Key, c.Before.Fingerprint(), c.After.Fingerprint())
+			fmt.Printf("  \033[33m~\033[0m %-27s %-24s %s -> %s\n", c.Label(), c.Key, c.Before.Fingerprint(), c.After.Fingerprint())
 		}
 	}
+	if len(d.HostHistory) == 0 && !hasHistory(d) {
+		fmt.Println("  (porównanie dwóch plików; stany z progami - missing, gone, reappeared - pokazuje `asi changes` i panel)")
+	}
+}
+
+func hasHistory(d findings.Diff) bool {
+	for _, c := range d.Changes {
+		if c.History != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func cmdServe(args []string) {

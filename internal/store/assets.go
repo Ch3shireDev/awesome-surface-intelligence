@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"asi/internal/findings"
 	"asi/internal/obs"
 )
 
@@ -203,6 +204,25 @@ func (s *Store) Events(ctx context.Context, runID, key string, limit int) ([]Eve
 		}
 		return e, nil
 	})
+}
+
+// RunEventTypes: asset key -> its event type in one run (the most meaningful one when there are several,
+// e.g. "missing" over "flapping"). Used to describe a diff in the words of the history (LAB-T5).
+func (s *Store) RunEventTypes(ctx context.Context, runID string) (map[string]string, error) {
+	rows, err := s.DB.Query(ctx, `SELECT key, type FROM asset_events WHERE run_id=$1`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var k, t string
+		if err := rows.Scan(&k, &t); err != nil {
+			return nil, err
+		}
+		out[k] = findings.PickEvent(out[k], t)
+	}
+	return out, rows.Err()
 }
 
 // EventCounts per run for the dashboard timeline: the newest `runs` runs, ordered oldest first.

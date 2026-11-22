@@ -159,8 +159,10 @@ Walidacja: tylko znane wartości statusu i oceny, uzasadnienie do 500 znaków. K
 ## Porównanie dwóch przebiegów (DEV-9)
 
 Skany → **Porównanie dwóch przebiegów**: dowolne dwa przebiegi z bazy (domyślnie dwa ostatnie zakończone):
-usługi nowe, zniknięte i zmienione (przed i po) oraz hosty nowe i znikłe. API: `GET /api/v1/diff?from=A&to=B`,
-CLI: `asi diff -db A B`.
+usługi, które się pojawiły, których brak w nowszym przebiegu i zmienione (przed i po) oraz hosty. Każda różnica ma
+etykietę ze **stanu w historii** nowszego przebiegu (brak / zniknął / powrót / nowy / zmiana), tak samo jak lista
+zmian przebiegu i `asi changes` (LAB-T5, [Porównanie przebiegów](/guide/diff#te-same-slowa-co-historia-lab-t5)).
+API: `GET /api/v1/diff?from=A&to=B` (pola `history`, `host_history`), CLI: `asi diff -db A B`.
 
 ## Edycja harmonogramu
 

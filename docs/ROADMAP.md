@@ -95,6 +95,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 22.11 ~08:20 | LAB-T5: diff przebiegów mówi słowami historii (`missing` zamiast „gone” przy pierwszym braku, `reappeared`), bez bazy „brak w tym przebiegu” |
 | 21.11 ~22:15 | LAB-4 zaliczony (`vulnerable`: 0 prób logowania w logach usług); poprawione fałszywe trafienia sygnatur IoT; testy LAB-* równolegle na kilku VM + nakładki `docker/lab-org/*.bind.yml` |
 | 21.11 ~21:45 | LAB-6 zaliczony (zmiana stacku labu organizatorów, 5 przebiegów, 0 duplikatów w DD); ALL-2: czysty start na czystej VM (`make up` 3 min 49 s, `make demo` 150 s); nowe LAB-T10 (PostgreSQL przy `--version-light`) |
 | 21.11 ~20:20 | LAB-T2: skaner nie skanuje własnych portów ASI/DD na hoście skanera (osobna paczka z `--exclude-ports`, porty z `.env`) |

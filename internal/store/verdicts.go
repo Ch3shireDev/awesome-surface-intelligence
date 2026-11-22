@@ -77,7 +77,11 @@ func (s *Store) DiffRuns(ctx context.Context, a, b string) (findings.Diff, error
 	if err != nil {
 		return findings.Diff{}, err
 	}
-	return findings.Compare(a, b, sa, sb, ua, ub), nil
+	d := findings.Compare(a, b, sa, sb, ua, ub)
+	if ev, err := s.RunEventTypes(ctx, b); err == nil {
+		d.Annotate(ev) // LAB-T5: the newer run's words from the history (missing vs gone, new vs reappeared)
+	}
+	return d, nil
 }
 
 // SetKey normalizes a run's set label: GUI runs used to store the frozen targets file name

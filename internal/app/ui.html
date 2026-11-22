@@ -633,10 +633,18 @@ $('df-go').onclick=async()=>{const o=$('df-out');
   try{const d=await api('api/v1/diff?from='+encodeURIComponent($('df-a').value)+'&to='+encodeURIComponent($('df-b').value));const ch=d.changes||[];
     const cnt=k=>ch.filter(c=>c.kind===k).length;
     const fp=x=>x?esc([x.service,x.product,x.version].filter(Boolean).join(' ')):'–';
-    o.className='';o.innerHTML=`<p><span class="badge t-new">nowe ${cnt('new')}</span> <span class="badge t-gone">zniknęły ${cnt('gone')}</span> <span class="badge t-changed">zmienione ${cnt('changed')}</span> · bez zmian ${d.unchanged}
-      · hosty nowe: ${(d.hosts_new||[]).length>20?(d.hosts_new.length+' (lista w CLI)'):(d.hosts_new||[]).map(esc).join(', ')||'–'} · hosty znikłe: ${(d.hosts_gone||[]).length>20?(d.hosts_gone.length+' (lista w CLI)'):(d.hosts_gone||[]).map(esc).join(', ')||'–'}</p>`+
+    // LAB-T5: zmiana opisana stanem z historii nowszego przebiegu (brak = missing, po progu zniknął = gone, powrót);
+    // bez historii neutralnie, bo samo porównanie dwóch przebiegów nie zna progu braków
+    const hist=c=>c.history&&c.history!=='flapping'?c.history:'';
+    const lab=c=>hist(c)?badge(hist(c)):`<span class="badge t-${c.kind}">${c.kind==='new'?'pojawiła się':c.kind==='gone'?'brak w tym przebiegu':'zmiana'}</span>`;
+    const hh=d.host_history||{};const hl=h=>esc(h)+(hh[h]?' ('+esc(PL[hh[h]]||hh[h])+')':'');
+    const byH=t=>ch.filter(c=>hist(c)===t).length;
+    const hsum=['new','reappeared','changed','reverted','missing','gone'].filter(t=>byH(t)).map(t=>badge(t)+' '+byH(t)).join(' ');
+    o.className='';o.innerHTML=`<p><span class="badge t-new">pojawiły się ${cnt('new')}</span> <span class="badge t-missing">brak w nowszym ${cnt('gone')}</span> <span class="badge t-changed">zmienione ${cnt('changed')}</span> · bez zmian ${d.unchanged}
+      · hosty, które się pojawiły: ${(d.hosts_new||[]).length>20?(d.hosts_new.length+' (lista w CLI)'):(d.hosts_new||[]).map(hl).join(', ')||'–'} · hosty bez odpowiedzi: ${(d.hosts_gone||[]).length>20?(d.hosts_gone.length+' (lista w CLI)'):(d.hosts_gone||[]).map(hl).join(', ')||'–'}</p>`+
+      (hsum?`<p class="muted">Według historii przebiegu ${esc(d.to)}: ${hsum}. „Brak” to pierwszy brak do potwierdzenia, „zniknął” dopiero po progu braków.</p>`:'')+
       (ch.length>500?`<p class="muted">Pokazuję pierwsze 500 z ${ch.length} różnic. Pełna lista: <span class="mono">asi diff -db ${esc(d.from)} ${esc(d.to)} -json</span>.</p>`:'')+
-      (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.slice(0,500).map(c=>`<tr><td><span class="badge t-${c.kind==='gone'?'gone':c.kind}">${c.kind==='new'?'nowa':c.kind==='gone'?'zniknęła':'zmiana'}</span></td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
+      (ch.length?'<table><thead><tr><th>zmiana</th><th>usługa</th><th>przed</th><th>po</th></tr></thead><tbody>'+ch.slice(0,500).map(c=>`<tr><td>${lab(c)}</td><td class="mono">${esc(c.key)}</td><td>${fp(c.before)}</td><td>${fp(c.after)}</td></tr>`).join('')+'</tbody></table>':'<p>Bez różnic w usługach.</p>')}
   catch(e){o.className='msg err';o.textContent=e.message}};
 async function showRun(id,opt={}){
   const ev=await api('api/v1/runs/'+encodeURIComponent(id)+'/events');
