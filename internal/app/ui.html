@@ -129,7 +129,7 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
     <button data-p="assets">Assety</button>
     <button data-p="targets">Cele</button>
     <button data-p="scans">Skany</button>
-    <button data-p="account">Konto</button>
+    <button data-p="account">Tokeny</button>
     <button data-p="admin" data-role="admin">Administracja</button>
   </nav>
   <div class="who"><span id="who"></span><span id="role" class="role"></span><button class="link" id="logout">Wyloguj</button></div>
@@ -317,21 +317,34 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
     </div>
   </div>
 </section>
-<!-- KONTO -->
+<!-- TOKENY -->
 <section id="p-account" class="hidden">
-  <div class="grid2">
-    <div class="card"><h2>Tokeny API</h2>
-      <p class="muted">Token działa jak hasło: wysyłasz go w nagłówku <code>Authorization: Bearer …</code>
-        (np. <code>curl -H "Authorization: Bearer asi_…" /api/v1/assets</code>). W bazie trzymamy tylko hash,
-        więc wartość pokazujemy raz, przy tworzeniu. Twoja bieżąca sesja też jest tokenem — jej nie unieważniaj,
-        bo wyloguje Cię to natychmiast.</p>
-      <div class="scroll"><table><thead><tr><th>nazwa</th><th>utworzono</th><th>ostatnio użyty</th><th>wygasa</th><th></th></tr></thead><tbody id="k-rows"></tbody></table></div>
+  <div class="card">
+    <h2>Nowy token</h2>
+    <p class="muted" style="margin-top:0">Token działa jak hasło: wysyłasz go w nagłówku <code>Authorization: Bearer …</code>
+      (np. <code>curl -H "Authorization: Bearer asi_…" /api/v1/assets</code>). W bazie trzymamy tylko hash SHA-256,
+      więc wartość pokazujemy raz, przy tworzeniu.</p>
+    <div class="row">
+      <div><label for="t-name">nazwa (do czego)</label><input id="t-name" placeholder="np. skrypt cron" style="min-width:240px"></div>
+      <div><label for="t-days">ważność (dni, 0 = bez terminu)</label><input id="t-days" type="number" min="0" max="3650" value="90" style="width:140px"></div>
+      <div><button class="btn" id="k-add">Utwórz</button></div>
     </div>
-    <div class="card"><h2>Nowy token</h2>
-      <div class="row"><div><label for="t-name">nazwa (do czego)</label><input id="t-name" placeholder="np. skrypt cron"></div>
-        <div><label for="t-days">ważność (dni, 0 = bez terminu)</label><input id="t-days" type="number" min="0" max="3650" value="90"></div>
-        <div><button class="btn" id="k-add">Utwórz</button></div></div>
-      <div id="t-out" class="msg"></div>
+    <div id="t-out" class="msg"></div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="row" style="align-items:center;gap:10px">
+        <h2 style="margin:0">Tokeny API</h2>
+        <span id="k-count" class="muted" style="font-size:12px"></span>
+      </div>
+      <button class="btn sec sm" id="k-ref" type="button">Odśwież</button>
+    </div>
+    <p class="muted" style="margin-top:0;font-size:12.5px">Twoja bieżąca sesja też jest tokenem — jej nie unieważniaj, bo wyloguje Cię to natychmiast.</p>
+    <div class="audit-box">
+      <table>
+        <thead><tr><th>nazwa</th><th>utworzono</th><th>ostatnio użyty</th><th>wygasa</th><th>akcje</th></tr></thead>
+        <tbody id="k-rows"></tbody>
+      </table>
     </div>
   </div>
 </section>
@@ -393,7 +406,7 @@ async function start(){
 const VIEWS=['dash','assets','targets','scans','account','admin'];
 const VIEW_PATH={dash:'/',assets:'/assets',targets:'/targets',scans:'/scans',account:'/account',admin:'/admin'};
 const PATH_VIEW={'/':'dash','/assets':'assets','/targets':'targets','/scans':'scans','/account':'account','/admin':'admin'};
-const TITLES={dash:'Dashboard',assets:'Assety',targets:'Cele',scans:'Skany',account:'Konto',admin:'Administracja'};
+const TITLES={dash:'Dashboard',assets:'Assety',targets:'Cele',scans:'Skany',account:'Tokeny',admin:'Administracja'};
 let curView='dash';
 const dec=s=>{try{return decodeURIComponent(s)}catch{return s}};
 function parseURL(){
@@ -908,18 +921,22 @@ $('au-ref').onclick=loadAdmin;
 $('u-add').onclick=async()=>{try{await api('api/v1/users',{method:'POST',body:JSON.stringify({username:$('u-name').value,password:$('u-pass').value,role:$('u-role').value})});
   $('u-msg').className='msg ok';$('u-msg').textContent='Dodano.';$('u-pass').value='';loadAdmin()}catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message}};
 
-// ---------- konto (tokeny API, DEV-3)
+// ---------- tokeny API (DEV-3)
 async function loadAccount(){
   const ts=await api('api/v1/tokens');
-  $('k-rows').innerHTML=ts.map(t=>`<tr><td>${esc(t.name)||'<span class="muted">(bez nazwy)</span>'}${t.current?' <span class="role">ta sesja</span>':''}</td>
-    <td class="muted">${fmtT(t.created_at)}</td><td class="muted">${t.last_used_at?fmtT(t.last_used_at):'—'}</td>
-    <td class="muted">${t.expires_at?fmtT(t.expires_at)+(t.expired?' <b>wygasł</b>':''):'bez terminu'}</td>
-    <td>${t.current?'':`<button class="link k-del" data-id="${t.id}" data-n="${esc(t.name)}">unieważnij</button>`}</td></tr>`).join('')
-    ||'<tr><td class="empty" colspan="5">Brak tokenów — utwórz pierwszy po prawej.</td></tr>';
+  const tokWord=n=>n===1?'token':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'tokeny':'tokenów');
+  if($('k-count'))$('k-count').textContent=`${ts.length} ${tokWord(ts.length)}`;
+  $('k-rows').innerHTML=ts.map(t=>`<tr><td style="vertical-align:middle"><b>${esc(t.name)||'<span class="muted">(bez nazwy)</span>'}</b>${t.current?' <span class="role">ta sesja</span>':''}</td>
+    <td class="muted" style="vertical-align:middle">${fmtAuditTime(t.created_at)}</td>
+    <td class="muted" style="vertical-align:middle">${t.last_used_at?fmtAuditTime(t.last_used_at):'—'}</td>
+    <td class="muted" style="vertical-align:middle">${t.expires_at?fmtAuditTime(t.expires_at)+(t.expired?' <span class="badge s-gone">wygasł</span>':''):'bez terminu'}</td>
+    <td style="vertical-align:middle">${t.current?'<span class="muted">aktywna sesja</span>':`<button type="button" class="btn sm del k-del" data-id="${t.id}" data-n="${esc(t.name)}">Unieważnij</button>`}</td></tr>`).join('')
+    ||'<tr><td class="empty" colspan="5" style="padding:14px 10px">Brak tokenów — utwórz pierwszy powyżej.</td></tr>';
   document.querySelectorAll('.k-del').forEach(b=>b.onclick=async()=>{
     if(!confirm(`Unieważnić token "${b.dataset.n}"? Aplikacje, które go używają, przestaną działać.`))return;
     try{await api('api/v1/tokens/'+b.dataset.id,{method:'DELETE'});loadAccount()}catch(e){alert(e.message)}});
 }
+$('k-ref').onclick=loadAccount;
 $('k-add').onclick=async()=>{
   const days=+$('t-days').value||0;
   try{const r=await api('api/v1/tokens',{method:'POST',body:JSON.stringify({name:$('t-name').value,days})});
