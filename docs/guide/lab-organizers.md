@@ -332,14 +332,14 @@ Trzy przebiegi z prawdziwą zmianą w środku (`quickstart.sh up → change → 
 Rozpoznane usługi z daleka: OpenSSH 10.3 (2223, Gitea), nginx 1.31.9 (8787), AMQP (5673), **PostgreSQL (15432 —
 rozpoznany drugą próbą `--version-intensity 7`, czyli LAB-T10 działa też przez DERP)**, RabbitMQ Management
 (15673, Cowboy), Gitea (3001, tytuł instalatora → `asi-gitea-install` **85/high**, LAB-T6). Pełny `-p 1-65535`
-(przebieg `20261122-091214`) widzi dodatkowo usługi samej VM: 22, 4173, 8080 (DD), 18090 (panel), 22000 (Syncthing), 33324.
+(przebieg `20261122-092205`) widzi dodatkowo usługi samej VM: 22, 4173, 8080 (DD), 18090 (panel), 22000 (Syncthing), 33324.
 
 **Dowód po stronie celu** (`docker logs hacknation-custom-network-flask-app-1` na VM A): 88 żądań z `<tailscale-ip-B>`,
 **same GET, 0 POST** (`GET /manager/html` 404, `GET /` 200 — ścieżki detekcyjne sygnatur), zero prób logowania.
 
 **Luka → LAB-T13: pełny TCP przez DERP gubi otwarte porty.** `-p 1-65535` przy `-rate 500` daje w nmapie
-`extraports state="filtered"` i **w każdym przebiegu ginął inny otwarty port**: `20261122-084757` bez 5673,
-`20261122-091214` bez 8787 (sprawdzone 3 s wcześniej: 8787 otwarty). Ten sam port odpowiada `open syn-ack` na
+`extraports state="filtered"` i **ginęły otwarte porty**, np. `20261122-084757` bez 5673.
+(`20261122-091214` nie jest dowodem: pod tym ID zapisały się dwa równoległe skany, jeden bez 8787, drugi z 8787.) Zgubiony port odpowiada `open syn-ack` na
 `nmap -sT -p <port> --reason` z tego samego kontenera, a ASI nie raportuje go wcale — to ten sam skutek co LAB-T11
 (port `filtered` = cisza), więc po 2 przebiegach byłby fałszywy `missing`/`gone`. Przyczyna to utrata SYN-ów na
 ścieżce relay (nie firewall), dlatego porty labu podaliśmy jawną listą. Dla celów za NAT/relay: jawna lista portów

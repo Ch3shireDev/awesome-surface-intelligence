@@ -111,12 +111,12 @@
     \begin{block}{Test skali}
       \small
       \textbf{16 384 adresy} w \textbf{86 s} (test lokalny: 2 porty, bez rozpoznawania usług i HTTP), 182 MB RAM;
-      dashboard w \textbf{0,22 s} przy 49 tys. zasobów.
+      dashboard \textbf{poniżej 0,5 s} przy 49 tys. zasobów.
     \end{block}
     \begin{block}{Lab organizatorów}
       \small
-Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
-      Opóźnienie sieci 500 ms wykryte i~nie zgłoszone błędnie jako zmiana usługi.
+Przetestowane wszystkie 4 środowiska, skan pełnego zakresu TCP: 97--128 s.
+      Opóźnienie sieci 500 ms zmierzone i~nie zgłoszone błędnie jako zmiana usługi.
     \end{block}
   \end{columns}
 \end{frame}
@@ -131,7 +131,7 @@ Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
     \medskip
     \textbf{34 własne sygnatury (nuclei)}, wyłącznie detekcja:
     \begin{itemize}\scriptsize
-      \item systemy CMS, środowiska testowe, stare wersje, bazy bez hasła
+      \item systemy CMS, środowiska testowe, stare wersje, Redis bez hasła
       \item urządzenia IoT: kamery, routery, drukarki, NAS
       \item panele i narzędzia: phpMyAdmin, Adminer, Gitea, RabbitMQ, Traefik
     \end{itemize}
@@ -206,7 +206,7 @@ Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
     \begin{itemize}\small
       \item zakres i~wykluczenia sprawdzane przed skanem i~w~jego trakcie
       \item twarde limity tempa i~równoległości, kontrola dozwolonych portów
-      \item system nie skanuje własnych usług
+      \item na hoście skanera pomija własne usługi
       \item sygnatury bez exploitów i~prób logowania
     \end{itemize}
     \column{0.48\textwidth}
@@ -225,7 +225,7 @@ Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
   \begin{columns}[T]
     \column{0.58\textwidth}
     \footnotesize
-    Wyniki każdego skanu trafiają do DefectDojo, które samo oznacza znaleziska
+    Wyniki skanu można automatycznie wysłać do DefectDojo, które samo oznacza znaleziska
     nowe, zamknięte i powracające.
 
     \medskip\scriptsize
@@ -239,7 +239,7 @@ Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
 
     \medskip\footnotesize
     \textbf{Sprawdzone w labie organizatorów:} po wyłączeniu i przywróceniu usług 7 znalezisk
-    otworzyło się ponownie, \textbf{bez duplikatów}. Niepełny skan niczego nie zamyka.
+    otworzyło się ponownie, \textbf{bez duplikatów}.
     \column{0.39\textwidth}
     \centering
     \shoth{0.66\textheight}{img/defectdojo.png}
@@ -255,7 +255,7 @@ Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
     \column{0.52\textwidth}
     \textbf{Co dostarczamy:}
     \begin{itemize}\small
-      \item Duże sieci: rdzeń sprawdzony na \textbf{16 384 adresach}, kontrola tempa, okna czasowe.
+      \item Duże sieci: rdzeń sprawdzony lokalnie na \textbf{16~384~adresach}, kontrola tempa, okna czasowe.
       \item Historia zmian i hosty niestabilne w~panelu i~w~DefectDojo.
       \item Rozpoznanie usług i stron, \textbf{34 bezpieczne sygnatury} (CMS, panele, IoT).
       \item Panel web z 4 rolami, dziennik audytu, szyfrowanie danych.
