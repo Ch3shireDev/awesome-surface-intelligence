@@ -121,6 +121,8 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
 <!-- DASHBOARD -->
 <section id="p-dash">
   <div class="kpis" id="kpis"></div>
+  <div class="card"><h2>Zmiany w czasie (ostatnie przebiegi)</h2><div class="bars" id="d-bars"></div>
+    <div class="legend" id="d-legend"></div></div>
   <div class="grid3">
     <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co i dlaczego</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
     <div class="card"><h2>Skan</h2><div id="d-scan"></div></div>
@@ -133,8 +135,6 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
     <div class="card"><h2>Grupy podobnych usług</h2><p class="muted" style="margin-top:0;font-size:12.5px">Ta sama usługa / wersja / technologia na wielu hostach: jedna aktualizacja albo jedna decyzja dla całej grupy.</p><div class="scroll"><table><tbody id="d-groups"></tbody></table></div></div>
     <div class="card"><h2>Wzorce pory dnia</h2><p class="muted" style="margin-top:0;font-size:12.5px">Hosty, które odpowiadają tylko w części godzin, w których były skanowane (z historii <span class="mono">hours_seen</span>).</p><div class="scroll"><table><tbody id="d-tod"></tbody></table></div></div>
   </div>
-  <div class="card"><h2>Zmiany w czasie (ostatnie przebiegi)</h2><div class="bars" id="d-bars"></div>
-    <div class="legend" id="d-legend"></div></div>
 </section>
 
 <!-- ASSETS -->
