@@ -474,9 +474,21 @@ func cmdScan(args []string) {
 				nWeak++
 			}
 		}
-		if nWeak > 0 && nWeak <= 512 {
-			tr.Logf("version: %d service(s) without identification - deeper probe (--version-all)", nWeak)
-			args := append(strings.Fields("-sT -sV --version-all -Pn -T3 --max-retries 2 --host-timeout 2m"), "--max-rate", perProc)
+		// LAB-T10: at most versionProbeMax ports get the deeper probe. Above the cap the first ones
+		// (sorted, deterministic) are probed and the rest is logged - before, the whole pass was
+		// skipped silently, i.e. exactly on large networks. Intensity 7 instead of --version-all:
+		// same identification on the lab (PostgreSQL on 15432), 2-3x faster - --version-all spends
+		// most of its time sending every probe to ports that stay unknown anyway. TCP only (above),
+		// so UDP probes such as SNMPv1public (community "public") are never sent here.
+		if nWeak > versionProbeMax {
+			total := nWeak
+			weak, nWeak = capWeak(weak, versionProbeMax)
+			tr.Logf("version: %d unidentified service(s) over the limit %d - probing %d, %d stay unidentified",
+				total, versionProbeMax, nWeak, total-nWeak)
+		}
+		if nWeak > 0 {
+			tr.Logf("version: %d service(s) without identification - deeper probe (--version-intensity 7)", nWeak)
+			args := append(strings.Fields("-sT -sV --version-intensity 7 -Pn -T3 --max-retries 2 --host-timeout 2m"), "--max-rate", perProc)
 			hosts := scanner.Confirm(ctx, weak, args, *parallel, filepath.Join(dir, "version"), pol, perProcN, tr.Logf)
 			better := nmapad.FromHosts(hosts)
 			if len(better) > 0 {
@@ -489,8 +501,8 @@ func cmdScan(args []string) {
 				n := 0
 				for _, s := range findings.FromObservations(better, meta) {
 					i, ok := idx[s.Key()]
-					if !ok || (s.Name == "" && s.Product == "") {
-						continue
+					if !ok || (s.Name == "" && s.Product == "") || (s.Product == "" && (s.Name == "unknown" || s.Name == "tcpwrapped")) {
+						continue // still unidentified: keep the weak entry, do not count it as identified
 					}
 					svcs[i] = s // richer identification replaces the weak one, count stays the same
 					n++

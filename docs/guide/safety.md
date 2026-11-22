@@ -156,9 +156,10 @@ Dlaczego domyślnie wyłączone (trzy powody):
    SNMP GetRequest z community `public`, czyli formalnie z domyślnym „hasłem”. Brief wymaga bezpiecznego
    skanowania bez prób logowania. Przy `--version-light` (intensywność 2) nie potwierdziliśmy jej wysłania
    (próba w kontenerze 22.11 nie była rozstrzygająca: odbiornik testowy rozpoznano wcześniej jako `echo`). Przy
-   intensywności ≥ 4 sonda mieści się w zakresie, więc **podniesienie intensywności `-sV` (LAB-T10) razem z
-   `ASI_ALLOW_UDP=1` oznacza wysyłanie `public` do SNMP**. Jeśli to niepożądane: UDP bez 161 (`ASI_UDP_PORTS=53,123`)
-   albo intensywność 2 dla UDP.
+   intensywności ≥ 4 sonda mieści się w zakresie, dlatego **LAB-T10 nie podnosi intensywności globalnie**:
+   główny przebieg zostaje na `--version-light`, a głębsza próba (`--version-intensity 7`) dotyczy tylko
+   nierozpoznanych portów **TCP**. Gdyby ktoś ręcznie podniósł intensywność w `-nmap` przy `ASI_ALLOW_UDP=1`,
+   bezpieczniej wyłączyć 161 (`ASI_UDP_PORTS=53,123`).
 
 Kiedy włączyć: gdy w zakresie mogą być serwery DNS/NTP/urządzenia sieciowe, a zwłaszcza gdy organizator
 poda listę dozwolonych portów zawierającą porty UDP. Wtedy `ASI_ALLOW_UDP=1` (i ewentualnie `ASI_UDP_PORTS`)

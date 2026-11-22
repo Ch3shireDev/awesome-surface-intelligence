@@ -129,6 +129,23 @@ docker-compose-custom-network.yml up -d`, jeden stack naraz. Cel `127.0.0.1`, po
 | httpbin | tytuł `httpbin.org`, `gunicorn/19.9.0`, `Python`, `Swagger UI` |
 | nginx | tytuł `Welcome to nginx!`, `Nginx:1.31.9` |
 
+**LAB-T10 (22.11, fatusia-2, pomiary na 127.0.0.1, 13 otwartych portów):**
+
+| tryb `-sV` | czas | PostgreSQL 15432 |
+|---|---|---|
+| `--version-light` (główny przebieg) | 47 s | nie |
+| `--version-intensity 4` na wszystkich | 48 s | tak |
+| `--version-all` na wszystkich | 366 s | tak |
+| druga próba tylko na nierozpoznanych (3 porty): `--version-all` / intensywność 7 / 4 | 16 s / 6 s / 7 s | tak |
+
+Decyzja: główny przebieg bez zmian (`--version-light`, więc UDP przy `ASI_ALLOW_UDP=1` nie dostaje sondy SNMP
+`public`), druga próba tylko na nierozpoznanych portach TCP z **`--version-intensity 7`** zamiast
+`--version-all` (ta sama identyfikacja, 2-3× szybciej; na portach naprawdę nieznanych `--version-all` wysyła
+wszystkie sondy na próżno). Limit 512 par host:port: wcześniej po przekroczeniu cała próba była **po cichu
+pomijana** (czyli właśnie w dużej sieci), teraz sprawdzane są pierwsze 512 (adres, port rosnąco), a reszta
+jest w logu. Na żywo: druga próba 7 s, `15432 → postgresql`. Uwaga: obraz `kennethreitz/httpbin` jest tylko
+amd64, na arm64 (fatusia-2) kontener `custom-api` kończy się `exec format error`, więc 8888 testuje się na amd64.
+
 **Dwie luki wykryte tym testem (naprawione w tym samym dniu):**
 
 1. **PostgreSQL na 15432 bez usługi.** `--version-light` probkuje tylko porty znane nmapowi, więc niestandardowe
