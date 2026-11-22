@@ -45,6 +45,11 @@ grep -E '^(ASI_ADMIN_PASSWORD|DD_ADMIN_PASSWORD)=' .env    # hasła do obu panel
 
 Panel słucha tylko na `127.0.0.1`. Test z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:18090` w `.env` i ponownie `make up`.
 
+**UDP jest domyślnie wyłączone** (wolne, niepewne `open|filtered`, ryzyko fałszywych zmian w historii). Jeśli
+w labie są usługi UDP albo lista dozwolonych portów od organizatorów zawiera porty UDP: przed `make up` ustaw
+w `.env` `ASI_ALLOW_UDP=1` (domyślnie porty `53,123,161`, zmiana przez `ASI_UDP_PORTS`). Szczegóły i zastrzeżenie
+dotyczące SNMP (`public`): [Bezpieczeństwo skanowania](/guide/safety#udp-decyzja).
+
 **Zarządzanie kontami z CLI (`asi user`)** — konto `admin` tworzy się raz przy pustej bazie; odzyskanie hasła
 lub dodanie konta testowego z terminala:
 

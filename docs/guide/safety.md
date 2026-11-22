@@ -143,6 +143,27 @@ po stronie celu) i daje dużo fałszywych `open|filtered`. `ASI_ALLOW_UDP=1` wł
 `ASI_UDP_PORTS`** (domyślnie `53,123,161`: DNS, NTP, SNMP, czyli usługi, które w ASM najczęściej są
 nieświadomie wystawione i bywają wzmacniaczami DDoS). Wymaga profilu `raw`.
 
+Dlaczego domyślnie wyłączone (trzy powody):
+
+1. **Czas.** Zamknięty port UDP odpowiada ICMP *port unreachable*, a jądra limitują tempo tych odpowiedzi (Linux
+   domyślnie ok. 1/s), więc nmap czeka i ponawia. Przy 10 000+ adresów nawet kilka portów UDP na żywy host
+   wydłuża przebieg o rzędy wielkości względem TCP i zjada okno czasowe.
+2. **Niepewność = fałszywe zmiany.** Usługa UDP, która milczy na pustą sondę, daje `open|filtered`: nmap nie
+   odróżni otwartego portu od filtrowanego. Dla historii to trucizna: raz jest odpowiedź, raz nie, więc reconcile
+   widziałby fałszywe `new` / `missing` / `flapping`, a DefectDojo rotację findingów (ta sama klasa problemu co
+   LAB-T7 / LAB-T8).
+3. **SNMP i hasło domyślne.** Baza sond nmapa w obrazie skanera ma sondę `SNMPv1public` (port 161, rzadkość 4):
+   SNMP GetRequest z community `public`, czyli formalnie z domyślnym „hasłem”. Brief wymaga bezpiecznego
+   skanowania bez prób logowania. Przy `--version-light` (intensywność 2) nie potwierdziliśmy jej wysłania
+   (próba w kontenerze 22.11 nie była rozstrzygająca: odbiornik testowy rozpoznano wcześniej jako `echo`). Przy
+   intensywności ≥ 4 sonda mieści się w zakresie, więc **podniesienie intensywności `-sV` (LAB-T10) razem z
+   `ASI_ALLOW_UDP=1` oznacza wysyłanie `public` do SNMP**. Jeśli to niepożądane: UDP bez 161 (`ASI_UDP_PORTS=53,123`)
+   albo intensywność 2 dla UDP.
+
+Kiedy włączyć: gdy w zakresie mogą być serwery DNS/NTP/urządzenia sieciowe, a zwłaszcza gdy organizator
+poda listę dozwolonych portów zawierającą porty UDP. Wtedy `ASI_ALLOW_UDP=1` (i ewentualnie `ASI_UDP_PORTS`)
+w `.env` przed `make up`.
+
 ```bash
 ASI_ALLOW_UDP=1 ./asi scan -nmap "-sS -sU -sV --version-light -Pn -p T:22,80,443,U:53,123,161"
 # porty U: spoza ASI_UDP_PORTS są wycinane; bez -p: --top-ports 1000 -p T:<allowlista>,U:53,123,161

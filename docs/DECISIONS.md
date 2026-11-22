@@ -182,6 +182,9 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       `cap_drop NET_RAW/NET_ADMIN`, nmap `--unprivileged`, tylko `-sT`). Domyslne argumenty dzialaja w obu.
     - **UDP domyslnie wylaczone**: wolne, duzo `open|filtered`. `ASI_ALLOW_UDP=1` tylko na `53,123,161`
       (DNS, NTP, SNMP - typowe nieswiadomie wystawione uslugi) i tylko w profilu `raw`.
+      Uzupelnienie 22.11: `open|filtered` w UDP daje falszywe new/missing/flapping w historii (klasa LAB-T7/T8),
+      a baza sond nmapa ma `SNMPv1public` (community `public`, rarity 4) - przy intensywnosci `-sV` >= 4 (LAB-T10)
+      i `ASI_ALLOW_UDP=1` skaner wysylalby do SNMP domyslne "haslo". Opis i kiedy wlaczyc: `guide/safety.md`.
     - Zweryfikowane: testy jednostkowe (`internal/safety`, worker w `internal/scanner`), skan 127.0.0.1 bez roota
       na blackarch (amd64) i oba profile w obrazie `nmap-scanner` na fatusia-2 (arm64: `syn` vs `connect`).
 
