@@ -695,7 +695,13 @@ func startUI(addr string, s *web.Server) *http.Server {
 	network := "tcp"
 	if path, ok := strings.CutPrefix(addr, "unix:"); ok { // live panel behind the main panel (decision 24)
 		network, addr = "unix", path
-		os.Remove(path) // stale socket of a killed scan
+		// remove ONLY a stale socket of a killed scan - never another file a mistyped path points to
+		if fi, err := os.Lstat(path); err == nil {
+			if fi.Mode()&os.ModeSocket == 0 {
+				log.Fatalf("-ui %s: the path exists and is not a socket - refusing to remove it", path)
+			}
+			os.Remove(path)
+		}
 	}
 	ln, err := net.Listen(network, addr)
 	must(err)

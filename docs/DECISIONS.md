@@ -340,6 +340,11 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Podgląd na żywo skanu z panelu jest pod `/live/` panelu. Proces skanu wystawia go na gnieździe uniksowym
       `ASI_LIVE_ADDR=unix:/tmp/asi-live.sock` (prawa 600, w kontenerze), a panel robi do niego proxy - **jedynym
       portem ASI jest 18090** (wcześniej TCP 8091). Stary `.env` z `127.0.0.1:8091` dalej działa.
+    - Bezpieczeństwo: podgląd skanu nie ma własnego logowania. Na TCP `127.0.0.1:8091` przy `network_mode: host`
+      mógł go czytać każdy proces i użytkownik VM (IP, usługi). Gniazdo ma prawa `600` i leży w kontenerze, więc
+      otworzy je tylko proces tego kontenera; użytkownik dochodzi do podglądu wyłącznie przez panel (logowanie,
+      rola `viewer`). Przy starcie usuwane jest tylko istniejące **gniazdo** (stare po przerwanym skanie); każdy
+      inny plik pod podaną ścieżką zatrzymuje start błędem, więc literówka w `-ui unix:...` niczego nie skasuje.
       `asi scan -ui` zostaje tylko jako opcja deweloperska.
 
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
