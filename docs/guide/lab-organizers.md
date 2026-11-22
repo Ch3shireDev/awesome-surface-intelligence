@@ -285,6 +285,50 @@ Swagger UI). `modern`: Apache 2.4.71 (WordPress 8080, phpMyAdmin 8081), Redis 7.
   HTTP jest kompletny. Bez działań.
 - Szum hosta jak w LAB-1/LAB-5: SSH, Syncthing (8384, 22000), dokumentacja (4173) i 2 porty lokalnych procesów VM.
 
+## Wyniki LAB-7 (22.11, skaner na innej maszynie; stack na fatusia-hacknation-2)
+
+**Układ (decyzja 19):** stack = VM A `fatusia-hacknation-2` (`100.74.210.52`, arm64, `custom-network` + `quickstart.sh`),
+skaner = VM B `blackarch` (`100.74.28.22`). Połączenie szło **przez relay DERP „waw”** (`tailscale ping`: „via DERP
+(waw) in 43 ms, direct connection not established”) — czyli gorszy wariant niż direct. Cel: `100.74.210.52`
+(`targets/lab-remote.csv`, `-set lab7-ports`), `-parallel 1 -rate 500`, porty labu jawnie:
+`-ports 2223,3001,5673,8787,15432,15673` (dlaczego nie pełne TCP — luka LAB-T13 niżej).
+
+Trzy przebiegi z prawdziwą zmianą w środku (`quickstart.sh up → change → up`):
+
+| przebieg | stan labu | otwarte | zmiany (reconcile) | czas |
+|---|---|---|---|---|
+| `20261122-091643` | `up` (8787 stoi) | 6/6 | `reappeared:1` (8787 wrócił po wcześniejszym `missing`) | 62 s |
+| `20261122-091750` | `change` (8787 zatrzymany) | 5/6 | **`missing:1` = tylko 8787**, pozostałe 5 bez zmian | 65 s |
+| `20261122-091901` | `up` (8787 wrócił) | 6/6 | **`reappeared:1` = tylko 8787** | 64 s |
+
+**Kryteria:**
+- ✅ **wszystkie opublikowane porty labu widoczne z VM B** (2223, 3001, 5673, 8787, 15432, 15673),
+- ✅ **brak fałszywych `missing`** — jedyna zmiana w każdym przebiegu to realnie zatrzymany/wrócony 8787,
+- ✅ **źródło w logu celu to `100.74.28.22`** (tailscale VM B), nie adres mostka,
+- ✅ **zero adresów `172.x`** w `plan.json`, `merged.xml` i obserwacjach — mostki dockera nie są celem skanu.
+
+Rozpoznane usługi z daleka: OpenSSH 10.3 (2223, Gitea), nginx 1.31.9 (8787), AMQP (5673), **PostgreSQL (15432 —
+rozpoznany drugą próbą `--version-intensity 7`, czyli LAB-T10 działa też przez DERP)**, RabbitMQ Management
+(15673, Cowboy), Gitea (3001, tytuł instalatora → `asi-gitea-install` **85/high**, LAB-T6). Pełny `-p 1-65535`
+(przebieg `20261122-091214`) widzi dodatkowo usługi samej VM: 22, 4173, 8080 (DD), 18090 (panel), 22000 (Syncthing), 33324.
+
+**Dowód po stronie celu** (`docker logs hacknation-custom-network-flask-app-1` na VM A): 88 żądań z `100.74.28.22`,
+**same GET, 0 POST** (`GET /manager/html` 404, `GET /` 200 — ścieżki detekcyjne sygnatur), zero prób logowania.
+
+**Luka → LAB-T13: pełny TCP przez DERP gubi otwarte porty.** `-p 1-65535` przy `-rate 500` daje w nmapie
+`extraports state="filtered"` i **w każdym przebiegu ginął inny otwarty port**: `20261122-084757` bez 5673,
+`20261122-091214` bez 8787 (sprawdzone 3 s wcześniej: 8787 otwarty). Ten sam port odpowiada `open syn-ack` na
+`nmap -sT -p <port> --reason` z tego samego kontenera, a ASI nie raportuje go wcale — to ten sam skutek co LAB-T11
+(port `filtered` = cisza), więc po 2 przebiegach byłby fałszywy `missing`/`gone`. Przyczyna to utrata SYN-ów na
+ścieżce relay (nie firewall), dlatego porty labu podaliśmy jawną listą. Dla celów za NAT/relay: jawna lista portów
+albo reproba portów „filtered” w tym samym przebiegu (LAB-T11/T13).
+
+**Uwaga o równoległych skanach tego samego celu:** w trakcie testu dwie sesje agentów na blackarch skanowały
+`100.74.210.52` jednocześnie (`20261122-084757` + `20261122-084819`, potem `085308` + `085801`/`090326`). Dwa skany
+na jednej ścieżce DERP gubią więcej portów i mieszają historię w bazie dla tego IP. Wnioski: **jeden skan celu
+naraz** (rezerwacja w TASKS) i unikalny `-set` na eksperyment. Przy okazji wyszła kolizja identyfikatora przebiegu
+(co do sekundy) → `db: create run: ERROR: duplicate key … runs_pkey` (LAB-T14).
+
 ## Jak testować
 
 Wspólne przygotowanie (LAB-0):
