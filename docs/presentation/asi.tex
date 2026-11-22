@@ -30,6 +30,7 @@
 \newcommand{\TODO}[1]{\textcolor{asiWarn}{\textbf{[TODO: #1]}}}
 \newcommand{\cmd}[1]{\texttt{\small #1}}
 \newcommand{\shot}[2]{\setlength{\fboxsep}{0pt}\setlength{\fboxrule}{0.5pt}\fcolorbox{gray!50}{white}{\includegraphics[width=#1]{#2}}}
+\newcommand{\shoth}[2]{\setlength{\fboxsep}{0pt}\setlength{\fboxrule}{0.5pt}\fcolorbox{gray!50}{white}{\includegraphics[height=#1]{#2}}}
 
 \title{Asia -- Attack Surface Intelligence Aggregator}
 \subtitle{ASI: cykliczny discovery scan dużych sieci jako źródło danych dla DefectDojo}
@@ -123,25 +124,25 @@
 % 5 --------------------------------------------------------------------------
 \begin{frame}{Fingerprint i własne sygnatury}
   \begin{columns}[T]
-    \column{0.48\textwidth}
-    \textbf{httpx:} tytuł, kod, \textbf{czas odpowiedzi (ms)}, nagłówki, ciasteczka, certyfikat TLS, przekierowania, technologie (Wappalyzer), favicon mmh3.
+    \column{0.44\textwidth}
+    \scriptsize
+    \textbf{httpx:} tytuł, kod, \textbf{czas odpowiedzi (ms)}, nagłówki, ciasteczka, TLS, przekierowania, technologie (Wappalyzer), favicon mmh3.
 
     \medskip
-    \textbf{nuclei + 34 własne sygnatury} (\cmd{signatures/}, wyłącznie GET / detekcja):
-    \begin{itemize}\small
+    \textbf{nuclei + 34 własne sygnatury} (\cmd{signatures/}, wyłącznie GET):
+    \begin{itemize}\scriptsize
       \item 14 bazowych (CMS, staging, panele, wersje, Redis)
-      \item \textbf{9 IoT} (kamery Hikvision/Dahua, RouterOS, OpenWrt LuCI, drukarki, NAS, UPnP)
+      \item \textbf{9 IoT} (Hikvision/Dahua, RouterOS, OpenWrt LuCI, drukarki, NAS, UPnP)
       \item 11 usług/labu (phpMyAdmin, Adminer, DVWA, Gitea + instalator, RabbitMQ, NPM, Traefik, Toxiproxy)
     \end{itemize}
-    \column{0.48\textwidth}
-    \textbf{Wykryte w labie organizatorów i demo:}
-    \begin{itemize}\small
-      \item WordPress 4.7 + PHP 5.6 (\alert{high}, 75/100) oraz WP 7.1.5 z \cmd{?ver=} CSS
-      \item Redis bez uwierzytelniania (\alert{high}, 95/100)
-      \item niedokończony instalator Gitea (\alert{high}, 85/100)
-      \item panele Adminer, DVWA, phpMyAdmin, Traefik, Toxiproxy, RabbitMQ, NPM
-      \item \textbf{0 prób logowania} w logach labu \cmd{vulnerable} (111 GET, 0 POST, 0 FTP LOGIN)
-    \end{itemize}
+
+    \smallskip
+    \textbf{Wyniki labu:} WP 4.7 + PHP 5.6 (\alert{75/100}), Redis bez hasła (\alert{95/100}), instalator Gitea (\alert{85/100}); \textbf{0 prób logowania} (111 GET, 0 POST, 0 FTP LOGIN).
+    \column{0.53\textwidth}
+    \shot{0.98\linewidth}{img/fingerprint.png}
+
+    \vspace{1.5mm}\scriptsize
+    Szuflada assetu w panelu: HTTP 200, czas odpowiedzi (ostrzeżenie $>300$ ms), nagłówki, ciasteczka, favicon mmh3 i trafienia sygnatur \cmd{nuclei}.
   \end{columns}
 \end{frame}
 
@@ -221,22 +222,32 @@
 
 % 9 --------------------------------------------------------------------------
 \begin{frame}{Integracja z DefectDojo}
-  Każdy przebieg trafia do \textbf{4 stałych testów} przez \cmd{reimport-scan}: DefectDojo samo liczy
-  nowe, zamknięte i reaktywowane znaleziska (jedna kanoniczna instancja DD jako źródło prawdy).
+  \begin{columns}[T]
+    \column{0.58\textwidth}
+    \footnotesize
+    Każdy przebieg trafia do \textbf{4 stałych testów} przez \cmd{reimport-scan}: DefectDojo samo liczy
+    nowe, zamknięte i reaktywowane znaleziska (jedna kanoniczna instancja DD jako źródło prawdy).
 
-  \medskip\small
-  \begin{tabular}{@{}llp{0.48\textwidth}@{}}\toprule
-    test & parser DD & zawartość \\\midrule
-    \cmd{ASI discovery} & Generic Findings & usługi z oceną ciekawości i oceną analityka \\
-    \cmd{asi-changes} & Generic Findings & braki, zniknięcia, flapping, zmiany (otwarte, dopóki trwają) \\
-    \cmd{asi-httpx} & httpx Scan & strony WWW, tytuły, technologie \\
-    \cmd{asi-nuclei} & Nuclei Scan & trafienia własnych sygnatur \\\bottomrule
-  \end{tabular}
+    \medskip\scriptsize
+    \begin{tabular}{@{}llp{0.42\textwidth}@{}}\toprule
+      test & parser DD & zawartość \\\midrule
+      \cmd{ASI discovery} & Generic & usługi z oceną ciekawości i analityka \\
+      \cmd{asi-changes} & Generic & braki, zniknięcia, flapping, zmiany \\
+      \cmd{asi-httpx} & httpx Scan & strony WWW, tytuły, technologie \\
+      \cmd{asi-nuclei} & Nuclei Scan & trafienia własnych sygnatur \\\bottomrule
+    \end{tabular}
 
-  \medskip
-  \textbf{Wynik LAB-6} (5 przebiegów ze zmianą całego stacku i powrotem):
-  \cmd{missing} $\rightarrow$ \cmd{gone} po progu, po powrocie \textbf{reactivated 7 / created 0},
-  \textbf{0 duplikatów} w API we wszystkich 4 testach. Przebieg częściowy lub po \cmd{timedout} nigdy nie zamyka wyników.
+    \medskip\footnotesize
+    \textbf{Wynik LAB-6} (5 przebiegów, zmiana stacku i powrót):
+    \cmd{missing} $\rightarrow$ \cmd{gone} po progu, po powrocie \textbf{reactivated 7 / created 0},
+    \textbf{0 duplikatów} w API we wszystkich 4 testach. Przebieg częściowy lub po \cmd{timedout} nigdy nie zamyka wyników.
+    \column{0.39\textwidth}
+    \centering
+    \shoth{0.66\textheight}{img/defectdojo.png}
+
+    \vspace{1.5mm}\scriptsize
+    Znaleziska z ASI w DefectDojo (tagi \cmd{asi}, priorytety \alert{High}/\textbf{Medium}).
+  \end{columns}
 \end{frame}
 
 % 10 -------------------------------------------------------------------------
