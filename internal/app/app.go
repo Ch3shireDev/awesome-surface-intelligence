@@ -248,6 +248,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 			unstable = append(unstable, it)
 		}
 	}
+	countSyntheticHosts(all, counts)
 	// custom signatures (nuclei, SEC-5): everything above "info" is an analyst-relevant finding
 	dismissed, levelOverride := map[string]bool{}, map[string]string{}
 	for _, as := range all {
@@ -344,7 +345,8 @@ func assetHTTPMs(as store.Asset) int {
 
 func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 	q := r.URL.Query()
-	f := store.AssetFilter{State: q.Get("state"), Kind: q.Get("kind"), Search: q.Get("q"), Flapping: q.Get("flapping") == "1", Limit: 5000}
+	origKind := q.Get("kind")
+	f := store.AssetFilter{State: q.Get("state"), Kind: origKind, Search: q.Get("q"), Flapping: q.Get("flapping") == "1", Limit: 5000}
 	// "nowe w ostatnim skanie" to zmiany, nie stan: ?run=<id>&events=new,reappeared
 	if run := strings.TrimSpace(q.Get("run")); run != "" {
 		f.RunID, f.Events = run, parseEventTypes(q.Get("events"))
@@ -365,14 +367,14 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		fail(w, 500, err.Error())
 		return
 	}
-	type row struct {
-		store.Asset
-		Interest string `json:"interest,omitempty"`
-		Reason   string `json:"reason,omitempty"`
-		Service  string `json:"service,omitempty"`
-		Verdict  string `json:"verdict,omitempty"`
-		HTTPMs   int    `json:"http_ms,omitempty"`
-		SlowHTTP bool   `json:"slow_http,omitempty"`
+	// If the user asks for hosts explicitly, also synthesize hosts for any IPs that
+	// have detected ports matching the same filter without a kind="host" row in DB.
+	if origKind == "host" && svcQ == "" && !slowOnly {
+		pf := f
+		pf.Kind = "port"
+		if ports, err := a.St.Assets(r.Context(), pf); err == nil {
+			as = ensureHostsFromOrphanPorts(as, ports)
+		}
 	}
 	if svcQ != "" {
 		kept := as[:0]
@@ -384,9 +386,9 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 		as = kept
 	}
 	slowMs := slowHTTPThresholdMs()
-	out := make([]row, 0, len(as))
+	out := make([]assetRow, 0, len(as))
 	for _, x := range as {
-		item := row{Asset: x}
+		item := assetRow{Asset: x}
 		if x.Kind == "port" {
 			s := portService(x)
 			s.Interest, s.Reason = findings.Score(s)
@@ -402,6 +404,31 @@ func (a *App) assets(w http.ResponseWriter, r *http.Request, u store.User) {
 			continue
 		}
 		out = append(out, item)
+	}
+	// When showing all assets (kind == ""), every IP with a visible port must also
+	// appear as a host row right above its ports (even if filtered by state/run/svc/slow).
+	if origKind == "" && len(out) > 0 {
+		hasHost, needHost := map[string]bool{}, false
+		for _, x := range out {
+			if x.Kind == "host" {
+				hasHost[x.IP] = true
+			}
+		}
+		for _, x := range out {
+			if x.Kind == "port" && x.IP != "" && !hasHost[x.IP] {
+				needHost = true
+				break
+			}
+		}
+		if needHost {
+			hostByIP := map[string]store.Asset{}
+			if hosts, err := a.St.Assets(r.Context(), store.AssetFilter{Kind: "host", Limit: 100000}); err == nil {
+				for _, h := range hosts {
+					hostByIP[h.IP] = h
+				}
+			}
+			out = ensureHostsForAssetRows(out, hostByIP)
+		}
 	}
 	writeJSON(w, 200, out)
 }

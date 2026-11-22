@@ -156,8 +156,12 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				now[o.AssetKey] = &seen{kind: "port", ip: addr, port: port, fp: o.FPHash, current: o.Data}
 			}
 		case obs.KindService: // service fingerprint wins over the bare port
+			live[ip] = true // a host with a detected service is alive
 			now[o.AssetKey] = &seen{kind: "port", ip: addr, port: port, fp: o.FPHash, current: o.Data}
 		case obs.KindHTTP:
+			if ip != "" {
+				live[ip] = true
+			}
 			httpNow[o.AssetKey] = o
 		}
 	}
