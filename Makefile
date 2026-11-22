@@ -92,7 +92,7 @@ env-sync:
 up: env-sync
 	@mkdir -p results
 	docker compose up -d --build
-	@docker compose restart nginx >/dev/null 2>&1 && echo "nginx DD zrestartowany (bez 502 po odtworzeniu uwsgi)" || true
+	@docker compose restart nginx >/dev/null 2>&1 && echo "DefectDojo: serwer WWW (nginx) zrestartowany" || true
 
 down:
 	docker compose down
