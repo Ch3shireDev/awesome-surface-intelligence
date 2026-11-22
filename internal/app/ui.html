@@ -102,6 +102,13 @@ pre.json{background:var(--soft);padding:10px;border-radius:6px;overflow:auto;max
 .bar i{display:block;width:100%}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.scanbar{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:10px 16px}
+.scanbar h2{margin:0}
+#d-scan{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
+#d-scan p{margin:0}
+details.livebox>summary{cursor:pointer}
+details.livebox>summary h2{display:inline;margin:0}
+details.livebox[open]>summary{margin-bottom:12px}
 iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .log{white-space:pre-wrap;max-height:240px;overflow:auto;margin:0}
 .empty{color:var(--muted);padding:14px 0}
@@ -141,10 +148,8 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
   <div class="kpis" id="kpis"></div>
   <div class="card"><h2>Zmiany w czasie (ostatnie przebiegi)</h2><div class="bars" id="d-bars"></div>
     <div class="legend" id="d-legend"></div></div>
-  <div class="grid3">
-    <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co i dlaczego</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
-    <div class="card"><h2>Skan</h2><div id="d-scan"></div></div>
-  </div>
+  <div class="card scanbar"><h2>Skan</h2><div id="d-scan"></div></div>
+  <div class="card"><h2>Najważniejsze znaleziska</h2><div class="scroll"><table><thead><tr><th>usługa</th><th>co i dlaczego</th><th>ocena</th><th>tagi</th></tr></thead><tbody id="d-hot"></tbody></table></div></div>
   <div class="grid2">
     <div class="card"><h2 id="d-ev-title">Zmiany w ostatnim przebiegu</h2><div class="scroll"><table><tbody id="d-ev"></tbody></table></div></div>
     <div class="card"><h2>Niestabilne i zniknięte</h2><div class="scroll"><table><tbody id="d-unst"></tbody></table></div></div>
@@ -161,7 +166,7 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
     <div class="row">
       <div><label for="a-q">Szukaj</label><input id="a-q" placeholder="192.0.2. albo /tcp/443"></div>
       <div><label for="a-state">Stan</label><select id="a-state"><option value="">wszystkie</option><option value="live">aktywne (new + active)</option><option>new</option><option>active</option><option>missing</option><option>gone</option></select></div>
-      <div><label for="a-int">Ocena</label><select id="a-int"><option value="">wszystkie</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></div>
+      <div><label for="a-int">Ocena</label><select id="a-int"><option value="">wszystkie</option><option value="high">wysoka</option><option value="medium">średnia</option><option value="low">niska</option></select></div>
       <div><label for="a-kind">Rodzaj</label><select id="a-kind"><option value="">wszystkie</option><option value="host">hosty</option><option value="port">porty</option></select></div>
       <div><label><input type="checkbox" id="a-flap"> tylko flapping</label></div>
       <div><label><input type="checkbox" id="a-slow"> tylko wolne HTTP</label></div>
@@ -259,7 +264,7 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
       <div id="sc-msg" class="msg"></div>
     </div>
   </div>
-  <div class="card"><h2>Postęp na żywo</h2><iframe class="live" id="s-live" title="Postęp skanu na żywo"></iframe></div>
+  <details class="card livebox" id="s-livebox"><summary><h2>Postęp na żywo</h2> <span class="muted" id="s-livenote"></span></summary><iframe class="live" id="s-live" title="Postęp skanu na żywo"></iframe></details>
   <div class="card" data-role="operator"><h2>Import wyników skanów</h2>
     <p class="muted" style="margin-top:0">Wyniki skanu wykonanego gdzie indziej trafiają do bazy jako przebieg, ze śledzeniem zmian i eksportem. Formaty (wykrywane automatycznie): <b>nmap XML</b>, <b>CSV</b> z nagłówkiem (<span class="mono">ip,port,protocol,service,product,version</span>, także nasz eksport assetów), <b>JSON</b> (tablica albo <span class="mono">{"results":[…]}</span>, nasze <span class="mono">observations.json</span>), <b>JSONL</b> z httpx i nuclei.</p>
     <div class="row">
@@ -377,6 +382,7 @@ async function api(path,opt={}){
 }
 const fmtT=s=>s?new Date(s).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–';
 const tags=a=>(a||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+const IL={high:'wysoka',medium:'średnia',low:'niska'}, lvl=v=>IL[v]||v||'';
 const badge=(t,cls='t')=>`<span class="badge ${cls}-${esc(t)}">${esc(PL[t]||t)}</span>`;
 const can=r=>me&&LV[me.role]>=LV[r];
 function svcOf(cur){try{const d=typeof cur==='string'?JSON.parse(cur):cur;if(!d)return'';if(d.up)return'host aktywny';
@@ -506,7 +512,7 @@ async function loadDash(){
   document.querySelectorAll('#kpis .kpi').forEach(b=>b.onclick=()=>showAssets(k[b.dataset.i][3]));
   const order={high:0,medium:1,low:2};
   const hot=(d.interesting||[]).sort((a,b)=>order[a.interest]-order[b.interest]);
-  $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${x.interest}${x.score?`<br><span class="muted">${x.score}/100</span>`:''}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
+  $('d-hot').innerHTML=hot.map(x=>`<tr class="click" data-k="${esc(x.key)}"><td class="mono">${esc(x.key)}</td><td>${esc(x.service)}<br><span class="muted">${esc(x.reason)}</span></td><td class="i-${x.interest}">${lvl(x.interest)}${x.score?`<br><span class="muted">${x.score}/100</span>`:''}</td><td>${tags(x.tags)}</td></tr>`).join('')||'<tr><td class="empty">Brak usług o podwyższonej ocenie.</td></tr>';
   $('d-groups').innerHTML=(d.groups||[]).map(g=>`<tr><td><b>${esc(g.label)}</b> <span class="muted">${g.kind==='tech'?'technologia':'usługa'}</span></td><td>${g.count} ${g.count===1?'host':'hostów'}</td>
     <td>${g.kind==='service'?`<button class="link grp" data-svc="${esc(g.query)}">pokaż →</button>`:g.keys.slice(0,3).map(k=>`<button class="link grp-k" data-k="${esc(k)}">${esc(k)}</button>`).join(' ')}</td></tr>`).join('')||'<tr><td class="empty">Brak grup (min. 2 hosty z tą samą usługą).</td></tr>';
   document.querySelectorAll('.grp').forEach(b=>b.onclick=()=>{assetSvc=b.dataset.svc;showAssets({kind:'port'})});
@@ -529,7 +535,10 @@ async function loadDash(){
   const span=tl.length&&tl[0].at?` · od ${fmtT(tl[0].at)} do ${fmtT(tl[tl.length-1].at)}`:'';
   $('d-legend').innerHTML=TYPES.map(t=>`<span><i style="background:${TCOL[t]}"></i>${PL[t]}</span>`).join('')+`<span>· słupek = jeden przebieg (godzina startu, liczba zmian)${span}</span>`;
   const s=d.scan||{};
+  // tylko najnowszy przebieg: starszy 'running' to slad po ubitym skanie
+  const ext=lr&&lr.status==='running'?lr.id:null;
   $('d-scan').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b> od ${fmtT(s.started)} (${esc(s.by)})</p><button class="btn sec" onclick="go('scans')">Podgląd na żywo</button>`
+    :ext?`<p><span class="badge t-new">w toku</span> przebieg <b class="mono">${esc(ext)}</b> <span class="muted">· poza panelem (np. z CLI), bez podglądu na żywo</span></p><button class="btn sec" onclick="go('scans')">Przebiegi</button>`
     :`<p class="muted">Brak aktywnego skanu.${lr?` Ostatni: ${esc(lr.id)}, ${PL[lr.status]||lr.status}.`:''}</p>${can('operator')?'<button class="btn" onclick="go(\'scans\')">Nowy skan</button>':''}`;
   bindRows();
 }
@@ -560,7 +569,7 @@ async function loadAssets(){
     const svcCell=isH
       ?`<span class="badge k-host">host</span>${portCnt[a.ip]?` <span class="muted" style="font-weight:400">· ${portCnt[a.ip]} ${portWord(portCnt[a.ip])}</span>`:''}`
       :esc(a.service||'');
-    return `<tr class="click${isH?' host-row':''}" data-k="${esc(a.key)}"><td onclick="event.stopPropagation()"><input type="checkbox" class="sel" data-sk="${esc(a.key)}" aria-label="zaznacz ${esc(a.key)}"${picked.has(a.key)?' checked':''}></td><td class="mono${!isH&&hasHost[a.ip]?' port-sub':''}">${esc(a.key)}</td><td>${svcCell}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`;
+    return `<tr class="click${isH?' host-row':''}" data-k="${esc(a.key)}"><td onclick="event.stopPropagation()"><input type="checkbox" class="sel" data-sk="${esc(a.key)}" aria-label="zaznacz ${esc(a.key)}"${picked.has(a.key)?' checked':''}></td><td class="mono${!isH&&hasHost[a.ip]?' port-sub':''}">${esc(a.key)}</td><td>${svcCell}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${lvl(a.interest)}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`;
   }).join('')||'<tr><td class="empty" colspan="9">Brak assetów. Uruchom skan.</td></tr>';
   bindPicks();
   const hostWord=n=>n===1?'host':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'hosty':'hostów');
@@ -625,7 +634,7 @@ async function openAsset(key,opt={}){
   const hrs=[...Array(24)].map((_,h)=>`<i class="${a.hours_seen&(1<<h)?'on':''}" title="${h}:00 UTC"></i>`).join('');
   const dr=$('drawer');dr.classList.remove('hidden');dr.dataset.key=key;dr.dataset.run='';
   dr.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="mono">${esc(a.key)}</h3><button class="link" id="dr-x">zamknij ✕</button></div>
-  <p>${a.kind==='host'?'<span class="badge k-host">host</span> ':''}${badge(a.state,'s')} ${a.flapping?badge('flapping'):''} ${a.kind==='port'&&a.ip?`<span class="muted">· host:</span> <button class="link mono" id="dr-host">${esc(a.ip)}</button> `:''}${a.interest?`<span class="i-${a.interest}">ocena ${a.interest}</span> <span class="muted">${esc(a.reason||'')}</span>`:''}</p>
+  <p>${a.kind==='host'?'<span class="badge k-host">host</span> ':''}${badge(a.state,'s')} ${a.flapping?badge('flapping'):''} ${a.kind==='port'&&a.ip?`<span class="muted">· host:</span> <button class="link mono" id="dr-host">${esc(a.ip)}</button> `:''}${a.interest?`<span class="i-${a.interest}">ocena ${lvl(a.interest)}</span> <span class="muted">${esc(a.reason||'')}</span>`:''}</p>
   <table><tr><th>pierwszy raz</th><td>${fmtT(a.first_seen)}</td></tr><tr><th>ostatnio</th><td>${fmtT(a.last_seen)} (${esc(a.last_seen_run)})</td></tr>
   <tr><th>widziany</th><td>${a.seen_count}× · kolejne braki: ${a.consecutive_misses}</td></tr></table>
   <label>Godziny, w których odpowiadał (UTC)</label><div class="hours">${hrs}</div><div class="hours-l"><span>0</span><span>6</span><span>12</span><span>18</span><span>23</span></div>
@@ -638,7 +647,7 @@ async function openAsset(key,opt={}){
   ${a.kind==='port'?`<h2 style="margin-top:16px">Ocena analityka</h2>
   <div class="row"><div><label for="dr-vst">Status wyniku</label><select id="dr-vst" ${can('analyst')?'':'disabled'}>
     <option value="">do analizy</option><option value="false_positive">fałszywy alarm</option><option value="accepted">zaakceptowane ryzyko</option></select></div>
-    <div><label for="dr-vint">Ocena</label><select id="dr-vint" ${can('analyst')?'':'disabled'}><option value="">automatyczna</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select></div></div>
+    <div><label for="dr-vint">Ocena</label><select id="dr-vint" ${can('analyst')?'':'disabled'}><option value="">automatyczna</option><option value="high">wysoka</option><option value="medium">średnia</option><option value="low">niska</option></select></div></div>
   <label for="dr-vre">Uzasadnienie</label><input id="dr-vre" style="width:100%" maxlength="500" ${can('analyst')?'':'disabled'}>
   <p class="muted" style="font-size:12.5px;margin:6px 0 0">Ocena zostaje na assecie przy kolejnych skanach. Fałszywy alarm i zaakceptowane ryzyko znikają z „Najważniejszych znalezisk” i trafiają do DefectDojo jako <i>false positive</i> / <i>risk accepted</i>.</p>`:''}
   ${can('analyst')?'<div style="margin-top:10px"><button class="btn" id="dr-save">Zapisz</button> <span id="dr-msg" class="msg"></span></div>':'<p class="muted">Rola viewer: tylko odczyt.</p>'}
@@ -654,7 +663,7 @@ async function openAsset(key,opt={}){
     const own=ps.filter(p=>p.ip===a.ip);
     if(!own.length){box.innerHTML='';return;}
     box.innerHTML=`<h2 style="margin-top:16px">Wykryte porty (${own.length})</h2><table>`+
-      own.map(p=>`<tr class="click" data-k="${esc(p.key)}"><td class="mono">${esc(p.key)}</td><td>${esc(p.service||'')}</td><td>${badge(p.state,'s')}</td><td class="i-${p.interest||'low'}">${p.interest||''}</td></tr>`).join('')+'</table>';
+      own.map(p=>`<tr class="click" data-k="${esc(p.key)}"><td class="mono">${esc(p.key)}</td><td>${esc(p.service||'')}</td><td>${badge(p.state,'s')}</td><td class="i-${p.interest||'low'}">${lvl(p.interest)}</td></tr>`).join('')+'</table>';
     bindRows();
   }).catch(()=>{});
   if(a.kind==='port')api('api/v1/asset/observations?key='+encodeURIComponent(key)).then(renderWeb).catch(()=>{});
@@ -773,13 +782,19 @@ async function showRun(id,opt={}){
 let wasRunning=false;
 async function loadScanStatus(force){
   const s=await api('api/v1/scans/current');
+  const last=s.running?null:(await api('api/v1/runs'))[0];
+  const ext=last?.status==='running'?last:null;
   $('s-start').disabled=s.running;$('s-stop').classList.toggle('hidden',!s.running||!can('operator'));$('s-pause').classList.toggle('hidden',!s.running||!can('operator'));
   $('s-status').innerHTML=s.running?`<p><span class="badge t-new">w toku</span> zbiór <b>${esc(s.set)}</b>, od ${fmtT(s.started)}, uruchomił ${esc(s.by)}</p>`
+    :ext?`<p><span class="badge t-new">w toku</span> przebieg <b class="mono">${esc(ext.id)}</b>, zbiór <b>${esc(ext.set_name)}</b><br><span class="muted">poza panelem (np. z CLI), bez podglądu na żywo</span></p>`
     :s.started?`<p>Ostatni skan zakończony ${fmtT(s.finished)}${s.exit_error?` <span class="msg err">(${esc(s.exit_error)})</span>`:''}</p>`:'<p class="muted">Brak skanu w tej sesji serwera.</p>';
   $('s-log').textContent=(s.log_tail||[]).join('\n');
   if(s.running&&(!wasRunning||force)) $('s-live').src='/live/';
   if(!s.running&&wasRunning){loadScans()}
-  if(!s.running&&force&&!$('s-live').src) $('s-live').srcdoc='<p style="font:14px system-ui;color:#888;padding:16px">Brak aktywnego skanu.</p>';
+  $('s-live').classList.toggle('hidden',!s.running);
+  $('s-livenote').textContent=s.running?'':ext?'· tylko dla skanów uruchomionych z panelu':'· brak aktywnego skanu';
+  // otwieramy / zwijamy tylko przy zmianie stanu, żeby nie cofać ręcznego wyboru
+  if(s.running!==wasRunning) $('s-livebox').open=s.running;
   wasRunning=s.running;
 }
 function scanParams(){const ports=$('s-ports').value==='custom'?$('s-custom').value.trim():$('s-ports').value;
