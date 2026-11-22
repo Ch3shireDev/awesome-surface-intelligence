@@ -15,7 +15,7 @@ Każdy przebieg: `results/<YYYYMMDD-HHMMSS>/`
 | `merged.xml` | wszystkie aktywne hosty w jednym XML nmapa, z domenami jako `hostname type="user"` |
 | `run.json` | podsumowanie: czasy, liczby, fazy, argumenty, link do testu w DefectDojo |
 | `events.ndjson` | log zdarzeń + końcowy snapshot |
-| `final_state.json` | końcowy stan panelu (dla `asi serve`) |
+| `final_state.json` | końcowy stan postępu przebiegu |
 
 Globalnie: `results/tuning.json` — zmierzone `s/host` dla faz (start następnego przebiegu).
 

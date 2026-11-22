@@ -366,7 +366,7 @@ rm -f targets/policy-demo.csv
 | przemycony cel i `--script vuln` kończą się błędem **przed wysłaniem pakietu** (`targets come only from the plan`, `--script vuln is not allowed`) | allowlista flag nmapa |
 | `169.254.169.254` (metadane chmury) automatycznie trafia do `skipped` | wykluczenia wbudowane |
 | żądanie `-rate 5000` jest obniżane do twardego limitu `ASI_MAX_RATE=1000` z `.env`; w logu `policy: profile=… max_rate=…pps …` i w `run.json` pole `policy` | kontrola intensywności |
-| skan `127.0.0.1` automatycznie pomija własne porty ASI i DefectDojo (`8080`, `18090`, `8091`, `5433`, `8094`, `8095`) | LAB-T2 (`ASI_SELF_PORTS`) |
+| skan `127.0.0.1` automatycznie pomija własne porty ASI i DefectDojo (`8080`, `18090`, `8091`, `5433`) | LAB-T2 (`ASI_SELF_PORTS`) |
 
 Testy jednostkowe polityki i bezpieczeństwa sygnatur (na hoście z Go):
 

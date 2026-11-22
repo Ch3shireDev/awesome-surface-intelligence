@@ -61,7 +61,7 @@ maszynie): przed `modern` przenieść DefectDojo w `.env` (`DD_PORT=18080`, `DD_
 ### 3. Skanujemy sami siebie
 
 Cel to `127.0.0.1` (albo IP VM), na którym działa też ASI i DefectDojo. **Załatwione przez LAB-T2:** na hoście
-skanera porty naszego stacku (z `.env`: `DD_PORT`, `ASI_WEB_ADDR`, `ASI_LIVE_ADDR`, `ASI_DB_PORT` + 8094, 8095)
+skanera porty naszego stacku (z `.env`: `DD_PORT`, `ASI_WEB_ADDR`, `ASI_LIVE_ADDR`, `ASI_DB_PORT`)
 są pomijane automatycznie, a reszta portów jest skanowana normalnie. Ręczna lista portów bez naszych nie jest
 już potrzebna. Wykluczenie idzie za wartościami z `.env`, więc DVWA na 8090 (panel jest na 18090) i, po
 przeniesieniu DD (pkt 2), WordPress na 8080 są skanowane. Szczegóły: [Bezpieczeństwo](safety.md#skaner-nie-skanuje-samego-siebie-lab-t2).

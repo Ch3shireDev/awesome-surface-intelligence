@@ -95,6 +95,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 22.11 ~09:50 | Decyzja 24: jeden panel ASI (18090), usunięte `asi serve`/`make asi-serve` (8095) i osobny podgląd `make asi-scan` (8094) |
 | 22.11 ~09:00 | Decyzja 23: panel ASI domyślnie na 18090 (8090 zostaje dla DVWA z labu), `make test-*` biorą adres z `.env` |
 | 22.11 ~08:20 | LAB-T5: diff przebiegów mówi słowami historii (`missing` zamiast „gone” przy pierwszym braku, `reappeared`), bez bazy „brak w tym przebiegu” |
 | 21.11 ~22:15 | LAB-4 zaliczony (`vulnerable`: 0 prób logowania w logach usług); poprawione fałszywe trafienia sygnatur IoT; testy LAB-* równolegle na kilku VM + nakładki `docker/lab-org/*.bind.yml` |

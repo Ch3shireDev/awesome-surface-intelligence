@@ -43,11 +43,9 @@ help:
 	@echo "  make clean            - usun lokalne wyniki skanow"
 	@echo ""
 	@echo "Silnik asi (Go):"
-	@echo "  make up               - GLOWNY panel ASI (asi server) na http://127.0.0.1:18090 (login: ASI_ADMIN_USER/ASI_ADMIN_PASSWORD z .env)"
+	@echo "  make up               - panel ASI na http://127.0.0.1:18090 - JEDYNY panel: cele, skany, wyniki, historia, role (login z .env)"
 	@echo "  make asi ARGS='plan'  - dowolna komenda asi w kontenerze skanera (cele: targets/, wyniki: results/)"
-	@echo "  make asi-scan         - skan targets/targets.csv z terminala: podglad postepu :8094 (tylko w trakcie), upload live do DD"
-	@echo "  make asi-serve        - STARY podglad samych plikow results/ (asi serve, bez bazy/logowania) na :8095"
-	@echo "                          porty: docs/guide/quickstart.md#panele-i-porty"
+	@echo "  make asi-scan         - skan targets/targets.csv z terminala (pasek w terminalu), wyniki w panelu :18090, upload live do DD"
 	@echo "  make build            - lokalny build ./asi (wymaga Go na hoscie - dev)"
 	@echo "  make test             - go vet + go test (wymaga Go na hoscie - dev)"
 	@echo "  make test-tokens      - test tokenow API w GUI (DEV-3, wymaga dzialajacego panelu)"
@@ -185,8 +183,9 @@ ARGS ?= help
 asi:
 	docker compose exec nmap-scanner asi $(ARGS)
 
+# skan z terminala: pasek postepu w terminalu, przebieg i wyniki od razu w panelu :18090 (decyzja 24: jeden panel)
 asi-scan:
-	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -ui 127.0.0.1:8094 -upload live
+	docker compose exec nmap-scanner asi scan -targets $(ASI_TARGETS) -upload live
 
 # Dowod szyfrowania w spoczynku (docs/guide/encryption.md): TDE wlaczone, tabele
 # tde_heap, szyfrowany WAL, brak jawnego tekstu w plikach bazy, pola _enc z AES-GCM.
@@ -196,8 +195,9 @@ crypto-check:
 schema-check:
 	docker compose exec -T asi-db sh < docker/asi-db/schema-check.sh
 
+# decyzja 24: stary panel plikowy usuniety, zostaje jeden panel (make up, :18090)
 asi-serve:
-	docker compose exec nmap-scanner asi serve -addr 127.0.0.1:8095
+	@echo "make asi-serve usuniete: jeden panel ASI to http://127.0.0.1:18090 (make up) - historia, porownanie przebiegow, skany"; exit 2
 
 build:
 	go build -o asi ./cmd/asi

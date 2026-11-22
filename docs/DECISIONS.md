@@ -327,6 +327,16 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       `ASI_WEB_ADDR=127.0.0.1:18090` i `make up`.
     - DefectDojo zostaje domyślnie na 8080 (koliduje tylko z `modern`). Na fatusia-1 stoi na 18080 (decyzja 22).
 
+24. **Jeden panel ASI (`asi server`, :18090) - wszystko w nim** (22.11, fatusia).
+    - Były trzy strony WWW: panel `asi server` (18090), stary panel plikowy `asi serve` / `make asi-serve` (8095) i
+      podgląd postępu skanu z terminala `make asi-scan -ui` (8094). Nazwy `server`/`serve` się myliły, a opisy portów
+      w dokumentacji się rozjeżdżały.
+    - Teraz: **jeden panel na 18090**. `asi serve` i `make asi-serve` usunięte (wypisują, gdzie jest panel);
+      historia i porównanie przebiegów są w panelu (z bazy, LAB-T5). `make asi-scan` bez osobnej strony: pasek w
+      terminalu, przebieg zapisuje się do bazy na bieżąco i widać go w panelu (Skany, Dashboard).
+    - 8091 zostaje jako wewnętrzny element panelu (proxy `/live/` dla skanu z GUI), nie jako osobny panel.
+      `asi scan -ui` zostaje tylko jako opcja deweloperska.
+
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan

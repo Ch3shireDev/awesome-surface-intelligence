@@ -14,7 +14,7 @@ import (
 // report our own panel, DefectDojo and asi-db as "findings" and hit them with -sV probes.
 //
 //	ASI_SELF_PORTS   explicit list of own ports; "off" disables; default: derived from .env
-//	                 (DD_PORT, ASI_WEB_ADDR, ASI_LIVE_ADDR, ASI_DB_PORT) + 8094, 8095 (make asi-scan / asi-serve)
+//	                 (DD_PORT, ASI_WEB_ADDR, ASI_LIVE_ADDR, ASI_DB_PORT) + the -ui port of the current scan
 //	ASI_SELF_IPS     extra addresses of the scanner host (e.g. a public IP behind NAT)
 
 // Default ports of the stack when .env does not say otherwise.
@@ -24,9 +24,6 @@ var defaultSelfPorts = []struct{ env, def string }{
 	{"ASI_LIVE_ADDR", "8091"},
 	{"ASI_DB_PORT", "5433"},
 }
-
-// extra panels started by make asi-scan (-ui :8094) and make asi-serve (:8095)
-const extraSelfPorts = "8094,8095"
 
 func loadSelf(p *Policy) error {
 	switch v := strings.ToLower(strings.TrimSpace(os.Getenv("ASI_SELF_PORTS"))); v {
@@ -39,7 +36,6 @@ func loadSelf(p *Policy) error {
 				list = append(list, port)
 			}
 		}
-		list = append(list, extraSelfPorts)
 		p.SelfPorts, _ = ParsePorts(strings.Join(list, ","))
 	default:
 		ps, err := ParsePorts(v)

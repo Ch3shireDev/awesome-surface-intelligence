@@ -30,7 +30,7 @@ Plus flagi `plan`.
 | `-chunk-timeout` | `20m` | limit jednej paczki |
 | `-window` | `0` | okno czasowe runu |
 | `-out` | `results` | katalog wyników |
-| `-ui` | — | adres panelu postępu tego skanu, np. `127.0.0.1:8094` (panel główny `asi server` jest na 18090) |
+| `-ui` | — | tylko dev: dodatkowa strona postępu tego skanu; zwykle niepotrzebne, bo panel `asi server` (:18090) pokazuje skany |
 | `-upload` | `off` | `off` / `end` / `live` |
 | `-product`, `-engagement` | `ASI PoC`, `discovery` | kontekst DefectDojo |
 
@@ -44,6 +44,6 @@ Zmienne środowiskowe: `DD_URL` (domyślnie `http://localhost:8080`), `DD_TOKEN`
 | `-format` | `generic` | `generic` (historia zmian) / `nmap` (surowy XML) |
 | `-close-old` | `true` | zamknij znaleziska, których nie ma w tym przebiegu |
 
-## `asi diff [A B]`, `asi serve`, `asi convert`
+## `asi diff [A B]`, `asi convert`
 
 Patrz [Porównanie](/guide/diff), [Postęp](/guide/progress), [Format celów](/guide/targets).

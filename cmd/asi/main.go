@@ -2,10 +2,9 @@
 //
 //	asi convert -in targets/targets.csv -out targets/targets.json
 //	asi plan    [-targets targets/targets.csv]
-//	asi scan    [-targets ...] [-parallel 5] [-rate 300] [-ui 127.0.0.1:8094] [-upload live|end|off]
+//	asi scan    [-targets ...] [-parallel 5] [-rate 300] [-upload live|end|off]
 //	asi upload  [-run results/<id>]
 //	asi diff    [runA runB]          (default: two latest)
-//	asi serve   [-addr 127.0.0.1:8095]
 package main
 
 import (
@@ -57,8 +56,9 @@ func main() {
 		cmdUpload(args)
 	case "diff":
 		cmdDiff(args)
-	case "serve":
-		cmdServe(args)
+	case "serve": // decision 24: one panel - the old file-based panel is gone
+		fmt.Fprintln(os.Stderr, "asi serve zostal usuniety: jeden panel to `asi server` (make up, http://127.0.0.1:18090) - historia, porownanie przebiegow i skany sa tam")
+		os.Exit(2)
 	case "db":
 		cmdDB(args)
 	case "server":
@@ -83,7 +83,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: asi <server|import|convert|plan|scan|upload|diff|serve|db|changes|assets|asset|user|targets-extract|mcp> [flags]   (asi <cmd> -h)")
+	fmt.Fprintln(os.Stderr, "usage: asi <server|import|convert|plan|scan|upload|diff|db|changes|assets|asset|user|targets-extract|mcp> [flags]   (asi <cmd> -h)")
 	os.Exit(2)
 }
 
@@ -205,7 +205,7 @@ func cmdScan(args []string) {
 	window := fs.Duration("window", 0, "scan window: stop everything after this (e.g. 2h), 0 = no limit")
 	outRoot := fs.String("out", "results", "results directory")
 	uiWait := fs.Bool("ui-wait", true, "with -ui: keep the panel open after the scan until Ctrl+C")
-	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8094")
+	ui := fs.String("ui", "", "dev only: extra live progress page on this address (the panel `asi server` already shows scans)")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	recCfg := reconcileFlags(fs)
 	httpStage := fs.String("http", "auto", "HTTP fingerprint stage (httpx): auto (if httpx is installed) | on | off")
@@ -882,16 +882,4 @@ func hasHistory(d findings.Diff) bool {
 		}
 	}
 	return false
-}
-
-func cmdServe(args []string) {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", "127.0.0.1:8095", "listen address")
-	root := fs.String("results", "results", "results directory")
-	fs.Parse(args)
-	srv := startUI(*addr, &web.Server{ResultsDir: *root})
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
-	srv.Close()
 }

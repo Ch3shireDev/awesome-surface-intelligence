@@ -11,29 +11,25 @@ make env                                # .env: sekrety + hasło admina DefectDo
 make up                                 # DefectDojo 3.5.202 :8080 + nmap-scanner
 cp targets/example.csv targets/targets.csv
 make asi ARGS=plan                      # co będzie skanowane, a co pominięte i dlaczego
-# panel ASI (główny interfejs): http://127.0.0.1:18090 - tam cele, skany, wyniki, historia
-make asi-scan                           # skan z terminala: pasek + podgląd postępu http://127.0.0.1:8094, upload live do DD
+# panel ASI: http://127.0.0.1:18090 - jedyny panel, tam cele, skany, wyniki, historia
+make asi-scan                           # skan z terminala: pasek w terminalu, przebieg i wyniki w panelu, upload live do DD
 make asi ARGS=diff                      # zmiany względem poprzedniego przebiegu
-make asi-serve                          # STARY podgląd samych plików results/ na :8095 (bez bazy i logowania)
 ```
 
-## Panele i porty
+## Panel i porty
 
-| port | co to jest | kto go stawia | logowanie |
-|---|---|---|---|
-| **18090** | **panel ASI** (`asi server`): dashboard, assety, cele, skany, harmonogram, role, eksport. **To jest główny interfejs.** | `make up` (kontener `nmap-scanner`), `ASI_WEB_ADDR` | tak (`admin` + `ASI_ADMIN_PASSWORD`) |
-| 8091 | postęp skanu uruchomionego **z panelu**; nie otwierasz go osobno, panel pokazuje go pod `/live/` | panel przy starcie skanu, `ASI_LIVE_ADDR` | przez panel |
-| 8094 | postęp skanu uruchomionego **z terminala**, działa tylko w trakcie tego skanu | `make asi-scan` (`asi scan -ui`) | nie (tylko `127.0.0.1`) |
-| 8095 | **stary** panel plikowy (`asi serve`, bez „r”): historia i diff z katalogu `results/`, bez bazy i ról. Zastąpiony przez 18090, zostaje do podglądu samych plików | `make asi-serve` | nie (tylko `127.0.0.1`) |
-| 8080 | DefectDojo (na fatusia-1: **18080**, decyzja 22) | `make up`, `DD_PORT` | tak (`admin` + `DD_ADMIN_PASSWORD`) |
-| 4173 | ta dokumentacja | `make docs` | — |
+**Jest jeden panel: http://127.0.0.1:18090** (`asi server`, stawia go `make up`, logowanie `admin` +
+`ASI_ADMIN_PASSWORD`). Tam są cele, skany z postępem na żywo, wyniki, historia, porównanie przebiegów, role i
+eksport. Skan uruchomiony z terminala (`make asi-scan`) pokazuje pasek w terminalu, a jego przebieg i wyniki są w
+tym samym panelu (decyzja 24; dawne osobne podglądy na 8094 i 8095 usunięte).
 
-Nazwy mylą: **`asi server`** (główny panel, z bazą) i **`asi serve`** (stary podgląd plików) to dwa różne
-programy. Na co dzień potrzebny jest tylko panel na 18090.
-
-`make asi-serve` kończy się Ctrl+C w tym samym terminalu. Jeśli terminal zostanie zamknięty inaczej, proces w
-kontenerze (`docker exec`) dalej słucha na 8095, aż do `docker compose restart nmap-scanner` albo kolejnego
-`make up` (sprawdzone na fatusia-1). Jest tylko do odczytu i tylko na `127.0.0.1`.
+| port | co |
+|---|---|
+| **18090** | panel ASI |
+| 8091 | wewnętrzny podgląd postępu skanu, wyświetlany w panelu (zakładka Skany); nie otwiera się go osobno |
+| 8080 (fatusia-1: 18080) | DefectDojo |
+| 5433 | baza `asi-db` (tylko `127.0.0.1`) |
+| 4173 | dokumentacja (`make docs`) |
 
 ## Repozytorium
 
@@ -85,7 +81,7 @@ i sam pobiera token API. Nie trzeba ręcznie kopiować tokenu.
 ```bash
 make build && make test
 set -a; . ./.env; set +a                # DD_* dla uploadu
-./asi scan -ui 127.0.0.1:8094 -upload live
+./asi scan -upload live                 # wyniki w panelu (asi server), pasek w terminalu
 ./asi diff
 ```
 

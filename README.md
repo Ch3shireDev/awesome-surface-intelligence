@@ -37,16 +37,8 @@ szyfrowanie → bezpieczeństwo, z oczekiwanymi wynikami): [`docs/guide/jury.md`
 | panel ASI | http://127.0.0.1:18090 | `admin`, hasło: `grep ASI_ADMIN_PASSWORD .env` |
 | DefectDojo | http://127.0.0.1:8080 | `admin`, hasło: `grep DD_ADMIN_PASSWORD .env` |
 
-Wszystkie porty (żeby nie pomylić paneli: `asi server` to główny panel na 18090, `asi serve` to stary podgląd plików na 8095):
-
-| port | co to jest | kto go stawia | logowanie |
-|---|---|---|---|
-| **18090** | **panel ASI** (`asi server`): dashboard, assety, cele, skany, harmonogram, role, eksport. **To jest główny interfejs.** | `make up` (kontener `nmap-scanner`), `ASI_WEB_ADDR` | tak (`admin` + `ASI_ADMIN_PASSWORD`) |
-| 8091 | postęp skanu uruchomionego **z panelu**; nie otwierasz go osobno, panel pokazuje go pod `/live/` | panel przy starcie skanu, `ASI_LIVE_ADDR` | przez panel |
-| 8094 | postęp skanu uruchomionego **z terminala**, działa tylko w trakcie tego skanu | `make asi-scan` (`asi scan -ui`) | nie (tylko `127.0.0.1`) |
-| 8095 | **stary** panel plikowy (`asi serve`, bez „r”): historia i diff z katalogu `results/`, bez bazy i ról. Zastąpiony przez 18090, zostaje do podglądu samych plików | `make asi-serve` | nie (tylko `127.0.0.1`) |
-| 8080 | DefectDojo (na fatusia-1: **18080**, decyzja 22) | `make up`, `DD_PORT` | tak (`admin` + `DD_ADMIN_PASSWORD`) |
-| 4173 | ta dokumentacja | `make docs` | — |
+**Jeden panel: http://127.0.0.1:18090.** Wszystko jest tam: cele, skany (także uruchomione z terminala przez
+`make asi-scan`), postęp na żywo, wyniki, historia, porównanie przebiegów, role, eksport.
 
 Panel słucha domyślnie tylko na `127.0.0.1`. Dostęp z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:18090` w `.env`
 i `make up`.
