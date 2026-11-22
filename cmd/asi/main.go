@@ -170,7 +170,14 @@ func cmdPlan(args []string) {
 		return
 	}
 	for _, h := range plan.Hosts {
-		fmt.Printf("%-16s %-20s %s\n", h.IP, strings.Join(h.Assets, ","), strings.Join(h.Domains, " "))
+		ports := ""
+		if h.Ports != "" {
+			ports = " porty=" + h.Ports
+		}
+		fmt.Printf("%-16s %-20s %s%s\n", h.IP, strings.Join(h.Assets, ","), strings.Join(h.Domains, " "), ports)
+	}
+	for _, w := range plan.Warnings {
+		log.Printf("warning: %s", w)
 	}
 	fmt.Println("\nskipped:")
 	for _, s := range plan.Skipped {
@@ -300,6 +307,17 @@ func cmdScan(args []string) {
 	})
 	tr.Logf("plan: %d IPs, %d targets skipped (see plan.json)", len(ips), len(plan.Skipped))
 	// LAB-T1: apply port profile (auto -> full TCP for small target sets <= 16 hosts)
+	byPorts, err := portGroups(*svcArgs, plan.Hosts) // decision 25: targets with their own ports
+	if err != nil {
+		bar.Stop()
+		log.Fatalf("target ports: %v", err)
+	}
+	for _, w := range plan.Warnings {
+		tr.Logf("ports: %s", w)
+	}
+	for _, g := range byPorts.specs() {
+		tr.Logf("ports: %d target(s) with their own ports %s (the others: -ports %s)", byPorts.count[g], g, *ports)
+	}
 	resolvedSvc, portNote, err := nmapad.ApplyPorts(*svcArgs, *ports, len(ips))
 	if err != nil {
 		bar.Stop()
@@ -311,7 +329,7 @@ func cmdScan(args []string) {
 		tr.Logf("ports: %s", portNote)
 	}
 	rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
-		"discovery_args": *discArgs, "nmap_args": *svcArgs, "ports": *ports, "window": window.String(), "targets": len(ips),
+		"discovery_args": *discArgs, "nmap_args": *svcArgs, "ports": *ports, "target_ports": byPorts.count, "window": window.String(), "targets": len(ips),
 		"policy": pol.Summary()})
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
@@ -393,7 +411,8 @@ func cmdScan(args []string) {
 	z.Seed(tune["services"])
 	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", RunID: runID, Adapter: nmapad.Services(*svcArgs),
 		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
-		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services"), Guard: pol}, up, tr,
+		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services"), Guard: pol,
+		Group: byPorts.group(), AdapterFor: byPorts.adapter(nmapad.Services(*svcArgs))}, up, tr,
 		func(r scanner.ChunkResult) {
 			keep(r.Observations)
 			if r.State == "killed" && ctx.Err() != nil {
@@ -422,6 +441,7 @@ func cmdScan(args []string) {
 	}
 	writeJSON(tunePath, tune)
 
+	outsidePorts := 0 // previously seen services outside the ports now chosen for their target
 	// --- confirmation: services that vanished since the previous run while their host
 	// is still up get one more, slower look before we call them gone (and close them in DefectDojo).
 	if prev := previousRun(*outRoot, runID); prev != "" && ctx.Err() == nil {
@@ -436,6 +456,10 @@ func cmdScan(args []string) {
 		recheck, n := map[string][]int{}, 0
 		for _, o := range old {
 			if !have[o.Key()] && isUp[o.IP] && o.Proto == "tcp" && !pol.IsSelfPort(o.IP, o.Proto, o.Port) {
+				if !targets.InPorts(meta[o.IP].Ports, o.Port) {
+					outsidePorts++ // the user excluded it: not probed, and not "gone"
+					continue
+				}
 				recheck[o.IP] = append(recheck[o.IP], o.Port)
 				n++
 			}
@@ -596,6 +620,10 @@ func cmdScan(args []string) {
 				closeOld = false
 				tr.Logf("dojo: close_old disabled - %s: %s", st, why)
 			}
+		}
+		if outsidePorts > 0 {
+			closeOld = false
+			tr.Logf("dojo: close_old disabled - %d known service(s) outside the ports chosen for their targets", outsidePorts)
 		}
 		uploadBatch(dd, ddTarget, svcs, closeOld, tr)
 		// SEC-7: raw httpx / nuclei output -> native DD parsers, tests asi-httpx / asi-nuclei

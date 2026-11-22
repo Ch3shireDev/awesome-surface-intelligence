@@ -360,14 +360,18 @@ func (s *Store) upsertTargets(ctx context.Context, set string, ts []targets.Targ
 					return err
 				}
 			}
+			ports, err := targets.NormalizePorts(t.Ports)
+			if err != nil {
+				return fmt.Errorf("target %s: %w", v, err)
+			}
 			tags := t.Tags
 			if tags == nil {
 				tags = []string{}
 			}
-			if _, err := tx.Exec(ctx, `INSERT INTO targets (set_id, kind, value, asset, owner, tags, enabled, note_enc)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+			if _, err := tx.Exec(ctx, `INSERT INTO targets (set_id, kind, value, asset, owner, tags, enabled, note_enc, ports)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 				ON CONFLICT (set_id, value) DO UPDATE SET `+onConflict(merge),
-				sid, kindOf(v), v, t.Asset, t.Owner, tags, t.Enabled, note); err != nil {
+				sid, kindOf(v), v, t.Asset, t.Owner, tags, t.Enabled, note, ports); err != nil {
 				return fmt.Errorf("target %s: %w", v, err)
 			}
 			n++
@@ -379,7 +383,7 @@ func (s *Store) upsertTargets(ctx context.Context, set string, ts []targets.Targ
 
 // Targets of a set, notes decrypted.
 func (s *Store) Targets(ctx context.Context, set string) ([]targets.Target, error) {
-	rows, err := s.DB.Query(ctx, `SELECT t.value, t.asset, t.owner, t.tags, t.enabled, t.note_enc
+	rows, err := s.DB.Query(ctx, `SELECT t.value, t.asset, t.owner, t.tags, t.enabled, t.note_enc, t.ports
 		FROM targets t JOIN target_sets ts ON ts.id=t.set_id WHERE ts.name=$1 ORDER BY t.id`, set)
 	if err != nil {
 		return nil, err
@@ -387,7 +391,7 @@ func (s *Store) Targets(ctx context.Context, set string) ([]targets.Target, erro
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (targets.Target, error) {
 		var t targets.Target
 		var note []byte
-		if err := r.Scan(&t.Target, &t.Asset, &t.Owner, &t.Tags, &t.Enabled, &note); err != nil {
+		if err := r.Scan(&t.Target, &t.Asset, &t.Owner, &t.Tags, &t.Enabled, &note, &t.Ports); err != nil {
 			return t, err
 		}
 		if note != nil {
@@ -450,11 +454,12 @@ type TargetRow struct {
 	Tags      []string  `json:"tags"`
 	Enabled   bool      `json:"enabled"`
 	Note      string    `json:"note"`
+	Ports     string    `json:"ports"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (s *Store) TargetRows(ctx context.Context, set string) ([]TargetRow, error) {
-	rows, err := s.DB.Query(ctx, `SELECT t.id, ts.name, t.kind, t.value, t.asset, t.owner, t.tags, t.enabled, t.note_enc, t.updated_at
+	rows, err := s.DB.Query(ctx, `SELECT t.id, ts.name, t.kind, t.value, t.asset, t.owner, t.tags, t.enabled, t.note_enc, t.updated_at, t.ports
 		FROM targets t JOIN target_sets ts ON ts.id=t.set_id WHERE ts.name=$1 ORDER BY t.id`, set)
 	if err != nil {
 		return nil, err
@@ -462,7 +467,7 @@ func (s *Store) TargetRows(ctx context.Context, set string) ([]TargetRow, error)
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (TargetRow, error) {
 		var t TargetRow
 		var note []byte
-		if err := r.Scan(&t.ID, &t.Set, &t.Kind, &t.Value, &t.Asset, &t.Owner, &t.Tags, &t.Enabled, &note, &t.UpdatedAt); err != nil {
+		if err := r.Scan(&t.ID, &t.Set, &t.Kind, &t.Value, &t.Asset, &t.Owner, &t.Tags, &t.Enabled, &note, &t.UpdatedAt, &t.Ports); err != nil {
 			return t, err
 		}
 		if note != nil {
@@ -502,12 +507,13 @@ func (s *Store) DeleteTarget(ctx context.Context, id int64) (string, error) {
 func onConflict(merge bool) string {
 	if !merge {
 		return `kind=EXCLUDED.kind, asset=EXCLUDED.asset, owner=EXCLUDED.owner,
-			tags=EXCLUDED.tags, enabled=EXCLUDED.enabled, note_enc=EXCLUDED.note_enc, updated_at=now()`
+			tags=EXCLUDED.tags, enabled=EXCLUDED.enabled, note_enc=EXCLUDED.note_enc, ports=EXCLUDED.ports, updated_at=now()`
 	}
 	return `kind=EXCLUDED.kind,
 			asset=CASE WHEN EXCLUDED.asset='' THEN targets.asset ELSE EXCLUDED.asset END,
 			owner=CASE WHEN EXCLUDED.owner='' THEN targets.owner ELSE EXCLUDED.owner END,
 			tags=(SELECT coalesce(array_agg(DISTINCT t), '{}') FROM unnest(targets.tags || EXCLUDED.tags) t),
 			enabled=EXCLUDED.enabled,
-			note_enc=coalesce(EXCLUDED.note_enc, targets.note_enc), updated_at=now()`
+			note_enc=coalesce(EXCLUDED.note_enc, targets.note_enc), ports=CASE WHEN EXCLUDED.ports='' THEN targets.ports ELSE EXCLUDED.ports END,
+		updated_at=now()`
 }

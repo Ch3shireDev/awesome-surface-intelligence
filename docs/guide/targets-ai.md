@@ -4,14 +4,12 @@ Często lista celów nie istnieje jako CSV, tylko jako inwentarz w wiki, tabela 
 z konfiguracji serwerów. ASI zamienia taki tekst na cele w [naszym formacie](/guide/targets)
 (`target, asset, owner, tags, enabled, note`).
 
-Są trzy drogi do tej samej funkcji (wzorzec MISP: GUI i MCP są nakładką na to, co robi CLI):
+Funkcja jest w CLI i MCP. W panelu cele dodaje się ręcznie albo z pliku (decyzja 25):
 
 | gdzie | jak |
 |---|---|
-| Panel web | **Cele → Wklej dowolny tekst → Wyciągnij cele**, podgląd, odznaczenie zbędnych, **Dodaj zaznaczone do zbioru** albo **Pobierz CSV** |
 | CLI | `asi targets-extract -in notatki.txt -out targets/targets.csv` (albo `-format json`, stdin/stdout) |
 | MCP | `asi mcp`: narzędzia `extract_targets`, `list_target_sets`, `list_targets`, `add_targets` |
-| API | `POST /api/v1/targets/extract` `{"text": "...", "engine": "auto"}` (rola `operator`), niczego nie zapisuje |
 
 ## Silniki
 

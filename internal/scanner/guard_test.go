@@ -179,3 +179,42 @@ func TestWorkerSelfExcludeOffAndUserExcludeMerge(t *testing.T) {
 		t.Fatalf("expected single merged --exclude-ports, got: %q", cmd)
 	}
 }
+
+type groupNmap struct {
+	echoNmap
+}
+
+func TestPhaseKeepsPortGroupsApart(t *testing.T) {
+	dir := t.TempDir()
+	tr := progress.New("t", 3, filepath.Join(dir, "events.ndjson"))
+	pol := safety.Default()
+	pol.Self = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	pol.SelfPorts, _ = safety.ParsePorts("18090")
+	ports := map[string]string{"127.0.0.1": "22", "192.0.2.1": "22", "192.0.2.3": "443"} // the rest: default
+	in := []string{"192.0.2.1", "127.0.0.2", "192.0.2.2", "127.0.0.1", "192.0.2.3", "192.0.2.4"}
+	rs := RunPhase(context.Background(), PhaseConfig{Name: "services", Adapter: echoNmap{}, Stage: obs.StageConfig{RatePPS: 10},
+		Parallel: 3, Sizer: &Sizer{Fixed: 10}, OutDir: dir, Guard: pol,
+		Group: func(ip string) string { return ports[ip] },
+		AdapterFor: func(g string) obs.Scanner {
+			if g == "" {
+				return echoNmap{}
+			}
+			return groupNmap{echoNmap{fakeNmap{extra: []string{"-p", g}}}}
+		}}, in, tr, nil)
+	seen := 0
+	for _, r := range rs {
+		cmd := r.Observations[0].AssetKey
+		for _, ip := range r.Hosts {
+			seen++
+			if p := ports[ip]; (p == "" && strings.Contains(cmd, "-p ")) || (p != "" && !strings.Contains(cmd, "-p "+p)) {
+				t.Errorf("%s: wrong ports in %q", ip, cmd)
+			}
+			if strings.HasPrefix(ip, "127.") != strings.Contains(cmd, "--exclude-ports") {
+				t.Errorf("%s: wrong self-port exclusion in %q", ip, cmd)
+			}
+		}
+	}
+	if seen != len(in) || len(rs) != 5 {
+		t.Fatalf("hosts %d/%d, chunks %d", seen, len(in), len(rs))
+	}
+}

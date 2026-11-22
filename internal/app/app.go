@@ -85,7 +85,6 @@ func (a *App) Handler() http.Handler {
 	m.Handle("GET /api/v1/targets", a.need("viewer", a.listTargets))
 	m.Handle("POST /api/v1/targets", a.need("operator", a.addTargets))
 	m.Handle("POST /api/v1/targets/import", a.need("operator", a.importTargets))
-	m.Handle("POST /api/v1/targets/extract", a.need("operator", a.extractTargets))
 	m.Handle("PUT /api/v1/targets/{id}", a.need("analyst", a.updateTarget)) // DEV-12: edycja istniejących celów
 	m.Handle("DELETE /api/v1/targets/{id}", a.need("operator", a.deleteTarget))
 	m.Handle("GET /api/v1/scans/current", a.need("viewer", a.currentScan))
@@ -569,6 +568,12 @@ func (a *App) saveTargets(w http.ResponseWriter, r *http.Request, u store.User, 
 			bad = append(bad, err.Error())
 			continue
 		}
+		ports, err := targets.NormalizePorts(t.Ports)
+		if err != nil {
+			bad = append(bad, t.Target+": "+err.Error())
+			continue
+		}
+		t.Ports = ports
 		ok = append(ok, t)
 	}
 	n, err := a.St.MergeTargets(r.Context(), set, ok) // add/import never wipes tags or notes
@@ -588,15 +593,21 @@ func (a *App) addTargets(w http.ResponseWriter, r *http.Request, u store.User) {
 		Tags    []string         `json:"tags"`
 		Owner   string           `json:"owner"`
 		Note    string           `json:"note"`
+		Ports   string           `json:"ports"`
 	}
 	if json.NewDecoder(io.LimitReader(r.Body, 4<<20)).Decode(&in) != nil {
 		fail(w, 400, "bad request")
 		return
 	}
+	ports, err := targets.NormalizePorts(in.Ports)
+	if err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
 	ts := in.Targets
 	for _, line := range strings.FieldsFunc(in.Text, func(c rune) bool { return c == '\n' || c == ',' || c == ';' || c == ' ' }) {
 		if line = strings.TrimSpace(line); line != "" && !strings.HasPrefix(line, "#") {
-			ts = append(ts, targets.Target{Target: line, Enabled: true, Tags: in.Tags, Owner: in.Owner, Note: in.Note})
+			ts = append(ts, targets.Target{Target: line, Enabled: true, Tags: in.Tags, Owner: in.Owner, Note: in.Note, Ports: ports})
 		}
 	}
 	a.saveTargets(w, r, u, setName(in.Set), ts, "targets_add")
@@ -628,6 +639,17 @@ func (a *App) importTargets(w http.ResponseWriter, r *http.Request, u store.User
 		fail(w, 400, "nie da się wczytać pliku: "+err.Error())
 		return
 	}
+	// ports chosen in the form apply to rows without their own value
+	ports, err := targets.NormalizePorts(r.FormValue("ports"))
+	if err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
+	for i := range ts {
+		if strings.TrimSpace(ts[i].Ports) == "" {
+			ts[i].Ports = ports
+		}
+	}
 	a.saveTargets(w, r, u, setName(r.FormValue("set")), ts, "targets_import")
 }
 
@@ -649,13 +671,17 @@ func (a *App) updateTarget(w http.ResponseWriter, r *http.Request, u store.User)
 		fail(w, 400, "zmiana wartości celu = usunięcie i dodanie (rola operator); edytuj tagi, notatkę, właściciela")
 		return
 	}
+	if t.Ports, err = targets.NormalizePorts(t.Ports); err != nil {
+		fail(w, 400, err.Error())
+		return
+	}
 	_, err = a.St.UpsertTargets(r.Context(), setName(t.Set), []targets.Target{{Target: t.Value, Asset: t.Asset,
-		Owner: t.Owner, Tags: t.Tags, Enabled: t.Enabled, Note: t.Note}})
+		Owner: t.Owner, Tags: t.Tags, Enabled: t.Enabled, Note: t.Note, Ports: t.Ports}})
 	if err != nil {
 		fail(w, 500, err.Error())
 		return
 	}
-	a.St.Audit(r.Context(), &u.ID, "target_edit", "target", t.Value, map[string]any{"enabled": t.Enabled, "tags": t.Tags})
+	a.St.Audit(r.Context(), &u.ID, "target_edit", "target", t.Value, map[string]any{"enabled": t.Enabled, "tags": t.Tags, "ports": t.Ports})
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

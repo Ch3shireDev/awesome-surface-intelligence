@@ -172,30 +172,21 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
       <div class="row"><div><label for="t-tags">tagi (po przecinku)</label><input id="t-tags" placeholder="lab, dmz"></div>
         <div><label for="t-owner">właściciel</label><input id="t-owner"></div>
         <div style="flex:1"><label for="t-note">notatka (szyfrowana)</label><input id="t-note" style="width:100%"></div></div>
+      <div class="row"><div><label for="t-ports">porty dla tych celów</label><select id="t-ports"><option value="" selected>domyślny zestaw (profil skanu)</option><option value="top100">top 100</option><option value="top1000">top 1000</option><option value="all">wszystkie TCP</option><option value="custom">własna lista</option></select></div>
+        <div id="t-ports-w" class="hidden"><label for="t-ports-list">lista portów TCP</label><input id="t-ports-list" placeholder="22,80,443,8000-8100"></div></div>
       <div style="margin-top:12px"><button class="btn" id="t-add">Dodaj cele</button></div>
       <div id="t-msg" class="msg"></div>
     </div>
     <div class="card"><h2>Import z pliku</h2>
-      <p class="muted" style="margin-top:0">CSV (<span class="mono">target,asset,owner,tags,enabled,note</span>), JSON (<span class="mono">{"targets":[…]}</span>) albo TXT. Ponowny import aktualizuje wpisy o tej samej wartości.</p>
+      <p class="muted" style="margin-top:0">CSV (<span class="mono">target,ports,asset,owner,tags,enabled,note</span>, porty np. <span class="mono">22;80;8000-8100</span>), JSON (<span class="mono">{"targets":[…]}</span>) albo TXT. Ponowny import aktualizuje wpisy o tej samej wartości.</p>
       <input type="file" id="t-file" accept=".csv,.json,.txt">
+      <div class="row"><div><label for="t-iports">porty dla wierszy bez kolumny ports</label><select id="t-iports"><option value="" selected>domyślny zestaw (profil skanu)</option><option value="top100">top 100</option><option value="top1000">top 1000</option><option value="all">wszystkie TCP</option><option value="custom">własna lista</option></select></div>
+        <div id="t-iports-w" class="hidden"><label for="t-iports-list">lista portów TCP</label><input id="t-iports-list" placeholder="22,80,443,8000-8100"></div></div>
       <div style="margin-top:12px"><button class="btn" id="t-import">Importuj</button></div>
       <div id="t-imsg" class="msg"></div>
     </div>
   </div>
-  <div class="card" data-role="operator"><h2>Wklej dowolny tekst</h2>
-    <p class="muted" style="margin-top:0">Inwentarz serwerów, tabela, notatki, mail. Model (DeepSeek <span class="mono">deepseek-flash</span>, bez klucza proste wyszukiwanie adresów) zamieni to na cele w formacie ASI. Cele spoza tekstu są odrzucane, adresy wewnętrzne i Tailscale są wyłączone ze skanowania. Nic się nie zapisze, dopóki nie zatwierdzisz listy.</p>
-    <label for="x-text">tekst źródłowy</label>
-    <textarea id="x-text" style="min-height:160px" placeholder="edge │ 192.0.2.10 │ proxy api.example.com&#10;Domeny: example.com (api., www.), shop.example.org"></textarea>
-    <div class="row" style="margin-top:12px"><div><label for="x-engine">silnik</label><select id="x-engine"><option value="auto">auto (LLM, jeśli jest klucz)</option><option value="llm">tylko LLM</option><option value="regex">tylko regex</option></select></div>
-      <div><button class="btn" id="x-run">Wyciągnij cele</button></div></div>
-    <div id="x-msg" class="msg"></div>
-    <div id="x-out" class="hidden" style="margin-top:12px">
-      <div class="scroll" style="max-height:420px"><table><thead><tr><th><input type="checkbox" id="x-all" checked aria-label="zaznacz wszystkie"></th><th>cel</th><th>asset</th><th>właściciel</th><th>tagi</th><th>notatka</th><th>skanuj</th></tr></thead><tbody id="x-rows"></tbody></table></div>
-      <div class="row" style="margin-top:12px"><div><button class="btn" id="x-save">Dodaj zaznaczone do zbioru</button></div><div><button class="btn sec" id="x-csv">Pobierz CSV</button></div></div>
-      <div id="x-smsg" class="msg"></div>
-    </div>
-  </div>
-  <div class="card"><h2 id="t-title">Cele</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>cel</th><th>rodzaj</th><th>asset</th><th>właściciel</th><th>tagi</th><th>notatka</th><th>skanuj</th><th></th></tr></thead><tbody id="t-rows"></tbody></table></div></div>
+  <div class="card"><h2 id="t-title">Cele</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>cel</th><th>rodzaj</th><th>porty</th><th>asset</th><th>właściciel</th><th>tagi</th><th>notatka</th><th>skanuj</th><th></th></tr></thead><tbody id="t-rows"></tbody></table></div></div>
 </section>
 
 <!-- SCANS -->
@@ -599,43 +590,27 @@ async function loadTargets(){
   const rows=await api('api/v1/targets?set='+encodeURIComponent(curSet));
   $('t-title').textContent=`Cele w zbiorze „${curSet}” (${rows.length})`;
   const op=can('operator');
-  $('t-rows').innerHTML=rows.map(t=>`<tr><td class="mono">${esc(t.target)}</td><td>${esc(t.kind)}</td><td>${esc(t.asset)}</td><td>${esc(t.owner)}</td><td>${tags(t.tags)}</td><td class="muted">${esc(t.note)}</td>
+  $('t-rows').innerHTML=rows.map(t=>`<tr><td class="mono">${esc(t.target)}</td><td>${esc(t.kind)}</td><td>${can('analyst')?`<input class="t-pe mono" data-id="${t.id}" value="${esc(t.ports)}" placeholder="domyślne" style="width:150px" title="puste = profil skanu; top100, top1000, all albo lista" aria-label="porty ${esc(t.target)}">`:esc(t.ports||'domyślne')}</td><td>${esc(t.asset)}</td><td>${esc(t.owner)}</td><td>${tags(t.tags)}</td><td class="muted">${esc(t.note)}</td>
     <td><input type="checkbox" data-id="${t.id}" class="t-en" ${t.enabled?'checked':''} ${op?'':'disabled'} aria-label="skanuj ${esc(t.target)}"></td>
-    <td>${op?`<button class="link t-del" data-id="${t.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="8">Zbiór jest pusty.</td></tr>';
+    <td>${op?`<button class="link t-del" data-id="${t.id}" style="color:var(--bad)">usuń</button>`:''}</td></tr>`).join('')||'<tr><td class="empty" colspan="9">Zbiór jest pusty.</td></tr>';
   document.querySelectorAll('.t-en').forEach(cb=>cb.onchange=async()=>{const t=rows.find(x=>x.id==cb.dataset.id);t.enabled=cb.checked;t.set=curSet;
     await api('api/v1/targets/'+t.id,{method:'PUT',body:JSON.stringify(t)})});
+  document.querySelectorAll('.t-pe').forEach(el=>el.onchange=async()=>{const t=rows.find(x=>x.id==el.dataset.id);
+    try{await api('api/v1/targets/'+t.id,{method:'PUT',body:JSON.stringify({...t,set:curSet,ports:el.value})});loadTargets()}
+    catch(e){el.value=t.ports;alert(e.message)}});
   document.querySelectorAll('.t-del').forEach(b=>b.onclick=async()=>{if(!confirm('Usunąć cel?'))return;await api('api/v1/targets/'+b.dataset.id,{method:'DELETE'});loadTargets()});
 }
 $('t-set').onchange=()=>{curSet=$('t-set').value;loadTargets()};
 $('t-useset').onclick=()=>{const v=$('t-newset').value.trim();if(v){curSet=v;$('t-newset').value='';loadTargets()}};
 function showRes(el,r){el.className='msg '+(r.rejected&&r.rejected.length?'err':'ok');el.innerHTML=`Zapisano ${r.written}.`+(r.rejected&&r.rejected.length?` Odrzucone: ${r.rejected.map(esc).join('; ')}`:'')}
-$('t-add').onclick=async()=>{try{const r=await api('api/v1/targets',{method:'POST',body:JSON.stringify({set:curSet,text:$('t-text').value,
+for(const p of ['t-ports','t-iports'])$(p).onchange=()=>$(p+'-w').classList.toggle('hidden',$(p).value!=='custom');
+function pickPorts(p){const v=$(p).value;if(v!=='custom')return v;const l=$(p+'-list').value.trim();if(!l)throw new Error('Podaj listę portów.');return l}
+$('t-add').onclick=async()=>{try{const r=await api('api/v1/targets',{method:'POST',body:JSON.stringify({set:curSet,ports:pickPorts('t-ports'),text:$('t-text').value,
   tags:$('t-tags').value.split(',').map(s=>s.trim()).filter(Boolean),owner:$('t-owner').value,note:$('t-note').value})});showRes($('t-msg'),r);$('t-text').value='';loadTargets()}
   catch(e){$('t-msg').className='msg err';$('t-msg').textContent=e.message}};
 $('t-import').onclick=async()=>{const f=$('t-file').files[0];if(!f){$('t-imsg').className='msg err';$('t-imsg').textContent='Wybierz plik.';return}
   const fd=new FormData();fd.append('file',f);fd.append('set',curSet);
-  try{const r=await api('api/v1/targets/import',{method:'POST',body:fd});showRes($('t-imsg'),r);loadTargets()}catch(e){$('t-imsg').className='msg err';$('t-imsg').textContent=e.message}};
-
-// ---------- targets from free text (LLM / regex)
-let xRes=null;
-$('x-run').onclick=async()=>{const b=$('x-run');$('x-msg').className='msg';$('x-msg').textContent='Analizuję tekst…';b.disabled=true;$('x-out').classList.add('hidden');
-  try{xRes=await api('api/v1/targets/extract',{method:'POST',body:JSON.stringify({text:$('x-text').value,engine:$('x-engine').value})});
-    const on=xRes.targets.filter(t=>t.enabled).length;
-    $('x-msg').innerHTML=`Silnik <b>${esc(xRes.engine)}</b>: ${xRes.targets.length} cel(e), ${on} do skanowania.`+(xRes.warnings||[]).map(w=>`<br><span style="color:var(--bad)">⚠ ${esc(w)}</span>`).join('');
-    $('x-rows').innerHTML=xRes.targets.map((t,i)=>`<tr><td><input type="checkbox" class="x-inc" data-i="${i}" checked aria-label="dodaj ${esc(t.target)}"></td><td class="mono">${esc(t.target)}</td><td>${esc(t.asset)}</td><td>${esc(t.owner)}</td><td>${tags(t.tags)}</td><td class="muted">${esc(t.note)}</td>
-      <td><input type="checkbox" class="x-en" data-i="${i}" ${t.enabled?'checked':''} aria-label="skanuj ${esc(t.target)}"></td></tr>`).join('')||'<tr><td class="empty" colspan="7">Nie znaleziono celów.</td></tr>';
-    document.querySelectorAll('.x-en').forEach(cb=>cb.onchange=()=>{xRes.targets[cb.dataset.i].enabled=cb.checked});
-    $('x-all').checked=true;$('x-smsg').textContent='';$('x-out').classList.remove('hidden')}
-  catch(e){$('x-msg').className='msg err';$('x-msg').textContent=e.message}
-  finally{b.disabled=false}};
-$('x-all').onchange=()=>document.querySelectorAll('.x-inc').forEach(cb=>cb.checked=$('x-all').checked);
-const xPicked=()=>[...document.querySelectorAll('.x-inc')].filter(cb=>cb.checked).map(cb=>xRes.targets[cb.dataset.i]);
-$('x-save').onclick=async()=>{const ts=xPicked();if(!ts.length){$('x-smsg').className='msg err';$('x-smsg').textContent='Nic nie zaznaczono.';return}
-  try{const r=await api('api/v1/targets',{method:'POST',body:JSON.stringify({set:curSet,targets:ts})});showRes($('x-smsg'),r);loadTargets()}
-  catch(e){$('x-smsg').className='msg err';$('x-smsg').textContent=e.message}};
-$('x-csv').onclick=()=>{const ts=xPicked();const q=v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
-  const csv='target,asset,owner,tags,enabled,note\n'+ts.map(t=>[t.target,t.asset||'',t.owner||'',(t.tags||[]).join(';'),String(t.enabled),t.note||''].map(q).join(',')).join('\n')+'\n';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='targets.csv';a.click();URL.revokeObjectURL(a.href)};
+  try{fd.append('ports',pickPorts('t-iports'));const r=await api('api/v1/targets/import',{method:'POST',body:fd});showRes($('t-imsg'),r);loadTargets()}catch(e){$('t-imsg').className='msg err';$('t-imsg').textContent=e.message}};
 
 // ---------- scans
 $('s-ports').onchange=()=>$('s-custom-w').classList.toggle('hidden',$('s-ports').value!=='custom');

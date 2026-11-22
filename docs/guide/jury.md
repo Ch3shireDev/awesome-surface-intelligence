@@ -258,8 +258,8 @@ Plik do importu kładź w `targets/` (albo w `results/`, jeśli należy do ciebi
 | zamknięty telnet nie tworzy assetu | |
 | obsługiwane też: nmap XML (`merged.xml`), JSON, JSONL httpx/nuclei (`results/lab/<przebieg>/http/*.jsonl`), nasz własny eksport CSV/JSON (pełny „roundtrip”) | [Import](/guide/import) |
 
-**Wprowadzanie celów (wymaganie 11 PDF):** w GUI zakładka **Cele** — **Dodaj ręcznie**, **Import z pliku**
-(CSV/JSON/TXT) oraz **Wklej dowolny tekst** (ekstrakcja adresów regex/DeepSeek); w CLI:
+**Wprowadzanie celów (wymaganie 11 PDF):** w GUI zakładka **Cele** — **Dodaj ręcznie** i **Import z pliku**
+(CSV/JSON/TXT), w obu z wyborem [portów dla celu](/guide/targets#porty); w CLI:
 `make asi ARGS='convert -in targets/lab.csv -out results/lab-targets.json'` i
 `make asi ARGS='db import-targets -set lab -targets targets/lab.csv'`.
 
@@ -406,7 +406,7 @@ a przy wierszu pojawia się przycisk **Wznów (N)** (CLI: `make asi ARGS='scan -
 | co | gdzie |
 |---|---|
 | harmonogram cykliczny z oknem czasowym i automatycznym wznawianiem | **Skany → Harmonogram**, [Harmonogram](/guide/schedule) |
-| cele z dowolnego tekstu (inwentarz, notatka, serwer MCP) | **Cele → Wklej dowolny tekst**, [Cele z tekstu](/guide/targets-ai) |
+| cele z dowolnego tekstu (inwentarz, notatka, serwer MCP) | `asi targets-extract`, `asi mcp`, [Cele z tekstu](/guide/targets-ai) |
 | pełny opis benchmarku 16 384 IP | [Test skali](/guide/scale) |
 | analiza 4 stacków labu organizatorów | [Lab organizatorów](/guide/lab-organizers) |
 

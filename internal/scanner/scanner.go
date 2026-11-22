@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -97,6 +98,10 @@ type PhaseConfig struct {
 	// Guard (SEC-8): checked again in the worker right before the tool starts - excluded or
 	// out-of-scope IPs are dropped from the chunk and the final nmap command line is validated.
 	Guard *safety.Policy
+	// Group and AdapterFor (decision 25, ports per target): hosts of different groups never share
+	// a chunk, and AdapterFor picks the tool arguments of the group. Both nil = one group.
+	Group      func(ip string) string
+	AdapterFor func(group string) obs.Scanner
 }
 
 type ChunkResult struct {
@@ -175,6 +180,12 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 				cfg.Name, nSelf, strings.Join(self, " "), cfg.Guard.SelfPorts)
 		}
 	}
+	if cfg.Group != nil {
+		ips = append([]string(nil), ips...) // the caller's slice keeps its order
+		for _, part := range [][]string{ips[:nSelf], ips[nSelf:]} {
+			sort.SliceStable(part, func(i, j int) bool { return cfg.Group(part[i]) < cfg.Group(part[j]) })
+		}
+	}
 	var (
 		mu      sync.Mutex
 		next    int
@@ -189,9 +200,18 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 			return 0, nil, false
 		}
 		self := next < nSelf
-		n := nSelf
+		n := nSelf - next
 		if !self {
 			n = cfg.Sizer.Next(len(ips)-next, cfg.Parallel)
+		}
+		if cfg.Group != nil {
+			g := cfg.Group(ips[next])
+			for i := 1; i < n; i++ {
+				if cfg.Group(ips[next+i]) != g {
+					n = i
+					break
+				}
+			}
 		}
 		batch := ips[next : next+n]
 		next += n
@@ -211,7 +231,11 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 				if cfg.OnStart != nil {
 					cfg.OnStart(id, batch)
 				}
-				r := runChunk(ctx, cfg, id, batch, self, tr)
+				c := cfg
+				if cfg.Group != nil && cfg.AdapterFor != nil {
+					c.Adapter = cfg.AdapterFor(cfg.Group(batch[0]))
+				}
+				r := runChunk(ctx, c, id, batch, self, tr)
 				cfg.Sizer.Observe(len(batch), r.Duration)
 				mu.Lock()
 				results = append(results, r)

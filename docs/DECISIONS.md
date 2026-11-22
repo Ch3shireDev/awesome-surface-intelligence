@@ -347,6 +347,12 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       inny plik pod podaną ścieżką zatrzymuje start błędem, więc literówka w `-ui unix:...` niczego nie skasuje.
       `asi scan -ui` zostaje tylko jako opcja deweloperska.
 
+25. **Porty per cel; import tylko ręcznie albo z pliku** (22.11, plan fatusi, wdrożenie blackarch).
+    - Użytkownik podaje hosta lub grupę hostów i porty dla nich albo zostawia domyślny zestaw (profil skanu).
+      Migracja `008_target_ports.sql`, etap usług dzieli hosty na grupy według portów.
+    - Z panelu i API znika „Wklej dowolny tekst” (`/api/v1/targets/extract`). `asi targets-extract` i `asi mcp` zostają.
+    - Reguły łączenia: `docs/guide/targets.md`, sekcja „Porty per cel”.
+
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan

@@ -17,7 +17,7 @@ Lokalnie bez dockera: `set -a; . ./.env; set +a; ./asi server`.
 | **Dashboard** | kafelki (aktywne hosty, usługi, nowe, braki, zniknięte, niestabilne, krytyczne ekspozycje), najważniejsze znaleziska wg oceny ciekawości, zmiany w ostatnim przebiegu, lista niestabilnych i zniknięte, wykres zmian w kolejnych przebiegach, stan skanu | pkt 15, „wizualizacja zmian w czasie”, „ocena ciekawości” |
 
 | **Assety** | filtry (stan, rodzaj, flapping, szukaj), tabela, panel szczegółów: ostatnia obserwacja, godziny odpowiedzi (24 h), historia zdarzeń, **edycja tagów i notatki** zachowanych przy kolejnych skanach; eksport CSV/JSON | pkt 14, 8–9, eksport |
-| **Cele** | zbiory celów, **formularz ręczny** (IP/CIDR/domena, tagi, właściciel, notatka szyfrowana), **import CSV/JSON/TXT**, włącz/wyłącz, usuń | pkt 1, 11 |
+| **Cele** | zbiory celów, **formularz ręczny** (IP/CIDR/domena, porty, tagi, właściciel, notatka szyfrowana), **import CSV/JSON/TXT** (z portami), edycja portów, włącz/wyłącz, usuń | pkt 1, 11 |
 | **Skany** | start z parametrami (zbiór, równoległość, globalny limit pps, porty, okno czasowe, eksport do DefectDojo), zatrzymanie (przebieg `partial`), **postęp na żywo** (panel skanu przez proxy), lista przebiegów i ich zmian | pkt 2, harmonogram/okno, ograniczanie tempa |
 | **Konto** | **tokeny API** zalogowanego użytkownika: lista (nazwa, data utworzenia, ostatnie użycie, ważność), utworzenie z nazwą i terminem ważności, unieważnienie; wartość tokenu pokazywana **raz** | pkt 12–13, integracja z DD/automatyzacja |
 | **Administracja** | użytkownicy z rolami, dziennik audytu | pkt 12–13 |

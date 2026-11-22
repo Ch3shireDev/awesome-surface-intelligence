@@ -27,6 +27,7 @@ type Target struct {
 	Tags    []string `json:"tags,omitempty"`  // free tags
 	Enabled bool     `json:"enabled"`         // false = never scan
 	Note    string   `json:"note,omitempty"`
+	Ports   string   `json:"ports,omitempty"` // "" = profile of the scan; see NormalizePorts
 }
 
 type File struct {
@@ -91,7 +92,7 @@ func loadCSV(r io.Reader) ([]Target, error) {
 	}
 	var out []Target
 	for _, row := range rows[1:] {
-		t := Target{Target: get(row, "target"), Asset: get(row, "asset"), Owner: get(row, "owner"), Note: get(row, "note"), Enabled: true}
+		t := Target{Target: get(row, "target"), Asset: get(row, "asset"), Owner: get(row, "owner"), Note: get(row, "note"), Ports: get(row, "ports"), Enabled: true}
 		if t.Target == "" {
 			continue
 		}
@@ -120,6 +121,7 @@ type Host struct {
 	Assets  []string `json:"assets,omitempty"`
 	Owners  []string `json:"owners,omitempty"`
 	Tags    []string `json:"tags,omitempty"`
+	Ports   string   `json:"ports,omitempty"` // merged from all targets covering this IP
 }
 
 type Skipped struct {
@@ -129,9 +131,10 @@ type Skipped struct {
 }
 
 type Plan struct {
-	Created time.Time `json:"created"`
-	Hosts   []Host    `json:"hosts"`
-	Skipped []Skipped `json:"skipped,omitempty"`
+	Created  time.Time `json:"created"`
+	Hosts    []Host    `json:"hosts"`
+	Skipped  []Skipped `json:"skipped,omitempty"`
+	Warnings []string  `json:"warnings,omitempty"`
 }
 
 type PlanOptions struct {
@@ -165,6 +168,11 @@ func BuildPlan(ts []Target, o PlanOptions) Plan {
 		h.Assets = appendUniq(h.Assets, t.Asset)
 		h.Owners = appendUniq(h.Owners, t.Owner)
 		h.Tags = appendUniq(h.Tags, t.Tags...)
+		ports, lost := mergePorts(h.Ports, t.Ports)
+		if lost {
+			p.Warnings = appendUniq(p.Warnings, fmt.Sprintf("%s: porty %q i %q - wygrywa profil %s, lista pominięta", ip, h.Ports, t.Ports, ports))
+		}
+		h.Ports = ports
 	}
 	skip := func(s Skipped) { mu.Lock(); p.Skipped = append(p.Skipped, s); mu.Unlock() }
 
@@ -180,6 +188,12 @@ func BuildPlan(ts []Target, o PlanOptions) Plan {
 			skip(Skipped{Target: t.Target, Reason: "disabled: " + t.Note})
 			continue
 		}
+		ports, err := NormalizePorts(t.Ports)
+		if err != nil { // never fall back to other ports than the user asked for
+			skip(Skipped{Target: t.Target, Reason: err.Error()})
+			continue
+		}
+		t.Ports = ports
 		if a, err := netip.ParseAddr(t.Target); err == nil {
 			add(a.String(), t, "")
 			continue
