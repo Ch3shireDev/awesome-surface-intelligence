@@ -223,8 +223,11 @@ test-router:
 	@command -v node >/dev/null || { echo "brak node (test opcjonalny, tylko dev machine)"; exit 1; }
 	BASE=$${BASE:-$(ASI_BASE)} node scripts/ui-router-test.js
 
+# vitepress preview ignoruje --host i slucha na wszystkich interfejsach (0.0.0.0),
+# wiec uzywamy vitepress dev z jawnym bindowaniem wylacznie na 127.0.0.1.
+DOCS_PORT ?= 4173
 docs:
-	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
+	cd docs && pnpm_config_strict_dep_builds=false pnpm install --frozen-lockfile && pnpm exec vitepress dev --host 127.0.0.1 --port $(DOCS_PORT)
 
 # Prezentacja Beamer (ALL-1): pdflatex w kontenerze TeX Live, nic na hoscie. Wynik: docs/presentation/asi.pdf
 TEXLIVE_IMAGE ?= texlive/texlive@sha256:3a3949a847929f989eb70a4c92ba43b38dcd4242e08a8a6a0b6f5ef3db1525ee

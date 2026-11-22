@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 21.11.2026, 20:00 CET** (LAB-T3 sygnatury labu organizatorów + synchronizacja z TASKS i audytem jury). Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 22.11.2026, 09:55 CET** (LAB-0…LAB-6, LAB-T1…T10/T12, jeden panel `:18090` + Unix socket, DEV-11…DEV-14, OPS-1, prezentacja ALL-1). Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -8,13 +8,13 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 ```
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
-M2 Fundament (kontrakt+DB)█████████░  95%  🔨  DEV-0/1 ✅, SEC-1 ✅, SEC-3 lab ✅, SEC-2 🟡 (lab organizatorów w ~/lab na fh2, analiza gotowa)
-M3 Historia i stany       ██████████ 100%  ✅  DEV-2
-M4 Web GUI                ██████████ 100%  ✅  DEV-4 ✅, DEV-8 ✅, DEV-9 ✅; weryfikacja live progress PTY (DEV-13)
-M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4 httpx ✅, SEC-5 +14 ✅, SEC-10 +9 IoT ✅, LAB-T3 +10 lab ✅, DEV-7 ✅
-M6 Ochrona danych i role  █████████░  95%  🔨  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3 ✅; w toku: DEV-11 (konta), wolne: DEV-12 (rola analyst)
-M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5 ✅, SEC-8 ✅, SEC-7 ✅ (asi-changes, asi-nmap/httpx/nuclei natywnie), DEV-6 ✅
-M8 Finisz dla jury        █████░░░░░  55%  🔨  DEV-10 ✅, SEC-9 ✅, LAB-T3 ✅; w toku: ALL-1 (Beamer, fh2), LAB-T1/T4 (agy); wolne: LAB-T2, LAB-0..6, ALL-2, OPS-1
+M2 Fundament (kontrakt+DB)██████████ 100%  ✅  DEV-0/1 ✅, SEC-1/2/3 ✅
+M3 Historia i stany       ██████████ 100%  ✅  DEV-2 ✅, LAB-T5/T7/T8 ✅
+M4 Web GUI                ██████████ 100%  ✅  DEV-4/8/9/13/14 ✅, jeden panel :18090 + Unix socket
+M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
+M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
+M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅ (4 testy DD + polityka skanera)
+M8 Finisz dla jury        █████████░  90%  🔨  DEV-10 ✅, SEC-9 ✅, ALL-2 ✅, OPS-1 ✅, LAB-0…6 ✅; w toku: LAB-7, LAB-T11, ALL-1 (slajdy gotowe poza autorem)
 ```
 
 ## Etapy
@@ -23,13 +23,13 @@ M8 Finisz dla jury        █████░░░░░  55%  🔨  DEV-10 ✅,
 |---|---|---|---|
 | **M0** Stack + PoC | DefectDojo 3.5.202 w compose, pierwszy import nmapa, pętla reimportu | Etap 0–1 PoC fatusi | ✅ |
 | **M1** Silnik skanowania | `asi scan`: plan celów (CSV/JSON/TXT, CIDR, domeny, reguły zakresu), 2 fazy nmapa, adaptacyjne paczki, globalny limit pps, okno czasowe, pasek CLI + panel SSE, diff, skan potwierdzający, reimport Generic Findings (`created/closed/reactivated`) | silnik z `~/asi-poc` | ✅ |
-| **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1 ✅, SEC-2, SEC-3 ✅ | 🔨 |
-| **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 | ✅ |
-| **M4** Web GUI (najwyżej punktowane) | logowanie (na start 1 admin), formularz celów (ręcznie + CSV/JSON), start skanu z panelu, lista assetów z edycją, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-8 ✅, DEV-9 ✅ | ✅ |
-| **M5** Fingerprint i sygnatury | httpx: tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z naszymi szablonami (CMS, panel, staging, wersja, IoT) | SEC-4 ✅, SEC-5 ✅, DEV-7 ✅, SEC-10 ✅ | ✅ |
-| **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (mentor: „darmowe 5%”), RBAC lokalny (4 role, jeśli starczy czasu), audit log | SEC-6 ✅, DEV-3 ✅ | ✅ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami, twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅ | ✅ |
-| **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, prezentacja ≤10 slajdów, nagranie demo, dokumentacja 100% | DEV-10 ✅, SEC-9 ✅, ALL-1 🔨, ALL-2 🔨 | 🔨 |
+| **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1 ✅, SEC-2 ✅, SEC-3 ✅ | ✅ |
+| **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `reverted`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial`/`timedout` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 ✅, LAB-T5/T7/T8 ✅ | ✅ |
+| **M4** Web GUI (najwyżej punktowane) | jeden panel na `:18090` (podgląd na żywo przez Unix socket), logowanie, formularz celów (ręcznie + CSV/JSON + tekst AI/regex), lista assetów z edycją, deep linki, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-8 ✅, DEV-9 ✅, DEV-13 ✅, DEV-14 ✅ | ✅ |
+| **M5** Fingerprint i sygnatury | httpx (w tym czas odpowiedzi ms, próg 300 ms): tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z 34 naszymi szablonami (CMS, panel, staging, wersje, 9 IoT, lab organizatorów) | SEC-4 ✅, SEC-5 ✅, SEC-10 ✅, DEV-7 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ | ✅ |
+| **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (`pg_tde`), RBAC lokalny 4 role (1:1 z PDF), zarządzanie kontami, tokeny API w GUI, audit log | SEC-6 ✅, DEV-3 ✅, DEV-11 ✅, DEV-12 ✅ | ✅ |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami (4 testy), twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅ | ✅ |
+| **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, testy na labie organizatorów (LAB-0…6 ✅), prezentacja ≤10 slajdów, dokumentacja 100% | DEV-10 ✅, SEC-9 ✅, ALL-2 ✅, OPS-1 ✅, LAB-0…6 ✅, ALL-1 🔨, LAB-7 🔨, LAB-T11 🔨 | 🔨 |
 
 ## Ścieżka krytyczna
 
@@ -80,21 +80,25 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | ~~LAB-T3~~ | M5 | 10 sygnatur pod lab organizatorów (phpMyAdmin, Adminer, DVWA, Gitea, RabbitMQ, NPM, Traefik, Toxiproxy, httpbin, WordPress < 6.0) | ✅ agy/blackarch (`nuclei -validate` + test na 12 usługach) | 10% + lab jury |
 | ~~SEC-9~~ | M8 | publiczne repo bez sekretów i realnych IP; czysty start z GitHuba | ✅ goose (repo + test `make env && make build && make test`); README/quickstart fh2 | formalny wymóg |
 | ~~DEV-3~~ | M6 | tokeny API w GUI (zakładka Konto, `scripts/test-tokens.sh` 24/24) | ✅ goose/blackarch | role 10% |
-| **ALL-1** | M8 | prezentacja ≤10 slajdów (`docs/presentation/asi.tex`, uzupełnić `\TODO`) + nagranie demo | 🔨 agent fatusia-2 (szablon Beamer) | formalny wymóg |
-| **DEV-11** | M6 | zarządzanie kontami (zmiana roli, blokada `disabled`, unieważnianie sesji/tokenów, ochrona ostatniego admina) | 🔨 goose/blackarch | role 10% (audyt jury) |
-| **DEV-12** | M6 | wyrównanie roli `analyst` („modyfikacja i odczyt”: edycja celów i harmonogramów bez tworzenia/usuwania) | wolne (DEV) | role 10% (audyt jury) |
-| **LAB-T1 / T4** | M8 | pełny zakres portów `-p-` dla małych celów / profilu lab + czas odpowiedzi HTTP z httpx (Toxiproxy) | 🔨 agy/blackarch (`lab-t1-t4`) | 30% (lab organizatorów) |
-| **LAB-T2** | M8 | wykluczenie portów własnego stacku ASI/DD przy skanie localhosta/hosta skanera | wolne (SEC) | lab organizatorów |
-| **LAB-0..6** | M8 | testy na żywo 4 stacków z `~/lab` (`custom-network`, `modern`, `vulnerable`, `modern-proxy`) | wolne (SEC, po LAB-T1..T4) | 30% (test jury) |
-| **DEV-13** | M4 | przebudowa `nmap-scanner`, weryfikacja PTY nmapa 7.95 w kontenerze i podgląd widoku postępu (`626855b`) | wolne (DEV) | 15% (czytelność GUI) |
-| **ALL-2** | M8 | strona ze ścieżką testowania pod jury, `status.md` 100%, quickstart na czystej VM z Dockerem | wolne (wszyscy) | 20% |
-| **SEC-2** | M2 | materiały organizatorów — lab pobrany (`~/lab` na fh2, `docs/guide/lab-organizers.md`); brak: ew. przykładowy JSON/CSV, oficjalne limity, testowe DD | 🟡 częściowo (człowiek na miejscu) | ryzyko testu jury |
-| **OPS-1** | docs | `make docs` (`vitepress preview` słucha na wszystkich interfejsach) + sprzątanie starych procesów na `blackarch` | wolne | bezpieczeństwo / porządek |
+| **ALL-1** | M8 | prezentacja ≤10 slajdów (`docs/presentation/asi.tex`, wyniki + zrzuty z `:18090`, `make slides`) + ew. nagranie demo | 🔨 agy/blackarch (został `\author` od zespołu i PDF do HackTribe) | formalny wymóg |
+| ~~DEV-11~~ | M6 | zarządzanie kontami (zmiana roli, blokada `disabled`, unieważnianie sesji/tokenów, ochrona ostatniego admina) | ✅ goose/blackarch (`make test-users` 35/35) | role 10% (audyt jury) |
+| ~~DEV-12~~ | M6 | wyrównanie roli `analyst` („modyfikacja i odczyt”: edycja celów i harmonogramów bez tworzenia/usuwania) | ✅ goose/blackarch (`make test-roles` 28/28) | role 10% (audyt jury) |
+| ~~LAB-T1 / T4~~ | M8 | pełny zakres portów `-p-` dla małych celów / profilu lab + czas odpowiedzi HTTP z httpx (Toxiproxy, próg 300 ms) | ✅ agy/blackarch + fatusia-2 (LAB-T9) | 30% (lab organizatorów) |
+| ~~LAB-T2~~ | M8 | wykluczenie portów własnego stacku ASI/DD przy skanie localhosta/hosta skanera | ✅ agent fatusia-1 | lab organizatorów |
+| ~~LAB-0..6~~ | M8 | testy na żywo 4 stacków z `~/lab` (`custom-network`, `modern`, `vulnerable`, `modern-proxy`) + poprawki LAB-T5..T10, T12 | ✅ fatusia-1, fatusia-2, goose/blackarch | 30% (test jury) |
+| **LAB-7** | M8 | test skanowania zdalnego przez Tailscale (`blackarch` → `fatusia-2`) | 🔨 w toku (fatusia-2 + blackarch) | 30% (test jury) |
+| **LAB-T11** | M8 | raportowanie wykrytego firewalla jako wynik niepełny zamiast zniknięcia usług | 🔨 w toku (blackarch) | odporność / DD |
+| ~~DEV-13~~ | M4 | weryfikacja PTY nmapa 7.95 i podglądu postępu na żywo + dashboardu na `:18090` (Unix socket, 0 błędów JS) | ✅ agy/blackarch | 15% (czytelność GUI) |
+| ~~ALL-2~~ | M8 | strona ze ścieżką testowania pod jury (`guide/jury.md`), `status.md` 100%, czysty start na czystej VM z Dockerem | ✅ fatusia-1 + blackarch | 20% |
+| ~~SEC-2~~ | M2 | materiały organizatorów — lab pobrany (`~/lab`, `docs/guide/lab-organizers.md`), porty i scenariusze przeanalizowane | ✅ fatusia-2 | ryzyko testu jury |
+| ~~OPS-1~~ | docs | `make docs` słucha wyłącznie na `127.0.0.1` (`vitepress dev` zamiast `preview`) + porządki worktree | ✅ agy/blackarch | bezpieczeństwo / porządek |
 
 ## Dziennik postępu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 22.11 ~10:00 | ALL-1: prezentacja `docs/presentation/asi.tex` uzupełniona o wyniki LAB-1…6, prawdziwe zrzuty z `:18090` (dashboard + porównanie przebiegów), zostaje `\author`; DEV-13 potwierdzone na `:18090` (`/live/` 200, 0 błędów JS); OPS-1 (`make docs` na `127.0.0.1`); aktualizacja `ROADMAP.md` i `status.md` |
+| 22.11 ~09:55 | Decyzja 24 (cd.): podgląd skanu `/live/` przez gniazdo Unix `unix:/tmp/asi-live.sock` zamiast TCP 8091 (`2ecf894`, `0be0bc5`) — jedynym portem ASI jest `18090`; LAB-T6 (instalator Gitea `high`), LAB-T10 (`--version-intensity 7` + limit 512 z logiem), LAB-T12 (`stop-at-first-match`, spójna ocena w `services.json`/DD/panelu) |
 | 22.11 ~09:50 | Decyzja 24: jeden panel ASI (18090), usunięte `asi serve`/`make asi-serve` (8095) i osobny podgląd `make asi-scan` (8094) |
 | 22.11 ~09:00 | Decyzja 23: panel ASI domyślnie na 18090 (8090 zostaje dla DVWA z labu), `make test-*` biorą adres z `.env` |
 | 22.11 ~08:20 | LAB-T5: diff przebiegów mówi słowami historii (`missing` zamiast „gone” przy pierwszym braku, `reappeared`), bez bazy „brak w tym przebiegu” |
