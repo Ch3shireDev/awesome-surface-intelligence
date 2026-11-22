@@ -69,7 +69,7 @@
 \end{frame}
 
 % 3 --------------------------------------------------------------------------
-\begin{frame}{Rozwiązanie: ASI jako feed dla DefectDojo}
+\begin{frame}{Rozwiązanie: ASI zasila DefectDojo}
   \centering
   \resizebox{0.98\linewidth}{!}{%
   \begin{tikzpicture}[
@@ -77,72 +77,72 @@
       box/.style={draw=asiDark,rounded corners=2pt,fill=asiDark!6,minimum height=8mm,align=center,font=\small},
       tool/.style={box,fill=asiAccent!12,draw=asiAccent},
       arr/.style={-{Stealth[length=2mm]},thick,asiDark}]
-    \node[box] (gui) {panel web :18090\\(4 role RBAC)};
-    \node[box,below=of gui] (cli) {CLI \cmd{asi}\\harmonogram};
-    \node[tool,right=9mm of gui,yshift=-7mm] (chunks) {paczki celów\\(adaptacyjne)};
+    \node[box] (gui) {panel web\\(4 role)};
+    \node[box,below=of gui] (cli) {wiersz poleceń\\i harmonogram};
+    \node[tool,right=9mm of gui,yshift=-7mm] (chunks) {paczki celów\\(dobierane do sieci)};
     \node[tool,right=of chunks] (nmap) {nmap\\hosty, usługi};
     \node[tool,right=of nmap] (httpx) {httpx\\HTTP/TLS};
     \node[tool,right=of httpx] (nuclei) {nuclei\\34 sygnatury};
-    \node[box,below=11mm of nmap,minimum width=48mm] (db) {PostgreSQL ASI\\TDE + pola AES-256-GCM};
+    \node[box,below=11mm of nmap,minimum width=48mm] (db) {baza ASI (PostgreSQL)\\szyfrowana AES-256};
     \node[box,below=11mm of nuclei,fill=asiAccent!25] (dd) {DefectDojo};
     \draw[arr] (gui) -- (chunks); \draw[arr] (cli) -- (chunks);
     \draw[arr] (chunks) -- (nmap); \draw[arr] (nmap) -- (httpx); \draw[arr] (httpx) -- (nuclei);
     \draw[arr] (nmap) -- (db); \draw[arr] (httpx) -- (db); \draw[arr] (nuclei) -- (db);
-    \draw[arr] (db) -- node[above,font=\scriptsize]{reimport} (dd);
+    \draw[arr] (db) -- node[above,font=\scriptsize]{wyniki} (dd);
   \end{tikzpicture}%
   }
 
   \vspace{3mm}\small
-  Gotowe skanery jako wymienne adaptery, jeden panel jako nakładka na CLI i bazę (wzorzec MISP).
-  Całość: \cmd{make env \&\& make up}.
+  Sprawdzone, wymienne skanery pod wspólnym panelem, podobnie jak w MISP.\\
+  Uruchomienie: \cmd{make env \&\& make up}.
 \end{frame}
 
 % 4 --------------------------------------------------------------------------
-\begin{frame}{Discovery w skali i wyniki labu organizatorów}
+\begin{frame}{Wykrywanie w dużej skali}
   \begin{columns}[T]
     \column{0.50\textwidth}
     \begin{itemize}\small
-      \item Lejek etapów: discovery $\rightarrow$ usługi (\cmd{nmap -sV}) $\rightarrow$ HTTP $\rightarrow$ sygnatury.
-      \item Profil \cmd{-ports auto}: pełne TCP dla $\le 16$ hostów, inaczej top 1000 + porty ryzykowne (Redis, MongoDB, Docker…).
-      \item Druga próba \cmd{-{}-version-intensity 7} tylko na nierozpoznanych TCP (+7 s, wykrywa PostgreSQL na 15432).
-      \item Okno czasowe z wznawianiem (\cmd{deferred}) i ochrona przed fałszywym zniknięciem po \cmd{-{}-host-timeout}.
+      \item Skan etapami: aktywne hosty $\rightarrow$ usługi $\rightarrow$ HTTP $\rightarrow$ sygnatury.
+      \item Małe zbiory: pełny zakres portów TCP. Duże: 1000 najczęstszych i porty ryzykowne (Redis, MongoDB, Docker…).
+      \item Nierozpoznane usługi dostają drugą, dokładniejszą próbę (np. PostgreSQL na nietypowym porcie).
+      \item Skan pracuje w oknie czasowym, resztę dokańcza w następnym.
     \end{itemize}
     \column{0.47\textwidth}
-    \begin{block}{Test skali (\cmd{127.0.0.0/18})}
+    \begin{block}{Test skali}
       \small
-      Rdzeń: \textbf{16 384 adresy} w \textbf{86 s} (loopback, 2 porty, bez \cmd{-sV} i HTTP), 182 MB RAM;
-      dashboard \textbf{0,22 s} przy 49 tys. assetów.
+      \textbf{16 384 adresy} w \textbf{86 s} (test lokalny: 2 porty, bez rozpoznawania usług i HTTP), 182 MB RAM;
+      dashboard w \textbf{0,22 s} przy 49 tys. zasobów.
     \end{block}
     \begin{block}{Lab organizatorów}
       \small
-      Wszystkie 4 stacki (\cmd{custom-network}, \cmd{modern}, \cmd{modern-proxy}, \cmd{vulnerable}):
-      40--128 s/przebieg; Toxiproxy 500 ms wykryte (próg 300 ms) bez fałszywego \cmd{changed}.
+Przetestowane wszystkie 4 środowiska, 40--128 s na skan.
+      Opóźnienie sieci 500 ms wykryte i~nie zgłoszone błędnie jako zmiana usługi.
     \end{block}
   \end{columns}
 \end{frame}
 
 % 5 --------------------------------------------------------------------------
-\begin{frame}{Fingerprint i własne sygnatury}
+\begin{frame}{Co działa pod adresem}
   \begin{columns}[T]
     \column{0.44\textwidth}
     \scriptsize
-    \textbf{httpx:} tytuł, kod, \textbf{czas odpowiedzi (ms)}, nagłówki, ciasteczka, TLS, przekierowania, technologie (Wappalyzer), favicon mmh3.
+    \textbf{Rozpoznanie stron (httpx):} tytuł, kod i czas odpowiedzi, nagłówki, ciasteczka, certyfikat, przekierowania, technologie, ikona strony.
 
     \medskip
-    \textbf{nuclei + 34 własne sygnatury} (\cmd{signatures/}, wyłącznie GET):
+    \textbf{34 własne sygnatury (nuclei)}, wyłącznie detekcja:
     \begin{itemize}\scriptsize
-      \item 14 bazowych (CMS, staging, panele, wersje, Redis)
-      \item \textbf{9 IoT} (Hikvision/Dahua, RouterOS, OpenWrt LuCI, drukarki, NAS, UPnP)
-      \item 11 usług/labu (phpMyAdmin, Adminer, DVWA, Gitea + instalator, RabbitMQ, NPM, Traefik, Toxiproxy)
+      \item systemy CMS, środowiska testowe, stare wersje, bazy bez hasła
+      \item urządzenia IoT: kamery, routery, drukarki, NAS
+      \item panele i narzędzia: phpMyAdmin, Adminer, Gitea, RabbitMQ, Traefik
     \end{itemize}
 
     \smallskip
-    \textbf{Wyniki labu:} WP 4.7 + PHP 5.6 (\alert{75/100}), Redis bez hasła (\alert{95/100}), instalator Gitea (\alert{85/100}); \textbf{0 prób logowania} (111 GET, 0 POST, 0 FTP LOGIN).
+    \textbf{Znalezione w labie organizatorów:} WordPress 4.7 + PHP 5.6 (\alert{75/100}), Redis bez hasła (\alert{95/100}), niedokończona instalacja Gitea (\alert{85/100}); \textbf{ani jednej próby logowania}.
     \column{0.53\textwidth}
     \shot{0.98\linewidth}{img/fingerprint.png}
 
     \vspace{1.5mm}\scriptsize
-    Szuflada assetu w panelu: HTTP 200, czas odpowiedzi (ostrzeżenie $>300$ ms), nagłówki, ciasteczka, favicon mmh3 i trafienia sygnatur \cmd{nuclei}.
+    Szczegóły usługi w panelu: odpowiedź serwera, technologie i dopasowane sygnatury.
   \end{columns}
 \end{frame}
 
@@ -151,41 +151,41 @@
   \begin{columns}[T]
     \column{0.42\textwidth}
     \small
-    Stany assetu (host, host:port):
+    Stan każdego hosta i usługi:
     \begin{itemize}\footnotesize
-      \item \textbf{new} $\rightarrow$ \textbf{active}
-      \item \textbf{missing}: pierwszy brak (do potwierdzenia)
-      \item \textbf{gone}: po $N$ kolejnych brakach
-      \item \textbf{reappeared}, \textbf{changed} (przed $\rightarrow$ po)
-      \item \textbf{reverted}: cofnięcie awarii (np. timeout za proxy)
-      \item \textbf{flapping}: niestabilność + wzorce pory dnia
+      \item \textbf{nowy} $\rightarrow$ \textbf{aktywny}
+      \item \textbf{brak}: pierwszy brak odpowiedzi
+      \item \textbf{zniknął}: dopiero po kilku kolejnych brakach
+      \item \textbf{powrót} oraz \textbf{zmiana} (przed $\rightarrow$ po)
+      \item \textbf{cofnięta zmiana}: chwilowa awaria
+      \item \textbf{niestabilny}: znika i wraca, np. działa tylko w~części godzin
     \end{itemize}
-    \footnotesize Brak liczy się wyłącznie dla faktycznie przeskanowanych adresów (timeout / przerwanie nie zamyka usług).
+    \footnotesize Brak liczy się tylko dla adresów, które udało się przeskanować.
     \column{0.55\textwidth}
-    \textbf{Porównanie dwóch przebiegów w panelu:}
+    \textbf{Porównanie dwóch skanów w panelu:}
     \vspace{2mm}
 
     \shot{0.97\linewidth}{img/diff.png}
 
     \vspace{1.5mm}\scriptsize
-    Demo 2 przebiegów: nowy host (\cmd{.16}), brakujący host (\cmd{.14}), zmiana serwera (\cmd{.15:80}), spójne nazwy z historią.
+    Między skanami: jeden host doszedł, jeden przestał odpowiadać, jeden zmienił serwer WWW.
   \end{columns}
 \end{frame}
 
 % 7 --------------------------------------------------------------------------
-\begin{frame}{Jeden panel web (:18090) i role RBAC}
+\begin{frame}{Panel web i role}
   \begin{columns}[T]
     \column{0.44\textwidth}
     \begin{itemize}\scriptsize
-      \item \textbf{Dashboard}: ocena 0--100 z powodami, zmiany, niestabilne, grupy usług, pora dnia.
-      \item \textbf{Cele}: ręcznie lub z CSV/JSON/TXT, własne porty dla hosta albo grupy.
-      \item \textbf{Assety}: trwałe tagi, notatki, ocena analityka (FP / akceptacja), deep linki \cmd{/assets/<klucz>}.
-      \item \textbf{Skany}: start, postęp na żywo (Unix socket), harmonogram, import wyników, eksport CSV/JSON.
+      \item \textbf{Dashboard}: najważniejsze znaleziska z~uzasadnieniem, zmiany, hosty niestabilne.
+      \item \textbf{Cele}: ręcznie lub z pliku CSV/JSON/TXT, własne porty dla hosta albo grupy.
+      \item \textbf{Zasoby}: tagi, notatki i ocena analityka zachowane między skanami.
+      \item \textbf{Skany}: start, postęp na żywo, harmonogram, import i eksport wyników.
     \end{itemize}
     \scriptsize
     \begin{tabular}{@{}ll@{}}\toprule
       rola & uprawnienia \\\midrule
-      \cmd{admin} & administracja, konta, audit log \\
+      \cmd{admin} & administracja, konta, audyt \\
       \cmd{operator} & dodawanie, usuwanie, modyfikacja \\
       \cmd{analyst} & modyfikacja i odczyt \\
       \cmd{viewer} & odczyt \\\bottomrule
@@ -194,7 +194,7 @@
     \shot{0.97\linewidth}{img/dashboard.png}
 
     \vspace{1.5mm}\scriptsize
-    Jedynym portem ASI jest \cmd{18090}; tokeny API (SHA-256) w zakładce Konto; role sprawdzane testami API.
+    ASI działa na porcie \cmd{18090}.
   \end{columns}
 \end{frame}
 
@@ -204,18 +204,18 @@
     \column{0.48\textwidth}
     \textbf{Bezpieczne skanowanie}
     \begin{itemize}\small
-      \item zakres i wykluczenia sprawdzane w planie \textbf{i w workerze} (wbudowane blokady metadanych 169.254/16, multicast)
-      \item twarde limity \cmd{ASI\_MAX\_RATE} i \cmd{ASI\_MAX\_PARALLEL}, allowlista flag nmapa i portów
-      \item automatyczne pomijanie własnych portów ASI/DD na hoście skanera
-      \item sygnatury bez exploitów i logowania (lint w testach, nuclei \cmd{-ni -duc})
+      \item zakres i~wykluczenia sprawdzane przed skanem i~w~jego trakcie
+      \item twarde limity tempa i~równoległości, kontrola dozwolonych portów
+      \item system nie skanuje własnych usług
+      \item sygnatury bez exploitów i~prób logowania
     \end{itemize}
     \column{0.48\textwidth}
     \textbf{Ochrona danych w spoczynku}
     \begin{itemize}\small
-      \item PostgreSQL z TDE (\cmd{pg\_tde}): 15/15 tabel, indeksy i WAL szyfrowane AES-256
-      \item pola wrażliwe (\cmd{\_enc}) dodatkowo AES-256-GCM w aplikacji z rotacją kluczy (\cmd{asi db reseal})
-      \item audyt operacji + tokeny wyłącznie jako hash SHA-256
-      \item weryfikacja: \cmd{make crypto-check} \textbf{9/9 OK}, \cmd{make schema-check} \textbf{12/12 OK}
+      \item cała baza ASI szyfrowana AES-256 (PostgreSQL TDE)
+      \item wrażliwe pola szyfrowane dodatkowo w~aplikacji, z~rotacją kluczy
+      \item hasła i~tokeny API przechowywane jako skróty
+      \item dziennik audytu działań użytkowników
     \end{itemize}
   \end{columns}
 \end{frame}
@@ -225,28 +225,27 @@
   \begin{columns}[T]
     \column{0.58\textwidth}
     \footnotesize
-    Każdy przebieg trafia do \textbf{4 stałych testów} przez \cmd{reimport-scan}: DefectDojo samo liczy
-    nowe, zamknięte i reaktywowane znaleziska (jedna kanoniczna instancja DD jako źródło prawdy).
+    Wyniki każdego skanu trafiają do DefectDojo, które samo oznacza znaleziska
+    nowe, zamknięte i powracające.
 
     \medskip\scriptsize
     \begin{tabular}{@{}llp{0.42\textwidth}@{}}\toprule
-      test & parser DD & zawartość \\\midrule
-      \cmd{ASI discovery} & Generic & usługi z oceną ciekawości i analityka \\
-      \cmd{asi-changes} & Generic & braki, zniknięcia, flapping, zmiany \\
+      test & format & zawartość \\\midrule
+      \cmd{ASI discovery} & Generic & usługi z priorytetem i oceną analityka \\
+      \cmd{asi-changes} & Generic & braki, zniknięcia, niestabilność, zmiany \\
       \cmd{asi-httpx} & httpx Scan & strony WWW, tytuły, technologie \\
       \cmd{asi-nuclei} & Nuclei Scan & trafienia własnych sygnatur \\\bottomrule
     \end{tabular}
 
     \medskip\footnotesize
-    \textbf{Wynik na labie organizatorów} (5 przebiegów, zmiana stacku i powrót):
-    \cmd{missing} $\rightarrow$ \cmd{gone} po progu, po powrocie \textbf{reactivated 7 / created 0},
-    \textbf{0 duplikatów} w API we wszystkich 4 testach. Przebieg częściowy lub po \cmd{timedout} nigdy nie zamyka wyników.
+    \textbf{Sprawdzone w labie organizatorów:} po wyłączeniu i przywróceniu usług 7 znalezisk
+    otworzyło się ponownie, \textbf{bez duplikatów}. Niepełny skan niczego nie zamyka.
     \column{0.39\textwidth}
     \centering
     \shoth{0.66\textheight}{img/defectdojo.png}
 
     \vspace{1.5mm}\scriptsize
-    Znaleziska z ASI w DefectDojo (tagi \cmd{asi}, priorytety \alert{High}/\textbf{Medium}).
+    Znaleziska z ASI w DefectDojo z~priorytetami.
   \end{columns}
 \end{frame}
 
@@ -256,20 +255,20 @@
     \column{0.52\textwidth}
     \textbf{Co dostarczamy:}
     \begin{itemize}\small
-      \item Duże zakresy (rdzeń sprawdzony na \textbf{16 384 IP}) z kontrolą tempa, oknami czasowymi i wznawianiem.
-      \item Historia zmian, hosty niestabilne i porównanie przebiegów (panel + DefectDojo bez duplikatów).
-      \item Fingerprint HTTP/TLS, czas odpowiedzi i \textbf{34 bezpieczne sygnatury} (CMS, panele, IoT).
-      \item Jeden panel \cmd{:18090}, 4 role RBAC, audit log, szyfrowanie \cmd{pg\_tde} + AES-256-GCM.
+      \item Duże sieci: rdzeń sprawdzony na \textbf{16 384 adresach}, kontrola tempa, okna czasowe.
+      \item Historia zmian i hosty niestabilne w~panelu i~w~DefectDojo.
+      \item Rozpoznanie usług i stron, \textbf{34 bezpieczne sygnatury} (CMS, panele, IoT).
+      \item Panel web z 4 rolami, dziennik audytu, szyfrowanie danych.
     \end{itemize}
     \column{0.44\textwidth}
-    \textbf{Uruchomienie od zera}\\
+    \textbf{Uruchomienie}\\
     \cmd{make env \&\& make up \&\& make demo}
 
     \medskip
-    \textbf{Także w systemie}
+    \textbf{Dodatkowo}
     \begin{itemize}\footnotesize
-      \item wykryty firewall = wynik niepełny, bez fałszywego zniknięcia
-      \item źródła pasywne: CT logs, DNS, inwentarz pasywny
+      \item usługa zasłonięta przez firewall nie jest zgłaszana jako zniknięta
+      \item źródła pasywne: logi certyfikatów, DNS, publiczne inwentarze
       \item eksport wybranych wyników z panelu i powiadomienia SIEM
     \end{itemize}
 
