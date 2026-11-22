@@ -24,7 +24,7 @@ Stan na 22.11.2026. Legenda: ✅ zrobione i przetestowane · 🟡 częściowo ·
 | 12–13 | RBAC, 4 role | ✅ | lokalne role `viewer`/`analyst`/`operator`/`admin` na każdej trasie API, użytkownicy w GUI i CLI (`asi user list/passwd/add`), **tokeny API w GUI (DEV-3)**: zakładka Konto, ważność 0–3650 dni, tylko hash SHA-256 w bazie, unieważnianie, audyt (`make test-tokens` 24/24); **zarządzanie kontami (DEV-11)**: zmiana roli, blokada (unieważnia sesje/tokeny → 401), reset hasła, usuwanie, ochrona ostatniego admina (409), audyt (`make test-users` 35/35); **role 1:1 z pkt 13 PDF (DEV-12)**: *Odczyt* = `viewer`, *Modyfikacja i odczyt* = `analyst` (edycja istniejących celów/harmonogramów/assetów bez tworzenia i usuwania), *Dodawanie, usuwanie, modyfikacja* = `operator` (+ tworzenie, usuwanie, start/stop), *Administracja* = `admin` (`make test-roles` 28/28); dziennik audytu |
 | 14 | edycja wartości niezależnie od skanu, trwała | ✅ | GUI + CLI (`asi asset edit`): tagi, notatka, **ocena analityka** (fałszywy alarm / zaakceptowane / nadpisana ocena, trwała i eksportowana do DD), edycja istniejących celów i harmonogramów; audit log |
 | 15 | czytelny interfejs + dashboard | ✅ | **jeden panel ASI na `127.0.0.1:18090`** (decyzje 23–24, podgląd skanu `/live/` przez gniazdo Unix `unix:/tmp/asi-live.sock`); dashboard: kafelki, najważniejsze znaleziska, zmiany, niestabilne, grupy podobnych usług, wzorce pory dnia, wykres zmian w czasie; **adres = stan panelu (DEV-14)**: `/assets/<klucz>`, `/scans/<id>`, filtry w query, wstecz/dalej i linki do zasobu ([Panel](/guide/gui#adresy-widokow-wstecz-i-linki-do-zasobu-dev-14)) |
-| 16 | szyfrowanie at-rest | ✅ | 2 warstwy (sprawdzone `make crypto-check` 9/9 także na blackarch po `asi db reseal`): TDE `pg_tde` w `asi-db` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM w aplikacji (`ASI_ENCRYPTION_KEYS`, rotacja, `asi db reseal`); kontrola schematu `make schema-check` 12/12 i `scripts/tde-reenable.sql`; [Szyfrowanie](/guide/encryption) |
+| 16 | szyfrowanie at-rest | ✅ | 2 warstwy (sprawdzone `make crypto-check` 9/9 także na VM B po `asi db reseal`): TDE `pg_tde` w `asi-db` (tabele, indeksy, WAL; AES-256) + pola `_enc` AES-256-GCM w aplikacji (`ASI_ENCRYPTION_KEYS`, rotacja, `asi db reseal`); kontrola schematu `make schema-check` 12/12 i `scripts/tde-reenable.sql`; [Szyfrowanie](/guide/encryption) |
 | — | harmonogram, okna czasowe | ✅ | cron + okno w GUI, wznawianie niezeskanowanych celów w kolejnym oknie, wstrzymaj/wznów/anuluj ([Harmonogram](/guide/schedule)) |
 | — | obsługa >10 000 IP | ✅ | 16 384 adresy w 86 s end-to-end, 49 tys. assetów w panelu ([Test skali](/guide/scale)) |
 | — | ograniczanie tempa | ✅ | `-rate` globalny, twarde limity `ASI_MAX_RATE` i `ASI_MAX_PARALLEL`, timeouty |
@@ -59,7 +59,7 @@ staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo]
 | okno czasowe | `-window 5s`: nmapy zabite, `interrupted`, brak zamykania znalezisk |
 | parsery wejścia | CSV, JSON, TXT + CIDR, dedup, `enabled=false` (test jednostkowy) |
 | profil portów `auto` + czas HTTP (LAB-T1, LAB-T4) | testy jednostkowe `ApplyPorts` (`≤ 16` hostów → `1-65535` z allowlistą) i `response_time_ms` poza `fp_hash`, kolumna `HTTP ms` i filtr wolnych w GUI |
-| pomijanie własnych portów ASI/DD (LAB-T2) | testy `internal/safety` + `internal/scanner` i e2e na blackarch (`-p 22,5433,8080,8090,8091` na hoście skanera → tylko `22`) |
+| pomijanie własnych portów ASI/DD (LAB-T2) | testy `internal/safety` + `internal/scanner` i e2e na VM B (`-p 22,5433,8080,8090,8091` na hoście skanera → tylko `22`) |
 | sygnatury IoT i labu (SEC-10, LAB-T3) | `nuclei -validate`, atrapa `scripts/iot-stub.py` (6/9 trafień, 0 fałszywych), lint bezpieczeństwa `TestTemplatesAreSafe` dla wszystkich 34 szablonów |
 | RBAC, konta i tokeny API (DEV-3, DEV-11, DEV-12) | `make test-tokens` 24/24, `make test-users` 35/35, `make test-roles` 28/28 (macierz 4 ról 1:1 z PDF, blokada → 401, ochrona ostatniego admina → 409, audyt); sprawdzone na działającym panelu w kontenerze `nmap-scanner` (obecnie `:18090`) |
 | szyfrowanie at-rest i schemat (SEC-6) | `make crypto-check` 9/9 (`pg_tde` + WAL + `tde_heap` + 0 trafień jawnych + AES-256-GCM), `asi db reseal`, `make schema-check` 12/12 |
@@ -71,24 +71,6 @@ staging, panel admina, stary PHP, Jenkins, cert TLS). Opis: [Lab testowy i demo]
 | lab organizatorów (LAB-0…LAB-7, 21–22.11) | wszystkie 4 stacki przetestowane (`custom-network`, `modern`, `modern-proxy` + Toxiproxy, `vulnerable`): quickstart 8787 `missing → reappeared`, PostgreSQL 15432 rozpoznany (`--version-intensity 7`), WordPress 4.7 (75/100 `high`) i **0 prób logowania** w logach (111 GET / 0 POST, 0 FTP LOGIN), zmiana stacku LAB-6 (`reactivated 7 / created 0`, **0 duplikatów** w 4 testach DD), `timedout` nie robi fałszywych braków (LAB-T7), cofnięcie awarii za proxy = `reverted` (LAB-T8), próg wolnego HTTP 300 ms (LAB-T9), wykryty firewall = `filtered` bez fałszywego `gone` (LAB-T11), LAB-7 zdalnie przez Tailscale/DERP 6/6 portów (z zastrzeżeniem równoległego skanu); [Lab organizatorów](/guide/lab-organizers) |
 | źródła pasywne, selektywny eksport i SIEM (`0ff4e8f`) | pasywne odpytywanie CT / DNS / InternetDB, selektywny eksport zaznaczonych assetów (CSV/JSON/DD `asi-selected`), powiadomienia SIEM (webhook/syslog); [Integracje](/guide/integrations) |
 
-## Decyzje do podjęcia
+## Ograniczenia
 
-Rozstrzygnięte decyzje są w [`DECISIONS.md`](DECISIONS.md) (architektura, RBAC, baza, szyfrowanie, UDP, polityka skanera).
-Otwarte:
-
-1. **Zgoda na skan cudzych hostów**: wiersze bez zgody właściciela mają `enabled=false`.
-2. **Licencje (regulamin §4.2).** nmap (NPSL) wołamy jako zewnętrzny program; httpx i nuclei (MIT) tak samo;
-   DefectDojo BSD-3. Do potwierdzenia z mentorami, że wywołanie nmapa jest OK.
-3. **Format i limity organizatorów** (SEC-2 ✅): materiały z Discorda to lab (`docs/guide/lab-organizers.md`); osobnego przykładowego JSON/CSV ani limitów ruchu w nich nie ma, porty bierzemy z labu.
-   Polityka (`internal/safety`) i `-rate` są gotowe na te wartości. **21.11: rozstrzygnięte** - limity i allowlistę
-   portów ustalamy sami w `.env`, zakres skanu jest per przebieg (decyzja 19), a wykryty firewall raportujemy jako
-   „wynik niepełny”, nie jako brak usług (decyzja 20, `LAB-T11`).
-
-4. **Topologia DefectDojo (decyzja 22, rozstrzygnięta 21.11 21:12)**: **jedna instancja** - źródło prawdy dla
-   wszystkich środowisk i maszyn. Kanoniczny DD na fatusia-1 (`:18080`), pozostałe VM tylko skaner + lab z
-   `DD_URL` na kanoniczny. Do zrobienia: wpis adresu tailnetu w `DD_SITE_URL`/`DD_CSRF_TRUSTED_ORIGINS` na
-   fatusia-1 i wyłączenie DD na fatusia-2 (`guide/defectdojo.md`, „Jedna instancja DD…”).
-
-## Następne kroki
-
-Aktualna lista z priorytetami: [Roadmapa](ROADMAP.md), sekcja „Co zostało, według priorytetu”.
+Znane ograniczenia i dalsze prace: [Ograniczenia i plan](ROADMAP.md). Uzasadnienia projektowe: [Decyzje](DECISIONS.md).

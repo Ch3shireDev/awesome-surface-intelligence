@@ -1,74 +1,53 @@
 # Szybki start
 
-## Na VM (tak testuje jury)
+## 1. Uruchom
 
-Na hoście tylko docker + compose, `make`, `openssl`. nmap i `asi` są w kontenerze `nmap-scanner`
-(`network_mode: host`, `NET_RAW`).
-
-```bash
-git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git ~/asi && cd ~/asi
-make env                                # .env: sekrety + hasło admina DefectDojo
-make up                                 # DefectDojo 3.5.202 :8080 + nmap-scanner
-cp targets/example.csv targets/targets.csv
-make asi ARGS=plan                      # co będzie skanowane, a co pominięte i dlaczego
-# panel ASI: http://127.0.0.1:18090 - jedyny panel, tam cele, skany, wyniki, historia
-make asi-scan                           # skan z terminala: pasek w terminalu, przebieg i wyniki w panelu, upload live do DD
-make asi ARGS=diff                      # zmiany względem poprzedniego przebiegu
-```
-
-## Panel i porty
-
-**Jest jeden panel: http://127.0.0.1:18090** (`asi server`, stawia go `make up`, logowanie `admin` +
-`ASI_ADMIN_PASSWORD`). Tam są cele, skany z postępem na żywo, wyniki, historia, porównanie przebiegów, role i
-eksport. Skan uruchomiony z terminala (`make asi-scan`) pokazuje pasek w terminalu, a jego przebieg i wyniki są w
-tym samym panelu. Podgląd na żywo skanu uruchomionego z panelu jest częścią panelu (`/live/`, przez gniazdo
-`unix:/tmp/asi-live.sock` w kontenerze, bez osobnego portu). Decyzja 24; dawne osobne podglądy na 8091, 8094 i 8095 usunięte.
-
-| port | co |
-|---|---|
-| **18090** | panel ASI |
-| 8080 (fatusia-1: 18080) | DefectDojo |
-| 5433 | baza `asi-db` (tylko `127.0.0.1`) |
-| 4173 | dokumentacja (`make docs`) |
-
-## Repozytorium
-
-- **Publiczne (dla jury):** https://github.com/Ch3shireDev/awesome-surface-intelligence — to jest link ze zgłoszenia.
-- Wewnętrznie zespół pracuje na bare repo `daniel@blackarch:repos/asi.git` (klony `~/asi` na blackarch,
-  fatusia-hacknation-1 i -2), a `main` jest wypychany na GitHuba po każdym `make sync`. Historia jest czysta:
-  `.env`, `.dd_token`, `targets/targets.csv`, `results/` i `scans/results/` nigdy nie były commitowane
-  (sprawdzone `git log --all --name-only` + szukanie wartości sekretów z `.env` w plikach).
-
-## Czysty start od zera na czystej VM z dockerem (ALL-2, sprawdzony)
-
-VM fatusia-hacknation-1 (x86_64, Debian 14, 7 GB RAM): przed testem bez demona dockera, bez `make`, bez obrazów
-i wolumenów. Doinstalowane tylko `docker.io` i `make` z repozytorium Debiana. Klon z GitHuba (`edc9869`), 21.11:
-
-| krok | wynik |
-|---|---|
-| `git clone … && make env` | `.env` z wygenerowanymi hasłami i kluczem szyfrowania (prawa `600`) |
-| `make up` | **3 min 49 s** (pobranie DefectDojo, build skanera), kod 0; panel :8090 od razu (wtedy domyślny port; od decyzji 23 panel jest na 18090), DefectDojo :8080 po kilkunastu sekundach migracji |
-| `make demo` | **150 s**, kod 0: przebieg 1 → zmiany w labie → przebieg 2; diff: `legacy` zniknął, `app` zmieniony, `jenkins` nowy, usługa niestabilna potwierdzona (`unstable`); DD: 4 testy z deltą (`ASI discovery` closed 3 / created 2, `asi-changes` 2 warunki, `asi-httpx`, `asi-nuclei`) |
-| `make crypto-check` | **9 OK, 0 FAIL** |
-| import (krok 4 ścieżki jury) | `rows 6, hosts 3, new 8`. **Znaleziony problem:** na świeżym klonie `results/` zakładał docker jako root, więc nie dało się tam wrzucić pliku. Poprawione: `make up` tworzy `results/` jako użytkownik, a ścieżka jury używa `targets/` |
-| polityka skanera (krok 9) | oba niedozwolone polecenia odrzucone przed wysłaniem pakietu |
-
-## Czysty start od zera (SEC-9, sprawdzony)
-
-Test na osobnym klonie z GitHuba, bez `.env` i bez katalogu `results/` (21.11, blackarch):
+Potrzebujesz Linuksa z dockerem i pluginem compose, `make` i `openssl`. Skanery i bazy są w kontenerach.
 
 ```bash
-git clone --depth 1 https://github.com/Ch3shireDev/awesome-surface-intelligence.git /tmp/jury-clone
-cd /tmp/jury-clone && make env && make build && make test
+git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git asi && cd asi
+make env     # hasła i klucze w .env
+make up      # cały system, za pierwszym razem kilka minut
+make demo    # lab testowy i dwa skany ze zmianami, około 2-3 minut
 ```
 
-Wynik: `make env` tworzy `.env` z wygenerowanymi hasłami, `make build` buduje `asi` (Go 1.27, bez zależności
-poza `pgx`), `make test` przechodzi (`go vet` + wszystkie testy pakietów). `make up` (DefectDojo + skaner)
-był sprawdzony wcześniej na blackarch i fatusia-2 (amd64/arm64); wymaga dockera na hoście — na maszynie
-bez prawa do `docker.sock` zostaje `make build` + `./asi` (bez bazy i DD).
+## 2. Zaloguj się
 
-`asi` czyta z `.env` dane DefectDojo (`DD_PORT`, `DD_ADMIN_USER`, `DD_ADMIN_PASSWORD`, `DD_PRODUCT*`)
-i sam pobiera token API. Nie trzeba ręcznie kopiować tokenu.
+| co | adres | login `admin`, hasło z |
+|---|---|---|
+| panel ASI | http://127.0.0.1:18090 | `grep ASI_ADMIN_PASSWORD .env` |
+| DefectDojo | http://127.0.0.1:8080 | `grep DD_ADMIN_PASSWORD .env` |
+
+## 3. Obejrzyj wynik demo
+
+- **Dashboard**: najważniejsze znaleziska i zmiany.
+- **Assety**: hosty i porty, po kliknięciu szczegóły i historia.
+- **Skany**: przebiegi i ich porównanie.
+- **DefectDojo**: produkt `ASI lab`.
+
+Pełny scenariusz z oczekiwanymi wynikami: [ścieżka testowania](jury.md).
+
+## 4. Przeskanuj własne cele
+
+Skanuj tylko adresy, na które masz zgodę właściciela.
+
+```bash
+cp targets/example.csv targets/targets.csv   # wpisz swoje cele
+make asi ARGS=plan                           # co będzie skanowane, a co pominięte
+make asi-scan                                # skan i wysyłka do DefectDojo
+make asi ARGS=diff                           # zmiany od poprzedniego przebiegu
+```
+
+To samo zrobisz w panelu, w zakładkach **Cele** i **Skany**.
+
+## Gdy coś nie działa
+
+| objaw | co zrobić |
+|---|---|
+| panel lub DefectDojo nie odpowiada | `make ps`, `make logs`; DefectDojo po starcie wykonuje migracje |
+| port 8080 jest zajęty | ustaw `DD_PORT` w `.env`, potem `make up` |
+| port 18090 jest zajęty | ustaw `ASI_WEB_ADDR` w `.env`, potem `make up` |
+| cel nie jest skanowany | `make asi ARGS=plan` podaje powód pominięcia |
 
 ## Na maszynie deweloperskiej
 

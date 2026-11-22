@@ -9,8 +9,8 @@ hero:
       text: Szybki start
       link: /guide/quickstart
     - theme: alt
-      text: Status projektu
-      link: /status
+      text: Jak testować
+      link: /guide/jury
 features:
   - title: Wejście CSV / JSON / TXT
     details: IP, zakresy CIDR i domeny w jednym schemacie. Domeny tylko podpisują adresy z inwentarza — nigdy nie rozszerzają zakresu skanu.
@@ -21,3 +21,26 @@ features:
   - title: DefectDojo z historią zmian
     details: Jedno znalezisko na IP:port, reimport do stałego testu — DefectDojo sam liczy nowe, zamknięte i reaktywowane usługi.
 ---
+
+## Jak to działa
+
+1. **Podajesz cele** w panelu albo w pliku.
+2. **ASI skanuje etapami**: żywe hosty → usługi → HTTP → sygnatury.
+3. **Porównuje z historią** i pokazuje, co jest nowe, zmienione, niestabilne lub zniknęło.
+4. **Wysyła wyniki** do DefectDojo.
+
+Pierwszy raz? Przejdź [Szybki start](/guide/quickstart), potem [ścieżkę testowania](/guide/jury).
+
+## Słowniczek
+
+| pojęcie | znaczenie |
+|---|---|
+| **cel** | adres IP, zakres CIDR albo domena, którą wolno skanować |
+| **przebieg** | jedno uruchomienie skanu zbioru celów |
+| **asset** | wykryty host albo port, z historią między przebiegami |
+| **obserwacja** | pojedynczy fakt z przebiegu: otwarty port, usługa, odpowiedź HTTP, trafienie sygnatury |
+| **sygnatura** | reguła YAML rozpoznająca produkt lub ekspozycję, bez exploitów |
+| **missing / gone** | brak do potwierdzenia / zniknięcie potwierdzone kolejnymi brakami |
+| **flapping** | asset niestabilny, na przemian jest i go nie ma |
+| **DefectDojo (DD)** | zewnętrzny system do zarządzania znaleziskami, do którego ASI wysyła wyniki |
+| **DEV-n, SEC-n, LAB-n** | identyfikatory wymagań i testów w opisach, można je pominąć przy czytaniu |

@@ -95,7 +95,7 @@ Skrypt `docker/asi-db/crypto-check.sh` uruchamiany w kontenerze `asi-db` (tylko 
    indeksów i WAL na dysku: oczekiwane 0 trafień.
 4. Każda kolumna `_enc`: liczba wartości zaszyfrowanych i jawnych, oczekiwane 0 jawnych.
 
-Przykład (VM fatusia-hacknation-2, 21.11, po `asi scan` 127.0.0.1):
+Przykład (VM A, 21.11, po `asi scan` 127.0.0.1):
 
 ```
 == 1. TDE (pg_tde) w serwerze

@@ -1,15 +1,15 @@
 # Decyzje i ustalenia - Attack Surface Intelligence (HackNation 2026)
 
-Stan na: 21.11.2026 (dzien startu Wydarzenia). Ten plik to zywy log decyzji -
-aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
+Chronologiczny log decyzji projektowych. Późniejsze decyzje zastępują wcześniejsze, więc aktualne działanie
+opisują [przewodniki](guide/quickstart.md) i [status](status.md).
 
 ## Kontekst wyzwania
 
 - Wyzwanie: **Attack Surface Intelligence**, partner: AGH / Centrum
   Bezpieczenstwa Informacji AGH (CBI AGH), hackathon HackNation 2026
   (21-22.11.2026, Bydgoszcz).
-- Pelny brief: https://hacknation.pl/zadania (PDF "Szczegoly"); streszczenie,
-  mapa wymagan i plan etapow: [`ROADMAP.md`](ROADMAP.md).
+- Pelny brief: https://hacknation.pl/zadania (PDF "Szczegoly"); mapa wymagan:
+  [`status.md`](status.md).
 - Cel wg briefu: kompleksowe rozwiazanie do automatycznego skanowania
   bezpieczenstwa - integracja narzedzi pentestowych (m.in. Nmap), pipeline
   skanowania podatnosci, dashboard do wizualizacji wynikow, raportowanie.
@@ -27,8 +27,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
   brutto, dzielone rowno miedzy czlonkow zespolu, chyba ze zlozą inny podzial
   na pismie przed podpisaniem).
 - Brak NDA, brak klauzuli zakazu konkurencji w regulaminie.
-- **Regulaminy zadan nie sa identyczne.** Sprawdzone w pelnym PDF regulaminu CBI AGH (21.11, agent na
-  fatusia-hacknation-1): AGH ma Umowe o dzielo na 25 000 zl brutto, **nie wspomina o terminach ani o
+- **Regulaminy zadan nie sa identyczne.** Sprawdzone w pelnym PDF regulaminu CBI AGH (21.11): AGH ma Umowe o dzielo na 25 000 zl brutto, **nie wspomina o terminach ani o
   repozytorium** (KOWR wymaga prywatnego repo do konca wydarzenia - AGH nie wymaga). Wczesniejszy zapis
   "ten sam szablon slowo w slowo co UZP" byl nieprawdziwy.
 - Terminy zgloszen pochodza z Regulaminu Wydarzenia i przewodnika uczestnika, nie z regulaminu zadania:
@@ -108,14 +107,14 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
    Szyfrowanie wolumenu / `pg_tde` jako opcjonalna druga warstwa.
 
 10. **Jedno repo poza Syncthingiem, synchronizacja gitem po ssh** (21.11).
-    Origin: `daniel@blackarch:~/repos/asi.git` (bare), klony `~/asi` na
-    blackarch i fatusia-hacknation-2. Polaczone dwa rownolegle PoC: compose +
-    PoC na Makefile (fatusia) i silnik `asi` w Go (blackarch: plan, 2 fazy
+    Origin: `<repo zespołu>` (bare), klony `~/asi` na
+    VM B i VM A. Polaczone dwa rownolegle PoC: compose +
+    PoC na Makefile i silnik `asi` w Go (VM B: plan, 2 fazy
     skanu, adaptacyjne paczki, postep CLI/web, diff, reimport Generic
     Findings). `asi` jest budowany w obrazie `nmap-scanner` (multi-stage), wiec
     na hoscie VM dalej wystarcza docker + make. Kod `asi` to obecna
     implementacja planera/skanera/eksportu z VISION; baza, RBAC, API i
-    szyfrowanie dochodza na nim (patrz `docs/TASKS.md`).
+    szyfrowanie dochodza na nim.
 
 11. **Wytyczne mentora CBI AGH, konsultacje 21.11 14:44 (WIAZACE)**.
     Pelny zapis i transkrypcja: [`MENTOR.md`](MENTOR.md). Skrot:
@@ -162,7 +161,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Pola `_enc`: `internal/crypto` (stdlib), keyring `id:base64` z rotacja; bledny klucz = blad startu,
       brak klucza = jawny zapis z ostrzezeniem.
     - Nowy wolumen `asi_db_tde_data`: dane ze starego `asi_db_data` nie sa migrowane (byly tylko testowe).
-    - Zweryfikowane na arm64 (fatusia-2): `make crypto-check` 9/9 OK; proba kontrolna na zwyklym postgres:18
+    - Zweryfikowane na arm64 (VM A): `make crypto-check` 9/9 OK; proba kontrolna na zwyklym postgres:18
       znajduje jawny tekst w pliku tabeli, na `pg_tde` nie. Opis: `docs/guide/encryption.md`.
 
 15. **Polityka bezpieczenstwa skanera w `internal/safety`, sprawdzana takze w workerze** (21.11, SEC-8).
@@ -186,7 +185,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       a baza sond nmapa ma `SNMPv1public` (community `public`, rarity 4) - przy intensywnosci `-sV` >= 4 (LAB-T10)
       i `ASI_ALLOW_UDP=1` skaner wysylalby do SNMP domyslne "haslo". Opis i kiedy wlaczyc: `guide/safety.md`.
     - Zweryfikowane: testy jednostkowe (`internal/safety`, worker w `internal/scanner`), skan 127.0.0.1 bez roota
-      na blackarch (amd64) i oba profile w obrazie `nmap-scanner` na fatusia-2 (arm64: `syn` vs `connect`).
+      na VM B (amd64) i oba profile w obrazie `nmap-scanner` na VM A (arm64: `syn` vs `connect`).
 
 16. **Zmiany w czasie trafiaja do DD jako test `asi-changes` oparty o STAN, nie o log zdarzen** (21.11, SEC-7).
     - Finding (Generic) istnieje, dopoki warunek trwa: `missing`, `gone`, `flapping`, ostatnia zmiana uslugi.
@@ -225,8 +224,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       `custom-network` scenariusz `./quickstart.sh up|change|up`.
     - **Testy LAB-* rownolegle na kilku VM** (21.11 22:00): kopia `~/lab` na kazda VM z dockerem, na kazdej
       wlasny skaner ASI (`docker compose up -d nmap-scanner asi-db`) i jeden stack labu; **DefectDojo jest
-      wspolny** - jedna instancja, decyzja 22. Nie czekamy na "wolny lab" na jednej maszynie. Rezerwacja w
-      TASKS jako `stack@VM`. LAB-6 (fatusia-1) szedl rownolegle z LAB-5 (fatusia-2), wyniki czyste.
+      wspolny** - jedna instancja, decyzja 22. LAB-6 (VM C) szedl rownolegle z LAB-5 (VM A), wyniki czyste.
     - Cel skanu zalezy od tego, gdzie stoi skaner: ta sama VM -> `127.0.0.1`; inna maszyna w tailnecie ->
       `<tailscale-ip>` tej VM. **Nie skanujemy adresow mostkow dockera (172.x) z innej maszyny** - tailscale
       ich nie routuje, z zewnatrz widoczne sa tylko porty opublikowane (`ports:` = DNAT na hoscie). Skaner w
@@ -243,7 +241,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       publikuja na `0.0.0.0`, czyli w tailnecie sa widoczne dla **calego tailnetu** (na maszynie bez firewalla
       takze w LAN). Stawiac tylko na maszynie testowej, po testach `docker compose down`. **Domyslnie nakladka
       `docker/lab-org/<stack>.bind.yml`**: porty labu na `LAB_BIND` (domyslnie `127.0.0.1`; adres tailnetu, gdy
-      skaner jest na innej VM), nigdy `0.0.0.0`. Docker omija firewall hosta, a fatusia-1 ma port forwarding.
+      skaner jest na innej VM), nigdy `0.0.0.0`. Docker omija firewall hosta, a VM C ma port forwarding.
 
 20. **Wykryty firewall = "nie da sie sprawdzic", nigdy "brak uslug"** (21.11, zespol; dotyczy zalozenia o
     plaskim intranecie z sekcji pytan).
@@ -276,9 +274,9 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       z linku (bez wpisu w historii) tylko czyści adres `replaceState`, żeby nie wypychać użytkownika z panelu.
 
 22. **Dokładnie jedna instancja DefectDojo = źródło prawdy dla wszystkich środowisk** (21.11 21:12).
-    - Stan: fatusia-1 ma pełny stack (DD `:18080`, `asi server`, `asi-db`, LAB-4), fatusia-2 ma pełny stack
-      (DD `:8080`, `asi server`, lab `modern-proxy`, LAB-T8), blackarch bez DD (stacja dev). Oba DD są osiągalne
-      z tailnetu (`/login` z blackarch: 200, 0,27 s f1 i 1,19 s f2).
+    - Stan: VM C ma pełny stack (DD `:18080`, `asi server`, `asi-db`, LAB-4), VM A ma pełny stack
+      (DD `:8080`, `asi server`, lab `modern-proxy`, LAB-T8), VM B bez DD (stacja dev). Oba DD są osiągalne
+      z tailnetu (`/login` z VM B: 200, 0,27 s f1 i 1,19 s f2).
     - Wniosek (potwierdzony przez zespół 21.11 21:12): **dokładnie jedna instancja**, bez „scratch”. Testy robimy
       na różnych środowiskach (lab organizatorów, nasz lab, własna infrastruktura), ale DD jest **jednym końcowym
       punktem, do którego pchamy wyniki** - więc między środowiskami i maszynami ma być jedna baza, jako źródło
@@ -291,10 +289,10 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       (4) DD na `8080` = port labu `modern` (WordPress), panel `8090` = DVWA - z DD domyślnym każda VM musi
       przenumerować porty i dokumentację, a `:18080` zostawia 8080/8090 labom;
       (5) jeden admin, jeden token, jedna wersja `DD_VERSION` (brak rozjazdu migracji przy równoległej pracy).
-    - Wdrożenie: kanoniczny = fatusia-1 `http://100.113.45.50:18080` (6 rdzeni, relay „waw”). Pozostałe VM:
-      **tylko skaner + lab**, `DD_URL` na kanoniczny (nie stawiają własnego DD). fatusia-2: DD wyłączyć
+    - Wdrożenie: kanoniczny = VM C `http://<adres-vm>:18080` (6 rdzeni, relay „waw”). Pozostałe VM:
+      **tylko skaner + lab**, `DD_URL` na kanoniczny (nie stawiają własnego DD). VM A: DD wyłączyć
       (`docker compose stop nginx uwsgi celeryworker celerybeat postgres valkey`) albo zostawić wyłączony na stałe;
-      jego skaner pcha wyniki do fatusia-1.
+      jego skaner pcha wyniki do VM C.
     - Zasady pracy ze wspólną instancją:
       (1) **produkt = środowisko, nie maszyna** (`ASI lab-org`, `ASI lab`, `ASI infra`), bo to ten sam asset
       niezależnie od tego, która VM skanuje;
@@ -310,27 +308,27 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Wyjątek (dozwolony, ale nie jest źródłem prawdy): lokalny DD na innej VM do eksperymentu offline. Po
       teście `asi upload` do kanonicznego i lokalny stack do kosza - findings mają być w jednym miejscu.
     - Wymóg konfiguracji: do `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` kanonicznego dopisać
-      `http://100.113.45.50:18080` - bez tego logowanie z przeglądarki przez tailnet wpadnie na CSRF (dziś
+      `http://<adres-vm>:18080` - bez tego logowanie z przeglądarki przez tailnet wpadnie na CSRF (dziś
       wpisany jest tylko `localhost`).
     - Odporność (dlaczego wspólny DD nie jest pojedynczym punktem awarii danych): każdy przebieg zostawia
       `results/<run>` + `run.json`, a `asi upload` odtwarza import po podniesieniu DD. DD jest celem eksportu,
       nie magazynem prawdy (decyzja 8).
     - **Demo:** jeśli prezentacja idzie z innej VM, nie przenosimy bazy - puszczamy `asi upload` do świeżego DD
-      na maszynie demo (albo pokazujemy UI fatusia-1 przez tailnet). Świadoma decyzja: historia diff z DD jest
+      na maszynie demo (albo pokazujemy UI VM C przez tailnet). Świadoma decyzja: historia diff z DD jest
       mniej warta niż to, że demo nie zależy od drugiej maszyny.
 
-23. **Panel ASI domyślnie na `127.0.0.1:18090`, nie 8090** (22.11, fatusia).
+23. **Panel ASI domyślnie na `127.0.0.1:18090`, nie 8090** (22.11).
     - Powód: lab organizatorów `vulnerable` publikuje DVWA na 8090. Przy panelu na 8090 każdy test LAB-4 wymagał
-      przeniesienia panelu w `.env` i przywrócenia po teście; po LAB-4 na fatusia-1 port nie wrócił i panel
+      przeniesienia panelu w `.env` i przywrócenia po teście; po LAB-4 na VM C port nie wrócił i panel
       „zniknął” z 8090. Zgodne z decyzją 22 pkt (4): 8080/8090 zostawiamy labom.
     - Zmienione: `.env.example`, domyślne `asi server -addr`, komentarz w compose, domyślne porty własne skanera
       (LAB-T2), skrypty `make test-*` (adres panelu teraz z `ASI_WEB_ADDR` w `.env`), dokumentacja.
       `asi serve` (stary panel plikowy) domyślnie na 8095 jak `make asi-serve`; przykłady `asi scan -ui` na 8094.
     - Istniejące `.env` zostają na 8090, bo `make env-sync` nie nadpisuje wartości: zmienić ręcznie
       `ASI_WEB_ADDR=127.0.0.1:18090` i `make up`.
-    - DefectDojo zostaje domyślnie na 8080 (koliduje tylko z `modern`). Na fatusia-1 stoi na 18080 (decyzja 22).
+    - DefectDojo zostaje domyślnie na 8080 (koliduje tylko z `modern`). Na VM C stoi na 18080 (decyzja 22).
 
-24. **Jeden panel ASI (`asi server`, :18090) - wszystko w nim** (22.11, fatusia).
+24. **Jeden panel ASI (`asi server`, :18090) - wszystko w nim** (22.11).
     - Były trzy strony WWW: panel `asi server` (18090), stary panel plikowy `asi serve` / `make asi-serve` (8095) i
       podgląd postępu skanu z terminala `make asi-scan -ui` (8094). Nazwy `server`/`serve` się myliły, a opisy portów
       w dokumentacji się rozjeżdżały.
@@ -347,7 +345,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       inny plik pod podaną ścieżką zatrzymuje start błędem, więc literówka w `-ui unix:...` niczego nie skasuje.
       `asi scan -ui` zostaje tylko jako opcja deweloperska.
 
-25. **Porty per cel; import tylko ręcznie albo z pliku** (22.11, plan fatusi, wdrożenie blackarch).
+25. **Porty per cel; import tylko ręcznie albo z pliku** (22.11, plan zespołu).
     - Użytkownik podaje hosta lub grupę hostów i porty dla nich albo zostawia domyślny zestaw (profil skanu).
       Migracja `008_target_ports.sql`, etap usług dzieli hosty na grupy według portów.
     - Cele wprowadza się formularzem albo importem CSV/JSON/TXT.
@@ -356,7 +354,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan
-      testów w `docs/guide/lab-organizers.md`, zadania `LAB-*` w `TASKS.md`. Wniosek: usługi na niestandardowych
+      testów w `docs/guide/lab-organizers.md`. Wniosek: usługi na niestandardowych
       portach (np. 8787 w ich quickstarcie) są poza domyślnym zestawem portów ASI.
 - [x] **Lista dozwolonych portów i limity ruchu** (brief, pkt 7.2-7.3) - **nie czekamy na jury, wpisujemy własne.**
       Profil portów (LAB-T1) i limity (decyzja 15) są parametrami naszego wdrożenia, nie czekają na brief:

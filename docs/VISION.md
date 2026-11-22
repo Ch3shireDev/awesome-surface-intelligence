@@ -1,11 +1,7 @@
 # Wizja i architektura - ASI (Attack Surface Intelligence)
 
-Dokument docelowy dla ludzi i agentow AI. Opisuje **co budujemy, jak to dziala
-i dlaczego tak**. Zanim zaczniesz implementowac cokolwiek wiekszego niz
-poprawka, przeczytaj ten plik, `docs/DECISIONS.md` i `docs/ROADMAP.md`.
-Zmiany architektoniczne najpierw tutaj, potem w kodzie.
-
-Status: zaakceptowany kierunek (21.11.2026), kod rdzenia jeszcze nie istnieje.
+Pierwotny projekt systemu z 21.11.2026, zachowany dla uzasadnienia architektury. Nie wszystko powstało w tej formie.
+Stan faktyczny: [Architektura](guide/architecture.md) i [Status](status.md).
 
 ## 1. Co budujemy
 

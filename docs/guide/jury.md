@@ -250,7 +250,7 @@ make asi ARGS="import $LAST_XML"
 ```
 
 Plik do importu kładź w `targets/` (albo w `results/`, jeśli należy do ciebie). Sprawdzone na świeżym klonie
-(21.11, fatusia-1): `import targets/inny-skaner.csv` daje `rows 6, hosts 3, events new 8` (3 hosty + 5 portów).
+(21.11, VM C): `import targets/inny-skaner.csv` daje `rows 6, hosts 3, events new 8` (3 hosty + 5 portów).
 
 | oczekiwany wynik | wymaganie |
 |---|---|

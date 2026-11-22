@@ -95,7 +95,7 @@ N portów spośród pozostałych (sprawdzone na nmap 7.99), a z sond discovery `
 Skan potwierdzający pomija je tak samo. W logu przebiegu jest linia
 `… target(s) are the scanner host (…) - own stack ports … left out`, a w `run.json` pole `policy.self_ports`.
 
-Sprawdzone na blackarch z działającym stackiem: `-p 22,5433,8080,8090,8091` na `127.0.0.1` daje nmapowi
+Sprawdzone na VM B z działającym stackiem: `-p 22,5433,8080,8090,8091` na `127.0.0.1` daje nmapowi
 `-p 22 --exclude-ports 5433,8080,8090-8091,8094-8095` i tylko port 22 w wynikach. Z `ASI_SELF_PORTS=off`
 widać też 5433, 8080 i 8090.
 

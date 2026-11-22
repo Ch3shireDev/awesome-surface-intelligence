@@ -25,18 +25,7 @@ Przeczytaj PRZED wieksza zmiana:
 - `docs/VISION.md`: architektura docelowa, model danych, rdzen (zrodlo prawdy dla projektu),
 - `docs/status.md`: co z wymagan PDF jest zrobione, a co nie (aktualizuj po kazdym kroku),
 - `docs/DECISIONS.md`: log decyzji z uzasadnieniami,
-- `docs/ROADMAP.md`: brief w skrocie, mapa wymaganie -> narzedzie, etapy,
-- `docs/TASKS.md`: aktualne zadania i podzial (dev / devsecops).
-
-## Gdzie jest repo i jak sie synchronizujemy
-
-- **Jedno repo**, origin to bare repo na blackarch: `daniel@blackarch:~/repos/asi.git`.
-  Klony robocze: `~/asi` na blackarch i `~/asi` na fatusia-hacknation-2 (remote po ssh, alias `ba`).
-- Synchronizacja tylko przez git: `make sync` (pull --rebase + push). Commituj male kawalki i czesto syncuj.
-- **Repo NIE lezy w `~/sync`** (Syncthing). Synchronizowany `.git` psuje repo przy rownoleglej pracy, a
-  Syncthing rozsylalby `.env` i wyniki skanow. `~/sync` sluzy tylko do notatek miedzy ludzmi i agentami
-  (`~/sync/komunikacja/`).
-- Stare lokalizacje (`~/sync/hacknation-asi`, `~/asi-poc`) sa nieaktualne. Nie pracuj w nich.
+- `docs/ROADMAP.md`: znane ograniczenia i plan.
 
 ## Twarde zasady
 
@@ -61,7 +50,7 @@ Przeczytaj PRZED wieksza zmiana:
 - Kod Go: tylko biblioteka standardowa, chyba ze decyzja w `DECISIONS.md` mowi inaczej (np. sterownik
   Postgresa). Przed commitem: `make test` (go vet + go test).
 - Flagi nmapa dla silnika zyja w `cmd/asi` / `internal/scanner` (profile). `Makefile` `scan-*` i `make poc`
-  to stary PoC fatusi, zostaje jako test dymny stacku.
+  to stary PoC, zostaje jako test dymny stacku.
 - Dokumentacja: VitePress w `docs/`, po polsku. Nowa strona = wpis w `docs/.vitepress/config.mts`.
   Po kazdej zmianie funkcjonalnej zaktualizuj `docs/status.md`.
 - Commity po polsku, krotko, w trybie "co zmienia".
@@ -88,5 +77,5 @@ Przeczytaj PRZED wieksza zmiana:
 | `Makefile` | `make help`: stack, PoC, `asi`, `build`, `test`, `docs`, `sync` |
 | `targets/example.csv` | szablon celow (kopiuj do `targets/targets.csv`) |
 | `docker/lab/`, `targets/lab.csv` | lab testowy (8 hostow, 2 stany) i jego cele; `make demo`, `docs/guide/lab.md` |
-| `README.md` / `CONTRIBUTING.md` | opis dla jury (bez spraw zespołowych) / praca zespołu: sync, build, testy, zadania |
-| `docs/` | VitePress: VISION, status, DECISIONS, ROADMAP, TASKS, przewodniki |
+| `README.md` / `CONTRIBUTING.md` | opis dla jury (bez spraw zespołowych) / build, testy, konwencje |
+| `docs/` | VitePress: VISION, status, DECISIONS, ROADMAP, przewodniki |

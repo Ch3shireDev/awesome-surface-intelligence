@@ -69,7 +69,7 @@ Adresy .8, .9, .18 i .19 są w zakresie, ale nic na nich nie ma: skaner powinien
 
 ## Oczekiwany wynik `make demo`
 
-Sprawdzone 21.11 na blackarch, w kontenerze skanera i z hosta:
+Sprawdzone 21.11 na VM B, w kontenerze skanera i z hosta:
 
 ```
 przebieg 1: 7/12 hosts up, 9 open services (2 high, 1 medium)

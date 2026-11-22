@@ -1,8 +1,7 @@
 # Lab organizatorów (przykładowe środowisko testowe)
 
-Przykładowe środowisko od organizatorów (CBI AGH), udostępnione na Discordzie 21.11: to są materiały od organizatorów z zadania SEC-2. Leży **poza repo**
-(`~/lab` na VM fatusia-hacknation-2): to materiał organizatorów, z domyślnymi hasłami do usług. Tutaj jest
-opis, analiza względem ASI i plan testów (zadania `LAB-*` w [TASKS](../TASKS.md)).
+Wyniki testów ASI na przykładowym środowisku organizatorów (CBI AGH). Samo środowisko nie jest częścią repo.
+To szczegółowy raport. Do pierwszego uruchomienia wystarczy [własny lab](lab.md). Maszyny testowe są oznaczone VM A, B i C.
 
 ## Co zawiera
 
@@ -53,7 +52,7 @@ Zostaje jeden konflikt:
 |---|---|---|
 | `8080` | `modern`: WordPress | DefectDojo (`DD_PORT`, domyślnie 8080) |
 
-W zespole ten konflikt nie występuje: DefectDojo stoi tylko na maszynie kanonicznej (fatusia-1) i to na 18080
+W zespole ten konflikt nie występuje: DefectDojo stoi tylko na maszynie kanonicznej (VM C) i to na 18080
 (decyzja 22), pozostałe VM mają sam skaner. Dotyczy jedynie pełnego stacku z domyślnym DD (np. jury na jednej
 maszynie): przed `modern` przenieść DefectDojo w `.env` (`DD_PORT=18080`, `DD_SITE_URL` i
 `DD_CSRF_TRUSTED_ORIGINS` na 18080) i `make up`.
@@ -83,7 +82,7 @@ nie są sprawdzane, a anonimowe logowanie FTP też byłoby próbą logowania.
 
 **Rozwiązane (LAB-T4):** adapter `httpx` uruchamia `-rt` i zapisuje metrykę `response_time_ms` w obserwacji `http` (celowo poza `fp_hash`, więc zmiana opóźnienia nie tworzy fałszywych zdarzeń `changed`). Panel web pokazuje kolumnę `HTTP ms`, filtr „tylko wolne HTTP” oraz ostrzeżenie w szufladzie assetu powyżej progu `ASI_HTTP_SLOW_MS` (domyślnie `300` ms, LAB-T9). Metryka trafia także do eksportu CSV (`http_ms`).
 
-## Wyniki LAB-1 (21.11, VM fatusia-hacknation-2, arm64)
+## Wyniki LAB-1 (21.11, VM A, arm64)
 
 Stack `custom-network` przez `quickstart.sh`, cel `127.0.0.1`, `-parallel 1 -rate 1000`. Przebiegi 1-3 na kodzie
 sprzed LAB-T1/T2, z ręcznym pełnym TCP bez portów ASI/DD (`-p 1-5432,5434-8079,8081-8089,8092-8093,8096-65535`).
@@ -114,7 +113,7 @@ przebiegu (`plan.json`). Zweryfikowane: 0 obcych warunków, a DD zamknął 2 bł
 Zostaje: ~~LAB-T5~~ (zrobione: diff używa słów z historii), LAB-T6 (instalator Gitea), szum usług samej
 VM (SSH, Syncthing, procesy lokalne). To prawdziwe usługi hosta, w labie jury wykluczyć je zakresem/portami.
 
-## Wyniki LAB-2 (21.11, `custom-network` na blackarch, amd64)
+## Wyniki LAB-2 (21.11, `custom-network` na VM B, amd64)
 
 Własna, niezależna kopia stacku organizatorów: `lab.zip` → `~/lab-org` (poza repo), `docker compose -f
 docker-compose-custom-network.yml up -d`, jeden stack naraz. Cel `127.0.0.1`, porty podane jawnie
@@ -129,7 +128,7 @@ docker-compose-custom-network.yml up -d`, jeden stack naraz. Cel `127.0.0.1`, po
 | httpbin | tytuł `httpbin.org`, `gunicorn/19.9.0`, `Python`, `Swagger UI` |
 | nginx | tytuł `Welcome to nginx!`, `Nginx:1.31.9` |
 
-**LAB-T10 (22.11, fatusia-2, pomiary na 127.0.0.1, 13 otwartych portów):**
+**LAB-T10 (22.11, VM A, pomiary na 127.0.0.1, 13 otwartych portów):**
 
 | tryb `-sV` | czas | PostgreSQL 15432 |
 |---|---|---|
@@ -144,7 +143,7 @@ Decyzja: główny przebieg bez zmian (`--version-light`, więc UDP przy `ASI_ALL
 wszystkie sondy na próżno). Limit 512 par host:port: wcześniej po przekroczeniu cała próba była **po cichu
 pomijana** (czyli właśnie w dużej sieci), teraz sprawdzane są pierwsze 512 (adres, port rosnąco), a reszta
 jest w logu. Na żywo: druga próba 7 s, `15432 → postgresql`. Uwaga: obraz `kennethreitz/httpbin` jest tylko
-amd64, na arm64 (fatusia-2) kontener `custom-api` kończy się `exec format error`, więc 8888 testuje się na amd64.
+amd64, na arm64 (VM A) kontener `custom-api` kończy się `exec format error`, więc 8888 testuje się na amd64.
 
 **Dwie luki wykryte tym testem (naprawione w tym samym dniu):**
 
@@ -162,7 +161,7 @@ amd64, na arm64 (fatusia-2) kontener `custom-api` kończy się `exec format erro
 kopię uruchamiamy z remapem portu (np. `18080:80`), żeby nie zatrzymywać naszego stacku. Wynik LAB-3 opisze
 faktyczne porty.
 
-## Wyniki LAB-3 (21.11, `modern` na blackarch, amd64)
+## Wyniki LAB-3 (21.11, `modern` na VM B, amd64)
 
 Ta sama niezależna kopia (`~/lab-org`), `docker-compose-modern-local.yml` z **remapem WordPressa 8080 → 18080**
 (na 8080 stoi nasze DefectDojo; reszta portów jak u organizatorów). Cel `127.0.0.1`, porty
@@ -226,7 +225,7 @@ zamyka i reaktywuje finding (DD dopasowuje po hashu opisu), to zachowanie Defect
 **Szum hosta:** krótkotrwałe porty lokalnych procesów VM (np. 39963, 43683) dają `new`/`missing` między
 przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 
-## Wyniki LAB-4 (21.11, `vulnerable`, VM fatusia-hacknation-1)
+## Wyniki LAB-4 (21.11, `vulnerable`, VM C)
 
 Własna kopia labu, stack **z nakładką** `docker/lab-org/vulnerable.bind.yml` (wszystkie 15 portów tylko na
 `127.0.0.1`, sprawdzone `ss -ltn`). Panel ASI na `ASI_WEB_ADDR=127.0.0.1:18090` (DVWA zajmuje 8090; od decyzji 23 to domyślny port panelu),
@@ -250,9 +249,9 @@ LuCI z atrapy i WebFig („RouterOS router configuration page”) dalej trafiaj�
 Adminer odpowiada stroną logowania pod każdym URL-em); `services.json` w pliku przebiegu ma starą ocenę z samego
 nmapa (`low` dla WordPressa), a panel i DD liczą ją z sygnaturami (75, high).
 
-## Wyniki LAB-6 (21.11, zmiana stacku, VM fatusia-hacknation-1)
+## Wyniki LAB-6 (21.11, zmiana stacku, VM C)
 
-Własna kopia labu (`~/lab`) na fatusia-1 (x86_64), aktualny `main`, domyślne ustawienia skanera: `-ports auto`
+Własna kopia labu (`~/lab`) na VM C (x86_64), aktualny `main`, domyślne ustawienia skanera: `-ports auto`
 (pełne TCP dla 1 hosta), `-parallel 1 -rate 1000`, pomijanie portów ASI/DD (LAB-T2). DefectDojo przeniesione na
 `DD_PORT=18080`, bo `modern` zajmuje 8080. Cel `127.0.0.1`, produkt DD `ASI lab-org`, engagement `lab6`.
 Progi domyślne: port `gone` po 2 brakach. Każdy przebieg trwał 118–128 s.
@@ -285,10 +284,10 @@ Swagger UI). `modern`: Apache 2.4.71 (WordPress 8080, phpMyAdmin 8081), Redis 7.
   HTTP jest kompletny. Bez działań.
 - Szum hosta jak w LAB-1/LAB-5: SSH, Syncthing (8384, 22000), dokumentacja (4173) i 2 porty lokalnych procesów VM.
 
-## Wyniki LAB-7 (22.11, skaner na innej maszynie; stack na fatusia-hacknation-2)
+## Wyniki LAB-7 (22.11, skaner na innej maszynie; stack na VM A)
 
-**Układ (decyzja 19):** stack = VM A `fatusia-hacknation-2` (`<tailscale-ip-A>`, arm64, `custom-network` + `quickstart.sh`),
-skaner = VM B `blackarch` (`<tailscale-ip-B>`). Połączenie szło **przez relay DERP „waw”** (`tailscale ping`: „via DERP
+**Układ (decyzja 19):** stack = VM A (`<tailscale-ip-A>`, arm64, `custom-network` + `quickstart.sh`),
+skaner = VM B (`<tailscale-ip-B>`). Połączenie szło **przez relay DERP „waw”** (`tailscale ping`: „via DERP
 (waw) in 43 ms, direct connection not established”) — czyli gorszy wariant niż direct. Cel: `<tailscale-ip-A>`
 (`targets/lab-remote.csv`), `-parallel 1 -rate 500`, porty labu jawnie:
 `-ports 2223,3001,5673,8787,15432,15673` (dlaczego nie pełne TCP — luka LAB-T13 niżej).
@@ -350,11 +349,7 @@ albo reproba portów „filtered” w tym samym przebiegu (LAB-T11/T13).
 w każdym przebiegu ginął jeden. Reprobe portów oznaczonych `filtered` w tym samym przebiegu domyka więc także utratę
 SYN-ów na relay. Zostaje zalecenie z LAB-T13 pkt 4 (cele za NAT/relay: pewniejsza jawna lista portów) i **LAB-T14**.
 
-**Uwaga o równoległych skanach tego samego celu:** w trakcie testu dwie sesje agentów na blackarch skanowały
-`<tailscale-ip-A>` jednocześnie (`20261122-084757` + `20261122-084819`, potem `085308` + `085801`/`090326`). Dwa skany
-na jednej ścieżce DERP gubią więcej portów i mieszają historię w bazie dla tego IP. Wnioski: **jeden skan celu
-naraz** (rezerwacja w TASKS) i unikalny `-set` na eksperyment. Przy okazji wyszła kolizja identyfikatora przebiegu
-(co do sekundy) → `db: create run: ERROR: duplicate key … runs_pkey` (LAB-T14).
+**Ograniczenie:** nie skanuj tego samego celu dwoma skanami naraz. Gubi to porty i miesza historię.
 
 ## Jak testować
 
@@ -370,8 +365,6 @@ Każdy test: uruchomić **jeden** stack, odczekać na gotowość (`docker compos
 zakresem portów, zmiana w labie, kolejny skan, potem wynik w panelu (Assety, porównanie przebiegów) i w
 DefectDojo (testy `ASI discovery`, `asi-changes`, `asi-httpx`, `asi-nuclei`). Na koniec
 `docker compose -f <plik> down -v`.
-
-Oczekiwane wyniki i kryteria zaliczenia: zadania `LAB-1` … `LAB-7` w [TASKS](../TASKS.md).
 
 ## Kilka maszyn w tailnecie (decyzja 19)
 
@@ -407,49 +400,9 @@ Uwagi:
 
 ## Testy równolegle na kilku VM
 
-Nie czekamy na „wolny lab” na jednej maszynie. Każda VM z dockerem może prowadzić inny test LAB-* w tym samym
-czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyste).
+Każda maszyna uruchamia jeden stack labu i własny skaner. Stack uruchamiaj z nakładką, która ogranicza porty do
+`127.0.0.1` (środowisko ma domyślne hasła):
 
-1. **Rezerwacja** w `docs/TASKS.md`: przy zadaniu `🔨 w toku: <kto>, <stack>@<VM>`. Na jednej VM tylko jeden stack labu.
-2. **Kopia labu** (materiał organizatorów, poza repo, bez `.env` z cudzej maszyny):
-   `rsync -a --exclude .env fh:lab/ ~/lab/` (albo z dowolnej VM, która go ma).
-3. **Własny skaner ASI + wspólny DefectDojo** (decyzja 22): na tej VM wstaje tylko skaner i baza,
-   `docker compose up -d nmap-scanner asi-db`, a `DD_URL` w `.env` wskazuje kanoniczny DD
-   (`http://100.113.45.50:18080`). Nie stawiamy drugiej instancji DD - wyniki z każdej VM mają trafiać do jednej
-   bazy. Konfiguracja: [Integracja z DefectDojo](defectdojo.md#jedna-instancja-dd-na-wiele-srodowisk-i-maszyn-decyzja-22).
-   Skan idzie na `127.0.0.1`, produkt = środowisko, engagement per VM (`lab-org@f2`), żeby równoległe przebiegi
-   się nie dublowały.
-4. **Porty naszego stacku** przed stackiem, który z nim koliduje (w `.env`):
-
-   | stack labu | koliduje z | w `.env` |
-   |---|---|---|
-   | stack labu | koliduje z | w `.env` |
-   |---|---|---|
-   | wszystkie cztery | — | — |
-
-   Od 22.11 nic nie trzeba przenosić: DefectDojo stoi tylko na maszynie kanonicznej (fatusia-1) i to na **18080**
-   (decyzja 22), a panel ASI ma domyślnie **18090** (decyzja 23), więc 8080 (`modern`) i 8090 (`vulnerable`)
-   są wolne dla labu. Wyjątek: starszy `.env` może mieć jeszcze `ASI_WEB_ADDR=127.0.0.1:8090` albo lokalny DD
-   na 8080 (`make env-sync` nie zmienia istniejących wartości) - wtedy ustaw `ASI_WEB_ADDR=127.0.0.1:18090`
-   i `make up` przed `vulnerable`/`modern`.
-
-   Wykluczenie własnych portów ze skanu (LAB-T2) samo idzie za nowymi wartościami.
-5. **Start z nakładką** (porty labu tylko na `LAB_BIND`, domyślnie `127.0.0.1`):
-
-   ```bash
-   cd ~/lab
-   docker compose -f docker-compose-vulnerable.yml -f ~/asi/docker/lab-org/vulnerable.bind.yml up -d
-   # skaner na innej VM: porty tylko w tailnecie, nie w LAN
-   LAB_BIND=$(tailscale ip -4) docker compose -f docker-compose-modern.yml -f ~/asi/docker/lab-org/modern.bind.yml up -d
-   ```
-
-   Sprawdzone `docker compose config`: bez nakładki 31 portów czterech stacków na `0.0.0.0`, z nakładką wszystkie na `127.0.0.1`.
-6. **Wynik** w tabeli zadania i w sekcji „Wyniki LAB-n” niżej, z nazwą VM (różne VM = różny szum własnych usług,
-   dlatego engagement nazywamy `lab-org@<vm>`).
-7. **Sprzątanie po teście:** `docker compose -f docker-compose-<stack>.yml -f ~/asi/docker/lab-org/<stack>.bind.yml down -v`.
-   Portów naszego stacku nie przestawiamy (krok 4), więc nie ma czego przywracać. Kontrola:
-   `grep -E '^(ASI_WEB_ADDR|DD_PORT)=' .env` i `ss -ltn | grep -E ':(18090|18080) '`. (Lekcja z LAB-4: panel
-   przeniesiony na czas testu i nieprzywrócony „zniknął” z 8090 - stąd decyzja 23.)
-
-**Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM), ASI
-ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.
+```bash
+docker compose -f docker-compose-<stack>.yml -f <repo>/docker/lab-org/<stack>.bind.yml up -d
+```

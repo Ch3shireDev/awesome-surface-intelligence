@@ -1,7 +1,7 @@
 # Ustalenia z mentorem CBI AGH (21.11.2026, 14:44)
 
 > **Wiążące.** To są ustalenia z konsultacji z mentorem/sędzią wyzwania. Mają pierwszeństwo przed wcześniejszymi
-> założeniami w `VISION.md`, `ROADMAP.md` i `TASKS.md`. Jeśli coś w repo im przeczy, popraw repo, nie ustalenia.
+> założeniami w `VISION.md`, `ROADMAP.md`. Jeśli coś w repo im przeczy, popraw repo, nie ustalenia.
 > Zapis w decyzjach: [`DECISIONS.md`](DECISIONS.md), decyzja 11.
 
 Źródło: nagranie `21 lis o 14_44.m4a` (7:50), transkrypcja Whisper large-v3. Rozmawiali: mentor (M), Daniel (D),
@@ -74,4 +74,4 @@ Mentor powiedział, że Postgres „out of the box” ma encryption at rest. Zwy
 
 **[06:14]–[07:43]** Sprawy organizacyjne: nazwa drużyny (do sprawdzenia na Discordzie), mentor zapisał Daniela Gustawa. Bez dalszych ustaleń technicznych.
 
-<sub>Poprawione przesłyszenia Whispera: Defend Dojo → DefectDojo, airbag → RBAC, bui/GUE → Web GUI, inkrytszy netres → encryption at rest, łapka laser → Wappalyzer, ATTPX → httpx. Kopia w `~/sync/komunikacja/transkrypcja_konsultacje_14_44.md`.</sub>
+<sub>Poprawione przesłyszenia Whispera: Defend Dojo → DefectDojo, airbag → RBAC, bui/GUE → Web GUI, inkrytszy netres → encryption at rest, łapka laser → Wappalyzer, ATTPX → httpx.</sub>

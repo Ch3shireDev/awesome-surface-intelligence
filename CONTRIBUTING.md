@@ -1,25 +1,7 @@
 # Praca nad kodem
 
-Dla zespołu i agentów AI. Opis projektu dla czytelnika z zewnątrz: [`README.md`](README.md).
-
-## Gdzie co jest
-
-- [`AGENTS.md`](AGENTS.md): zasady dla agentów AI (zakres skanu, sekrety, konwencje, mapa katalogów).
-  `CLAUDE.md` tylko go importuje.
-- [`docs/VISION.md`](docs/VISION.md): architektura docelowa i model danych.
-- [`docs/DECISIONS.md`](docs/DECISIONS.md): log decyzji z uzasadnieniami.
-- [`docs/ROADMAP.md`](docs/ROADMAP.md): postęp etapów i dziennik zmian.
-- [`docs/TASKS.md`](docs/TASKS.md): zadania i podział (DEV / SEC). Przed kodem zarezerwuj zadanie commitem.
-- [`docs/status.md`](docs/status.md): wymagania z treści zadania i ich stan. Aktualizuj po każdej zmianie funkcjonalnej.
-- [`docs/MENTOR.md`](docs/MENTOR.md): ustalenia z konsultacji z mentorem CBI AGH (wiążące).
-
-## Repozytorium i synchronizacja
-
-- Robocze `origin` zespołu: bare repo `daniel@blackarch:~/repos/asi.git`, klony w `~/asi` na każdej maszynie.
-- Publiczne repo dla jury: https://github.com/Ch3shireDev/awesome-surface-intelligence. Przed pierwszym
-  pushem przegląd historii pod kątem sekretów i realnych adresów (zadanie SEC-9).
-- `make sync`: `git pull --rebase` + `git push`. Małe commity, sync przed i po pracy.
-- Repo nie leży w `~/sync` (Syncthing psuje `.git` i rozsyła `.env`).
+Opis systemu: [`README.md`](README.md). Projekt i uzasadnienia: [architektura](docs/guide/architecture.md),
+[decyzje](docs/DECISIONS.md). Po zmianie funkcjonalnej zaktualizuj [status](docs/status.md).
 
 ## Build, testy, dokumentacja
 
@@ -51,4 +33,4 @@ zostaje jako test dymny stacku: `echo 127.0.0.1 > scans/targets.txt && make poc`
 
 - Kod Go: biblioteka standardowa, wyjątki zapisane w `DECISIONS.md` (np. pgx).
 - Dokumentacja i commity po polsku. Nowa strona przewodnika = wpis w `docs/.vitepress/config.mts`.
-- Sekrety tylko w `.env`. Skanujemy wyłącznie zatwierdzone cele i własny lab (`AGENTS.md`).
+- Sekrety tylko w `.env`. Skanujemy wyłącznie zatwierdzone cele i własny lab.

@@ -1,8 +1,5 @@
 # Asia - Attack Surface Intelligence Aggregator
 
-**HackNation 2026, zadanie CBI AGH: Attack Surface Intelligence.** Nazwa projektu w zgłoszeniu: *Asia -
-Attack Surface Intelligence Aggregator*. W kodzie i dokumentacji skrót **ASI**.
-
 Prototyp systemu do **cyklicznego discovery scanu dużych sieci (10 000+ adresów IP)**, przygotowany na
 HackNation 2026 dla Centrum Bezpieczeństwa Informacji AGH (wyzwanie *Attack Surface Intelligence*).
 
@@ -14,6 +11,30 @@ jego zamiennikiem. Całość obsługuje się z **panelu web z rolami**, a dane s
 
 Repozytorium publiczne (link ze zgłoszenia): **https://github.com/Ch3shireDev/awesome-surface-intelligence**
 Klon: `git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git && cd awesome-surface-intelligence`.
+
+## Zacznij tutaj
+
+| chcesz | czytaj |
+|---|---|
+| uruchomić system | [Szybki start](docs/guide/quickstart.md) |
+| sprawdzić go krok po kroku | [Ścieżka testowania](docs/guide/jury.md) |
+| zrozumieć, jak działa | [Architektura](docs/guide/architecture.md) |
+| korzystać z panelu | [Panel web](docs/guide/gui.md) |
+| wiedzieć, co działa i jakie są ograniczenia | [Status](docs/status.md), [ograniczenia i plan](docs/ROADMAP.md) |
+
+### Słowniczek
+
+| pojęcie | znaczenie |
+|---|---|
+| **cel** | adres IP, zakres CIDR albo domena, którą wolno skanować |
+| **przebieg** | jedno uruchomienie skanu zbioru celów |
+| **asset** | wykryty host albo port, z historią między przebiegami |
+| **obserwacja** | pojedynczy fakt z przebiegu: otwarty port, usługa, odpowiedź HTTP, trafienie sygnatury |
+| **sygnatura** | reguła YAML rozpoznająca produkt lub ekspozycję, bez exploitów |
+| **missing / gone** | brak do potwierdzenia / zniknięcie potwierdzone kolejnymi brakami |
+| **flapping** | asset niestabilny, na przemian jest i go nie ma |
+| **DefectDojo (DD)** | zewnętrzny system do zarządzania znaleziskami, do którego ASI wysyła wyniki |
+| **DEV-n, SEC-n, LAB-n** | identyfikatory wymagań i testów w opisach, można je pominąć przy czytaniu |
 
 ## Uruchomienie
 
