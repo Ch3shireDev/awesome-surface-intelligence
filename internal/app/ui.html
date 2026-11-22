@@ -64,6 +64,24 @@ label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
 button.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
 button.btn.sec{background:var(--soft);color:var(--ink)}
 button.btn.danger{background:var(--bad);color:#fff}
+button.btn.sm{padding:4px 10px;font-size:12px;font-weight:500;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);white-space:nowrap}
+button.btn.sm:hover{background:var(--soft);border-color:var(--muted)}
+button.btn.sm.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+button.btn.sm.warn:hover{background:color-mix(in srgb,var(--warn) 10%,var(--panel))}
+button.btn.sm.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+button.btn.sm.ok:hover{background:color-mix(in srgb,var(--ok) 10%,var(--panel))}
+button.btn.sm.del{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+button.btn.sm.del:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+.actions{display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center}
+.audit-box{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.audit-box table{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.audit-box thead th{position:sticky;top:0;background:var(--soft);z-index:1;font-family:system-ui,-apple-system,sans-serif;border-bottom:1px solid var(--line)}
+.audit-box td{padding:6px 10px;white-space:nowrap}
+.audit-box td.au-det{white-space:normal;word-break:break-word;color:var(--muted);max-width:460px}
+.au-act{display:inline-block;padding:1px 7px;border-radius:4px;font-weight:600;background:var(--soft);color:var(--ink)}
+.au-act.au-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.au-act.au-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.au-act.au-ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
 button.btn:disabled{opacity:.5;cursor:not-allowed}
 button.link{background:none;border:0;color:var(--accent);cursor:pointer;font:inherit;padding:0}
 .msg{margin-top:10px;font-size:13px}
@@ -261,15 +279,42 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
 
 <!-- ADMIN -->
 <section id="p-admin" class="hidden">
-  <div class="grid2">
-    <div class="card"><h2>Użytkownicy</h2><table><thead><tr><th>login</th><th>rola</th><th>stan</th><th></th></tr></thead><tbody id="u-rows"></tbody></table>
-      <h2 style="margin-top:18px">Dodaj użytkownika</h2>
-      <div class="row"><div><label for="u-name">login</label><input id="u-name"></div>
+  <div class="card">
+    <h2>Użytkownicy</h2>
+    <div class="scroll" style="max-height:none">
+      <table>
+        <thead><tr><th>login</th><th>rola</th><th>stan</th><th>akcje</th></tr></thead>
+        <tbody id="u-rows"></tbody>
+      </table>
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+      <h2>Dodaj użytkownika</h2>
+      <div class="row">
+        <div><label for="u-name">login</label><input id="u-name"></div>
         <div><label for="u-pass">hasło (min. 10)</label><input id="u-pass" type="password"></div>
         <div><label for="u-role">rola</label><select id="u-role"><option value="viewer">viewer: odczyt</option><option value="analyst">analyst: modyfikacja i odczyt</option><option value="operator">operator: dodawanie, usuwanie, modyfikacja</option><option value="admin">admin</option></select></div>
-        <div><button class="btn" id="u-add">Dodaj</button></div></div>
-      <div id="u-msg" class="msg"></div></div>
-    <div class="card"><h2>Dziennik audytu</h2><div class="scroll"><table><thead><tr><th>kiedy</th><th>kto</th><th>akcja</th><th>obiekt</th></tr></thead><tbody id="au-rows"></tbody></table></div></div>
+        <div><button class="btn" id="u-add">Dodaj</button></div>
+      </div>
+      <div id="u-msg" class="msg"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="row" style="align-items:center;gap:10px">
+        <h2 style="margin:0">Dziennik audytu</h2>
+        <span id="au-count" class="muted" style="font-size:12px"></span>
+      </div>
+      <div class="row" style="align-items:center;gap:8px">
+        <input id="au-q" placeholder="Filtruj logi (kto, akcja, obiekt…)" style="min-width:240px;padding:5px 9px;font-size:13px">
+        <button class="btn sec sm" id="au-ref" type="button">Odśwież</button>
+      </div>
+    </div>
+    <div class="audit-box">
+      <table>
+        <thead><tr><th>czas</th><th>użytkownik</th><th>akcja</th><th>obiekt</th><th>szczegóły</th></tr></thead>
+        <tbody id="au-rows"></tbody>
+      </table>
+    </div>
   </div>
 </section>
 <!-- KONTO -->
@@ -783,14 +828,53 @@ $('sc-add').onclick=async()=>{const p=scanParams();delete p.window;delete p.set;
 
 // ---------- admin
 const ROLES=['viewer','analyst','operator','admin'];
+let auditCache=[];
+function fmtAuditTime(s){
+  if(!s)return '–';
+  const d=new Date(s);
+  if(isNaN(d))return s;
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function fmtAuditChanges(c){
+  if(c===null||c===undefined||c==='')return '';
+  if(typeof c==='string')return c==='null'?'':c;
+  if(typeof c==='object'){
+    const ks=Object.keys(c);
+    if(!ks.length)return '';
+    return ks.map(k=>`${k}=${typeof c[k]==='object'?JSON.stringify(c[k]):c[k]}`).join(' · ');
+  }
+  return String(c);
+}
+function auditCls(act){
+  const a=String(act||'').toLowerCase();
+  if(/del|revok|ban|cancel/.test(a))return 'au-bad';
+  if(/disable|block|pass|role|edit|update/.test(a))return 'au-warn';
+  if(/create|add|login|enable|start|import/.test(a))return 'au-ok';
+  return '';
+}
+function renderAudit(){
+  const q=($('au-q')?.value||'').trim().toLowerCase();
+  const list=q?auditCache.filter(a=>{
+    const hay=[a.username,a.action,a.object,fmtAuditChanges(a.changes)].join(' ').toLowerCase();
+    return hay.includes(q);
+  }):auditCache;
+  if($('au-count'))$('au-count').textContent=q?`${list.length} z ${auditCache.length} wpisów`:`${auditCache.length} wpisów`;
+  $('au-rows').innerHTML=list.map(a=>{
+    const det=fmtAuditChanges(a.changes);
+    return `<tr><td class="muted">${esc(fmtAuditTime(a.at))}</td><td><b>${esc(a.username)}</b></td><td><span class="au-act ${auditCls(a.action)}">${esc(a.action)}</span></td><td>${esc(a.object)}</td><td class="au-det">${esc(det||'–')}</td></tr>`;
+  }).join('')||'<tr><td class="empty" colspan="5" style="padding:14px 10px">Brak wpisów w dzienniku audytu.</td></tr>';
+}
 async function loadAdmin(){
   const [us,au]=await Promise.all([api('api/v1/users'),api('api/v1/audit')]);
-  $('u-rows').innerHTML=us.map(u=>`<tr><td>${esc(u.username)}${u.id===me.id?' <span class="role">Ty</span>':''}</td>
-    <td><select class="u-role" data-id="${u.id}">${ROLES.map(r=>`<option value="${r}"${r===u.role?' selected':''}>${r}</option>`).join('')}</select></td>
-    <td>${u.disabled?'<b style="color:var(--bad)">zablokowany</b>':'aktywny'}</td>
-    <td><button class="link u-pass" data-id="${u.id}" data-n="${esc(u.username)}">reset hasła</button>
-      <button class="link u-block" data-id="${u.id}" data-d="${u.disabled}">${u.disabled?'odblokuj':'zablokuj'}</button>
-      ${u.id===me.id?'':`<button class="link u-del" data-id="${u.id}" data-n="${esc(u.username)}">usuń</button>`}</td></tr>`).join('');
+  $('u-rows').innerHTML=us.map(u=>`<tr><td style="vertical-align:middle"><b>${esc(u.username)}</b>${u.id===me.id?' <span class="role">Ty</span>':''}</td>
+    <td style="vertical-align:middle"><select class="u-role" data-id="${u.id}">${ROLES.map(r=>`<option value="${r}"${r===u.role?' selected':''}>${r}</option>`).join('')}</select></td>
+    <td style="vertical-align:middle">${u.disabled?'<span class="badge s-gone">zablokowany</span>':'<span class="badge s-new">aktywny</span>'}</td>
+    <td style="vertical-align:middle"><div class="actions">
+      <button type="button" class="btn sm u-pass" data-id="${u.id}" data-n="${esc(u.username)}">Reset hasła</button>
+      <button type="button" class="btn sm ${u.disabled?'ok':'warn'} u-block" data-id="${u.id}" data-d="${u.disabled}">${u.disabled?'Odblokuj':'Zablokuj'}</button>
+      ${u.id===me.id?'':`<button type="button" class="btn sm del u-del" data-id="${u.id}" data-n="${esc(u.username)}">Usuń</button>`}
+    </div></td></tr>`).join('');
 
   // Role, blokada i reset hasła (DEV-11, pkt 12-13 PDF). Każda zmiana od razu unieważnia
   // sesje/tokeny zmienianego konta (blokada i reset hasła), więc działa natychmiast.
@@ -816,8 +900,11 @@ async function loadAdmin(){
     try{await api('api/v1/users/'+b.dataset.id,{method:'DELETE'});
       $('u-msg').className='msg ok';$('u-msg').textContent='Konto usunięte.';loadAdmin()}
     catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message}});
-  $('au-rows').innerHTML=au.map(a=>`<tr><td>${fmtT(a.at)}</td><td>${esc(a.username)}</td><td>${esc(a.action)}</td><td class="mono">${esc(a.object)}</td></tr>`).join('');
+  auditCache=au||[];
+  renderAudit();
 }
+$('au-q').oninput=renderAudit;
+$('au-ref').onclick=loadAdmin;
 $('u-add').onclick=async()=>{try{await api('api/v1/users',{method:'POST',body:JSON.stringify({username:$('u-name').value,password:$('u-pass').value,role:$('u-role').value})});
   $('u-msg').className='msg ok';$('u-msg').textContent='Dodano.';$('u-pass').value='';loadAdmin()}catch(e){$('u-msg').className='msg err';$('u-msg').textContent=e.message}};
 
