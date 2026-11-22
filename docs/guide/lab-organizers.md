@@ -174,7 +174,7 @@ Ta sama niezależna kopia (`~/lab-org`), `docker-compose-modern-local.yml` z **r
 | `asi-redis-noauth` high | Redis 7.4.12 na 6379, sygnatura `asi-redis-noauth` **high**; dodatkowo ocena portu `medium` („Redis reachable internally”) |
 | phpMyAdmin | tytuł `phpMyAdmin`, `Apache/2.4.71`, `PHP 8.3.37`, sygnatura `asi-phpmyadmin` (low) |
 | Nginx Proxy Manager | tytuł `Nginx Proxy Manager`, `openresty`, sygnatura `asi-nginx-proxy-manager` (low) z wersją panelu `2.17.1` z `/api/` |
-| TLS na 443 | **niezaliczone na świeżym NPM**: bez skonfigurowanego hosta NPM nie ma żadnego certyfikatu, handshake kończy się `unrecognized name`, więc nie ma czego odciskować. Samo 443 jest wykryte jako `https` (`tls=true`) |
+| TLS na 443 | **domknięte 22.11**: na 443 w sieci `modern` wstawiono terminator TLS (nginx) z certyfikatem self-signed `CN=asi.lab`, proxujący do WordPressa (świeży NPM nie ma konta admina/hosta, więc nie dało się dodać certu przez API bez pierwszej konfiguracji; sam NPM z panelem 81 pozostaje wykrywany jak wyżej). `curl -k https://asi.lab/` → 302 do instalatora WP; ASI zapisał `tls_subject=asi.lab`, `tls_issuer=asi.lab`, `self_signed=true`, `tls13` (przebieg `20261122-094056`, `-ports 443`) |
 
 **Weryfikacja TLS poza labem** (żeby nie zostawić tej ścieżki niesprawdzonej): tymczasowy serwer HTTPS z certyfikatem
 self-signed (`CN=lab-tls.local`) na `127.0.0.1:8443`, skan `-ports 8443`. Wynik: `https`, tytuł `ASI TLS test`,
