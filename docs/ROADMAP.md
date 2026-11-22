@@ -13,7 +13,7 @@ M3 Historia i stany       █████████░  90%  🔨  działa; LA
 M4 Web GUI                ██████████ 100%  ✅  kod gotowy (porty per cel, hosty przy portach); panel demo do przebudowy
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
 M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
-M7 Harmonogram i eksport  █████████░  90%  🔨  DEV-5/6 ✅, SEC-7/8 ✅; selektywny eksport + SIEM ✅
+M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅; selektywny eksport + SIEM ✅
 M8 Finisz dla jury        ████████░░  80%  🔨  zostało: oddanie ALL-1, wdrożenie na demo, LAB-7, kontrola repo
 ```
 
@@ -28,7 +28,7 @@ M8 Finisz dla jury        ████████░░  80%  🔨  zostało: o
 | **M4** Web GUI (najwyżej punktowane) | jeden panel na `:18090` (podgląd na żywo przez Unix socket), logowanie, formularz celów (ręcznie + CSV/JSON, porty per cel), lista assetów z edycją, deep linki, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-9 ✅, DEV-13 ✅, DEV-14 ✅ | ✅ |
 | **M5** Fingerprint i sygnatury | httpx (w tym czas odpowiedzi ms, próg 300 ms): tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z 34 naszymi szablonami (CMS, panel, staging, wersje, 9 IoT, lab organizatorów) | SEC-4 ✅, SEC-5 ✅, SEC-10 ✅, DEV-7 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ | ✅ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (`pg_tde`), RBAC lokalny 4 role (1:1 z PDF), zarządzanie kontami, tokeny API w GUI, audit log | SEC-6 ✅, DEV-3 ✅, DEV-11 ✅, DEV-12 ✅ | ✅ |
-| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami (4 testy), twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅, selektywny eksport ✅ | 🔨 |
+| **M7** Harmonogram i eksport | cron + okno + wznawianie paczek `deferred`, eksport JSON/CSV, import cudzych wyników, eksport do DD natywnymi parserami (4 testy), twarde limity skanera | DEV-5 ✅, DEV-6 ✅, SEC-7 ✅, SEC-8 ✅, selektywny eksport ✅ | ✅ |
 | **M8** Finisz | test skali ≥10k IP, publiczne repo bez sekretów, czyste uruchomienie od zera, testy na labie organizatorów (LAB-0…6 ✅), prezentacja ≤10 slajdów, dokumentacja 100% | DEV-10 ✅, ALL-2 ✅, LAB-0…6 ✅ (LAB-3 poza TLS), SEC-9 🟡, OPS-1 🟡, ALL-1 🔨, LAB-7 🔨 | 🔨 |
 
 ## Ścieżka krytyczna do 11:00 CET
@@ -78,10 +78,9 @@ Właściciele według podziału z 10:13 CET. Zadania zamknięte: [`TASKS.md`](TA
 | **P0** | ALL-1: oddanie | zrzuty na slajdach tylko z adresami dokumentacyjnymi lub loopback; PDF z końcowego `main` i opis zapisane w HackTribe | daniel-a8 (materiały), Daniel (wysyłka) | 🔨 |
 | **P0** | wdrożenie demo | po LAB-7 `make up` z `origin/main`; migracje 008 i 009; działa: logowanie, dodanie celu z portami, skan, eksport | do przypisania | ⏳ |
 | **P0** | SEC-9: kontrola publicznego repo | przegląd przed oddaniem potwierdzony przez właściciela | Daniel | 🟡 |
-| **P1** | LAB-7: skan zdalny | 3 przebiegi **po kolei, z jednego procesu**, na nowym zbiorze (`20261122-091214` nie liczy się: zmieszane dwa skany); wynik w `lab-organizers.md` | goose + fatusia-2 | 🔨 |
+| **P1** | LAB-7: skan zdalny | wstępny wynik 6/6 portów jest w `lab-organizers.md`; do zaliczenia powtórka 3 przebiegów bez drugiego skanu w tle | goose + fatusia-2 | 🟡 |
 | **P2** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | cudzy przebieg jest już chroniony: skan, który przegrał wyścig o ID, nie pisze do bazy. Zostaje: unikalne ID, żeby zapisywały się oba skany | do przypisania | 🟡 |
 | **P1** | LAB-T13: gubione porty przy pełnym TCP | poprawka albo opisane znane ograniczenie | do przypisania | ⏳ |
-| **P1** | histogram na górze dashboardu (`7f3ff19`) | commit jest w `origin/main` przed przebudową panelu, inaczej zniknie z demo | do przypisania | ⏳ |
 | **P2** | OPS-1: dokumentacja tylko lokalnie | działający proces na 4173 słucha na `127.0.0.1` (Makefile już poprawiony) | agy | 🟡 |
 
 ## Dziennik postępu
