@@ -327,6 +327,11 @@ rozpoznany drugą próbą `--version-intensity 7`, czyli LAB-T10 działa też pr
 ścieżce relay (nie firewall), dlatego porty labu podaliśmy jawną listą. Dla celów za NAT/relay: jawna lista portów
 albo reproba portów „filtered” w tym samym przebiegu (LAB-T11/T13).
 
+**Sprawdzone po LAB-T11** (✅ 22.11 09:17: `filtered` + reproba znanych portów, migracja 009): powtórzony pełny przebieg
+`-p 1-65535 -rate 500` przez DERP (`20261122-092205`, ten sam cel) widzi **12/12 portów, w tym 5673 i 8787** — wcześniej
+w każdym przebiegu ginął jeden. Reprobe portów oznaczonych `filtered` w tym samym przebiegu domyka więc także utratę
+SYN-ów na relay. Zostaje zalecenie z LAB-T13 pkt 4 (cele za NAT/relay: pewniejsza jawna lista portów) i **LAB-T14**.
+
 **Uwaga o równoległych skanach tego samego celu:** w trakcie testu dwie sesje agentów na blackarch skanowały
 `<tailscale-ip-A>` jednocześnie (`20261122-084757` + `20261122-084819`, potem `085308` + `085801`/`090326`). Dwa skany
 na jednej ścieżce DERP gubią więcej portów i mieszają historię w bazie dla tego IP. Wnioski: **jeden skan celu
