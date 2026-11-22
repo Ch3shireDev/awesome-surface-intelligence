@@ -1,0 +1,103 @@
+# Czysty start na pustej maszynie GitHuba, dokladnie tak jak w README:
+# make env -> make up -> make demo (8 hostow labu, 2 skany), a potem sprawdzenie wynikow.
+name: clean-start
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: go vet + testy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: make test
+
+  clean-start:
+    name: czysty start, skany, wyniki
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: maszyna
+        run: |
+          uname -m; nproc; free -g; docker --version; docker compose version
+          echo "obrazy przed startem:"; docker images
+
+      - name: make env
+        run: |
+          make env
+          grep -E '(PASSWORD|SECRET|_KEY|_KEYS)=.' .env | cut -d= -f2- | while IFS= read -r v; do
+            if [ ${#v} -ge 12 ]; then echo "::add-mask::$v"; fi
+          done
+
+      - name: make up
+        run: time make up
+
+      - name: panel i DefectDojo odpowiadaja
+        run: |
+          for i in $(seq 1 120); do
+            if curl -fs -o /dev/null --max-time 3 http://127.0.0.1:18090/ &&
+               curl -fs -o /dev/null --max-time 3 http://127.0.0.1:8080/login; then
+              echo "gotowe po ${i} probach"; docker compose ps -a; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::panel albo DefectDojo nie wstal"; exit 1
+
+      - name: "make demo: 8 hostow, 2 skany ze zmianami"
+        run: time make demo
+
+      - name: wyniki zgodne ze scenariuszem labu
+        run: python3 scripts/ci-check.py demo
+
+      - name: pelny skan TCP z domyslnymi ustawieniami
+        run: |
+          printf 'target,enabled\n192.0.2.13,true\n' > targets/ci-full.csv
+          time docker compose exec -T nmap-scanner asi scan -targets targets/ci-full.csv -set ci-full -out results/ci-full -ports all -upload off
+          python3 scripts/ci-check.py full
+
+      - name: szyfrowanie i schemat bazy
+        run: |
+          make crypto-check
+          make schema-check
+
+      - name: role, konta, tokeny
+        run: |
+          set -o pipefail
+          for t in roles users tokens; do
+            bash scripts/test-$t.sh | tee /tmp/test-$t.log
+            if grep -qE '^ *FAIL |FAIL=[1-9]|[1-9][0-9]* FAIL' /tmp/test-$t.log; then
+              echo "::error::test-$t"; exit 1
+            fi
+          done
+
+      - name: restart nie gubi danych
+        run: |
+          make down
+          make up
+          for i in $(seq 1 60); do
+            curl -fs -o /dev/null --max-time 3 http://127.0.0.1:18090/ && break
+            sleep 2
+          done
+          python3 scripts/ci-check.py persisted
+
+      - name: diagnostyka
+        if: failure()
+        run: |
+          docker compose ps -a || true
+          docker compose logs --tail 60 nmap-scanner asi-db initializer nginx || true
