@@ -1,6 +1,6 @@
 # Roadmapa: gdzie jesteśmy
 
-**Ostatnia aktualizacja: 22.11.2026, 10:26 CET, stan `main` = `835cb9d`.** Oddanie finalne: **11:00 CET**. Zasada: kto kończy zadanie z
+**Ostatnia aktualizacja: 22.11.2026, 10:39 CET, stan `main` = `6f8f6c7`.** Oddanie finalne: **11:00 CET**. Zasada: kto kończy zadanie z
 [`TASKS.md`](TASKS.md), aktualizuje tu wiersz etapu i pasek postępu, a w [`status.md`](status.md) wymagania.
 
 Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸ odłożone.
@@ -9,8 +9,8 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)██████████ 100%  ✅  DEV-0/1 ✅, SEC-1/2/3 ✅
-M3 Historia i stany       █████████░  90%  🔨  działa; LAB-T11 ✅; otwarte: LAB-T13 (gubione porty)
-M4 Web GUI                ██████████ 100%  ✅  kod gotowy (porty per cel, hosty przy portach, histogram na górze); panel demo do przebudowy
+M3 Historia i stany       ██████████ 100%  ✅  DEV-2 ✅, LAB-T5/T7/T8/T11/T13 ✅ (testy integracyjne Postgres OK)
+M4 Web GUI                ██████████ 100%  ✅  porty per cel, hosty przy portach, histogram, Admin/Tokeny/UI OK (`3f90610`, `7740529`)
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
 M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
 M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅, źródła pasywne + selektywny eksport + SIEM ✅
@@ -24,7 +24,7 @@ M8 Finisz dla jury        █████████░  90%  🔨  SEC-9 ✅, 
 | **M0** Stack + PoC | DefectDojo 3.5.202 w compose, pierwszy import nmapa, pętla reimportu | Etap 0–1 PoC fatusi | ✅ |
 | **M1** Silnik skanowania | `asi scan`: plan celów (CSV/JSON/TXT, CIDR, domeny, reguły zakresu), 2 fazy nmapa, adaptacyjne paczki, globalny limit pps, okno czasowe, pasek CLI + panel SSE, diff, skan potwierdzający, reimport Generic Findings (`created/closed/reactivated`) | silnik z `~/asi-poc` | ✅ |
 | **M2** Fundament | kontrakt `Observation` + interfejs `Scanner` (adaptery), Postgres `asi-db` z migracjami, przebiegi i obserwacje w bazie, diff z bazy, cały stack przez `make up` | DEV-0 ✅, DEV-1 ✅, SEC-1 ✅, SEC-2 ✅, SEC-3 ✅ | ✅ |
-| **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `reverted`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial`/`timedout` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 ✅, LAB-T5/T7/T8 ✅, LAB-T11 ✅, LAB-T13 ⏳ | 🔨 |
+| **M3** Historia i stany | assety ze stanami `new/active/missing/gone`, `reappeared`, `reverted`, `filtered`, `flapping`, próg braków dla hostów, zasada pokrycia (`partial`/`timedout`/`filtered` nie zamyka), edycje użytkownika trwałe między skanami | DEV-2 ✅, LAB-T5/T7/T8 ✅, LAB-T11 ✅, LAB-T13 ✅ | ✅ |
 | **M4** Web GUI (najwyżej punktowane) | jeden panel na `:18090` (podgląd na żywo przez Unix socket), logowanie, formularz celów (ręcznie + CSV/JSON, porty per cel), lista assetów z edycją, deep linki, dashboard: najważniejsze znaleziska, zmiany, niestabilne hosty | DEV-4 ✅, DEV-9 ✅, DEV-13 ✅, DEV-14 ✅ | ✅ |
 | **M5** Fingerprint i sygnatury | httpx (w tym czas odpowiedzi ms, próg 300 ms): tytuł, kod, nagłówki, cookies, TLS, przekierowania, technologie, favicon; nuclei z 34 naszymi szablonami (CMS, panel, staging, wersje, 9 IoT, lab organizatorów) | SEC-4 ✅, SEC-5 ✅, SEC-10 ✅, DEV-7 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ | ✅ |
 | **M6** Ochrona danych i role | AES-256-GCM dla pól `_enc` + szyfrowanie Postgresa w spoczynku (`pg_tde`), RBAC lokalny 4 role (1:1 z PDF), zarządzanie kontami, tokeny API w GUI, audit log | SEC-6 ✅, DEV-3 ✅, DEV-11 ✅, DEV-12 ✅ | ✅ |
@@ -50,11 +50,11 @@ Przegląd z 21.11 sprawdzał każdy punkt w kodzie. 22.11 poprawione tylko wiers
 |---|---|---|
 | 1. wczytanie IP / CIDR / domen | ✅ | – |
 | 2. bezpieczny, wielowątkowy skan; czas trwania; podział na podgrupy | ✅ | – |
-| 3–4. aktywne hosty, identyfikacja usług | 🟡 | działa; UDP domyślnie wyłączone (decyzja 15), pełne TCP zdalnie potrafi zgubić otwarty port (LAB-T13) |
+| 3–4. aktywne hosty, identyfikacja usług | ✅ | pełny TCP przez DERP zweryfikowany po LAB-T11/T13 (`6cbf91c`: 12/12 portów) + poprawka `6f8f6c7`; UDP opcjonalne (decyzja 15) |
 | 5. HTTP: tytuł, kod, nagłówki, ciasteczka, TLS, przekierowania | ✅ | – |
 | 6. CMS, framework, serwer aplikacyjny, **urządzenia IoT** | ✅ | SEC-10: 9 sygnatur — kamery Hikvision/Dahua/ogólne, RouterOS, LuCI, drukarki, NAS, wbudowane serwery firmware'u, opis UPnP ([Fingerprint](/guide/fingerprint#sygnatury-iot-sec-10)) |
 | 7. staging, panel administracyjny | ✅ | – |
-| 8–9. porównanie przebiegów; nowe / znikające / zmienione | 🟡 | działa; firewall obsłużony (LAB-T11), zostają fałszywe braki przy utracie pakietów (LAB-T13); porównanie w GUI (DEV-9); zmiana usługi i treści HTTP (tytuł, certyfikat, technologie) jako `changed` (DEV-7) |
+| 8–9. porównanie przebiegów; nowe / znikające / zmienione | ✅ | firewall i utrata SYN obsłużone (LAB-T11/T13: `filtered` + reproba znanych portów); porównanie w GUI (DEV-9), diff z historią (LAB-T5), `reverted` (LAB-T8), testy integracyjne Postgres 18 OK |
 | 10. własne sygnatury | ✅ | (opcja) wgrywanie sygnatur z GUI |
 | 11. formularz celów, ręcznie + CSV/JSON | ✅ | – |
 | 12–13. RBAC, 4 role | ✅ | – (DEV-3 domknięte: tokeny API w GUI z ważnością, unieważnianiem i audytem) |
@@ -80,13 +80,15 @@ Właściciele według podziału z 10:13 CET. Zadania zamknięte: [`TASKS.md`](TA
 | **P0** | SEC-9: kontrola publicznego repo | przegląd `835cb9d`: 0 sekretów, 0 prawdziwych publicznych IP, brak `LICENSE` / ekstrakcji tekstu, 0 martwych linków VitePress; zostaje końcowy push przed 11:00 | agy (audyt ✅), Daniel (końcowy push) | ✅ |
 | **P1** | LAB-7: skan zdalny | wstępny wynik 6/6 portów jest w `lab-organizers.md` (`e4c4922`, `835cb9d`); do zaliczenia powtórka 3 przebiegów bez drugiego skanu w tle | goose + fatusia-2 | 🟡 |
 | **P2** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | cudzy przebieg jest już chroniony (`0dd62b5`): skan, który przegrał wyścig o ID, nie pisze do bazy. Zostaje: unikalne ID, żeby zapisywały się oba skany | do przypisania | 🟡 |
-| **P1** | LAB-T13: gubione porty przy pełnym TCP | poprawka albo opisane znane ograniczenie (już opisane w `lab-organizers.md`) | do przypisania | ⏳ |
+| **P1** | LAB-T13: gubione porty przy pełnym TCP | zweryfikowane po LAB-T11 (`6cbf91c`: 12/12 portów przez DERP) + poprawka pełnego TCP (`6f8f6c7`); zalecenie jawnych portów za NAT w `lab-organizers.md` | goose / daniel-a8 | ✅ |
 | **P2** | OPS-1: dokumentacja tylko lokalnie | proces na `:4173` zbindowany wyłącznie na `127.0.0.1` (`vitepress dev --host 127.0.0.1`) | agy | ✅ |
 
 ## Dziennik postępu
 
 | kiedy | co się zmieniło |
 |---|---|
+| 22.11 10:39 | M3 na 100% ✅: pełne testy integracyjne `internal/store` na czystym PostgreSQL 18 (17/17 PASS, 0 pominiętych — w tym `TestReconcile`, `TestReconcileFiltered`, `TestReconcileHTTPChange`, `TestReconcileRevert`, `TestTargetPorts`) + `findings`/`scanner/nmap`/`cmd/asi` OK; zamknięte `LAB-T13` (`6cbf91c`) i poprawka pełnego TCP (`6f8f6c7`) |
+| 22.11 10:35 | UI i prezentacja: zakładka Tokeny (`3f90610`), poprawki dashboardu i ocen PL (`7740529`), finalne teksty slajdów dla jury (`b32e4e5`), pełny TCP bez zera usług i poprawka RBAC `analyst` (`6f8f6c7`) |
 | 22.11 10:25 | audyt czystości repo i dokumentacji (`0ff4e8f`): 0 sekretów, 0 prawdziwych publicznych IP, brak `LICENSE` i wzmianek o ekstrakcji z tekstu, `vitepress build` 0 martwych linków; wyrównane `ROADMAP.md`, `status.md`, `README.md` |
 | 22.11 10:23 | integracje (`0ff4e8f`): źródła pasywne (CT, DNS, InternetDB), selektywny eksport zaznaczonych (CSV/JSON/DD `asi-selected`) i powiadomienia SIEM (`guide/integrations.md`) |
 | 22.11 10:22 | LAB-7 (`e4c4922`): skaner blackarch → lab na fatusia-2 przez DERP (6/6 portów, 0 FP, z zastrzeżeniem nakładki); nowe LAB-T13 i LAB-T14; kolizja ID przebiegu (`0dd62b5`): skan bez własnego wiersza `runs` nie pisze do bazy; histogram na górze dashboardu (`3395a45`) |
