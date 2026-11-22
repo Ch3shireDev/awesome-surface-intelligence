@@ -16,6 +16,8 @@ Klon: `git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git
 
 | chcesz | czytaj |
 |---|---|
+| przeczytać lub włączyć dokumentację | [Dokumentacja](#dokumentacja) |
+| zobaczyć test czystej instalacji | [GitHub Actions: instalacja od zera, skany, sprawdzenie wyników](https://github.com/Ch3shireDev/awesome-surface-intelligence/actions/workflows/clean-start.yml) |
 | uruchomić system | [Szybki start](docs/guide/quickstart.md) |
 | sprawdzić go krok po kroku | [Ścieżka testowania](docs/guide/jury.md) |
 | zrozumieć, jak działa | [Architektura](docs/guide/architecture.md) |
@@ -144,7 +146,16 @@ make lab-down                    # usunięcie labu
 
 ## Dokumentacja
 
-Przewodniki w [`docs/guide/`](docs/guide/) (po polsku; strona VitePress: `make docs`), w tym
+**Bez instalowania czegokolwiek:** wszystkie strony czyta się na GitHubie, zacznij od
+[ścieżki testowania](docs/guide/jury.md).
+
+**Jako strona z menu i wyszukiwarką** (wymaga Node.js i pnpm na hoście):
+
+```bash
+make docs     # http://127.0.0.1:4173, zatrzymanie: Ctrl+C
+```
+
+Przewodniki są w [`docs/guide/`](docs/guide/) (po polsku), w tym
 [komendy CLI](docs/guide/cli.md), [adaptery skanerów](docs/guide/adapters.md),
 [baza danych](docs/guide/database.md) i [lab testowy](docs/guide/lab.md).
 
