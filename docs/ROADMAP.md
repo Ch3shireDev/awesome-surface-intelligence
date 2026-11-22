@@ -14,7 +14,7 @@ M4 Web GUI                ██████████ 100%  ✅  DEV-4/8/9/13
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
 M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
 M7 Harmonogram i eksport  ██████████ 100%  ✅  DEV-5/6 ✅, SEC-7/8 ✅ (4 testy DD + polityka skanera)
-M8 Finisz dla jury        █████████░  90%  🔨  DEV-10 ✅, SEC-9 ✅, ALL-2 ✅, OPS-1 ✅, LAB-0…6 ✅; w toku: LAB-7, LAB-T11, ALL-1 (slajdy gotowe poza autorem)
+M8 Finisz dla jury        █████████░  90%  🔨  DEV-10 ✅, SEC-9 ✅, ALL-2 ✅, OPS-1 ✅, LAB-0…6 ✅; LAB-T11 ✅; w toku: LAB-7, ALL-1 (slajdy gotowe)
 ```
 
 ## Etapy
@@ -87,7 +87,7 @@ Każdy punkt sprawdzony w kodzie, nie tylko w dokumentacji. Szczegóły: [`statu
 | ~~LAB-T2~~ | M8 | wykluczenie portów własnego stacku ASI/DD przy skanie localhosta/hosta skanera | ✅ agent fatusia-1 | lab organizatorów |
 | ~~LAB-0..6~~ | M8 | testy na żywo 4 stacków z `~/lab` (`custom-network`, `modern`, `vulnerable`, `modern-proxy`) + poprawki LAB-T5..T10, T12 | ✅ fatusia-1, fatusia-2, goose/blackarch | 30% (test jury) |
 | **LAB-7** | M8 | test skanowania zdalnego przez Tailscale (`blackarch` → `fatusia-2`) | 🔨 w toku (fatusia-2 + blackarch) | 30% (test jury) |
-| **LAB-T11** | M8 | raportowanie wykrytego firewalla jako wynik niepełny zamiast zniknięcia usług | 🔨 w toku (blackarch) | odporność / DD |
+| **LAB-T11** | M8 | raportowanie wykrytego firewalla jako wynik niepełny zamiast zniknięcia usług | ✅ 22.11 | odporność / DD |
 | ~~DEV-13~~ | M4 | weryfikacja PTY nmapa 7.95 i podglądu postępu na żywo + dashboardu na `:18090` (Unix socket, 0 błędów JS) | ✅ agy/blackarch | 15% (czytelność GUI) |
 | ~~ALL-2~~ | M8 | strona ze ścieżką testowania pod jury (`guide/jury.md`), `status.md` 100%, czysty start na czystej VM z Dockerem | ✅ fatusia-1 + blackarch | 20% |
 | ~~SEC-2~~ | M2 | materiały organizatorów — lab pobrany (`~/lab`, `docs/guide/lab-organizers.md`), porty i scenariusze przeanalizowane | ✅ fatusia-2 | ryzyko testu jury |

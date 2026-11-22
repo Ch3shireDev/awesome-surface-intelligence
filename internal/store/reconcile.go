@@ -40,7 +40,7 @@ func (c *ReconcileConfig) defaults() {
 type Event struct {
 	Key    string          `json:"key"`
 	Kind   string          `json:"asset_kind"` // host | port
-	Type   string          `json:"type"`       // new | changed | reverted | missing | gone | reappeared | flapping
+	Type   string          `json:"type"`       // new | changed | reverted | missing | gone | reappeared | flapping | filtered
 	Before json.RawMessage `json:"before,omitempty"`
 	After  json.RawMessage `json:"after,omitempty"`
 	RunID  string          `json:"run_id"`
@@ -141,6 +141,7 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 	now := map[string]*seen{}
 	httpNow := map[string]obs.Observation{}
 	live := map[string]bool{}
+	unverified, filteredHost := map[string]bool{}, map[string]bool{} // LAB-T11
 	for _, o := range os {
 		ip, _, port := obs.SplitKey(o.AssetKey)
 		addr, _ := netip.ParseAddr(ip)
@@ -151,6 +152,11 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				now[o.AssetKey] = &seen{kind: "host", ip: addr, fp: "up", current: []byte(`{"up":true}`)}
 			}
 		case obs.KindPort:
+			var pd obs.PortData
+			if o.Decode(&pd) == nil && pd.State == "filtered" {
+				unverified[o.AssetKey], filteredHost[ip] = true, true // neither seen nor absent
+				continue
+			}
 			live[ip] = true // a host with an open port is alive
 			if now[o.AssetKey] == nil {
 				now[o.AssetKey] = &seen{kind: "port", ip: addr, port: port, fp: o.FPHash, current: o.Data}
@@ -327,6 +333,13 @@ func (s *Store) Reconcile(ctx context.Context, runID string, cfg ReconcileConfig
 				continue
 			}
 			ip := a.ip.String()
+			if unverified[a.key] {
+				emit(a, "filtered", open(a.current), nil) // incomplete result: no miss, state untouched
+				continue
+			}
+			if a.kind == "host" && filteredHost[ip] {
+				continue // a firewall answering with silence does not prove the host is gone
+			}
 			threshold := cfg.HostMissThreshold
 			if a.kind == "host" {
 				if !covHosts[ip] {

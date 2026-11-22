@@ -208,3 +208,16 @@ head -1 results/*/services/chunk_0000.log                       # faktyczna lini
   [Szyfrowanie](/guide/encryption).
 - `.env` i `.dd_token` mają prawa `600` i są w `.gitignore`.
 - Panel web słucha tylko na `127.0.0.1`.
+
+## Wykryty firewall = wynik niepełny
+
+Znane porty, których nie widać w przebiegu, ASI sprawdza ponownie (nmap bez `--open`), także te z bazy, zgubione
+wcześniej. Port `filtered` (sondy giną bez odpowiedzi) to zdarzenie `filtered`, w panelu „firewall: wynik niepełny”:
+
+- stan portu się nie zmienia, licznik braków nie rośnie, więc nie powstaje `missing` ani `gone`,
+- przebieg ma w `run.json` `incomplete: true` i `filtered_ports`,
+- eksport do DefectDojo niczego nie zamyka (`close_old=false`), także przy `asi upload`,
+- port, który odpowiada odmową (`closed`), dalej jest zwykłym brakiem.
+
+Utraty pakietów nie da się odróżnić od firewalla: jeśli także reproba zostaje bez odpowiedzi, wynik jest niepełny.
+Port nieznany wcześniej, od początku filtrowany, nie tworzy assetu. Bez technik omijania firewalla.

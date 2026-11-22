@@ -37,6 +37,29 @@ type Host struct {
 	Addresses []Address  `xml:"address"`
 	Hostnames []Hostname `xml:"hostnames>hostname"`
 	Ports     []Port     `xml:"ports>port"`
+	// Extra: ports nmap did not list one by one, summarized by state.
+	Extra []ExtraPorts `xml:"ports>extraports"`
+}
+
+type ExtraPorts struct {
+	State string `xml:"state,attr"`
+	Count int    `xml:"count,attr"`
+}
+
+// TCPState is the state of a probed TCP port ("" = unknown). A port hidden in a summary that
+// includes filtered ports counts as filtered: silence must never turn into "gone".
+func (h Host) TCPState(port int) (state, reason string) {
+	for _, p := range h.Ports {
+		if p.PortID == port && p.Protocol == "tcp" {
+			return p.State.State, p.State.Reason
+		}
+	}
+	for _, e := range h.Extra {
+		if e.State == "filtered" {
+			return e.State, "extraports"
+		}
+	}
+	return "", ""
 }
 
 type Status struct {

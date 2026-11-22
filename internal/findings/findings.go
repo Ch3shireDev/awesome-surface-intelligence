@@ -422,6 +422,12 @@ func FromObservations(os []obs.Observation, meta map[string]targets.Host) []Serv
 		if o.Kind != obs.KindPort && o.Kind != obs.KindService {
 			continue
 		}
+		if o.Kind == obs.KindPort {
+			var pd obs.PortData
+			if o.Decode(&pd) == nil && pd.State == "filtered" {
+				continue // unverified (firewall), not an open service
+			}
+		}
 		s := byKey[o.AssetKey]
 		if s == nil {
 			ip, proto, port := obs.SplitKey(o.AssetKey)

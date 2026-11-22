@@ -439,11 +439,27 @@ func cmdScan(args []string) {
 	}
 	writeJSON(tunePath, tune)
 
-	outsidePorts := 0 // previously seen services outside the ports now chosen for their target
+	filteredPorts := 0 // LAB-T11: known services behind a firewall in this run
+	outsidePorts := 0  // previously seen services outside the ports now chosen for their target
 	// --- confirmation: services that vanished since the previous run while their host
 	// is still up get one more, slower look before we call them gone (and close them in DefectDojo).
-	if prev := previousRun(*outRoot, runID); prev != "" && ctx.Err() == nil {
-		old, _ := findings.Load(filepath.Join(*outRoot, prev, "services.json"))
+	prev, known := previousRun(*outRoot, runID), rec.knownServices()
+	if (prev != "" || len(known) > 0) && ctx.Err() == nil {
+		var old []findings.Service
+		if prev != "" {
+			old, _ = findings.Load(filepath.Join(*outRoot, prev, "services.json"))
+		}
+		// also what the database still holds: a port lost one run ago is probed again
+		inOld := map[string]bool{}
+		for _, o := range old {
+			inOld[o.Key()] = true
+		}
+		for _, o := range known {
+			if !inOld[o.Key()] {
+				inOld[o.Key()] = true
+				old = append(old, o)
+			}
+		}
 		have, isUp := map[string]bool{}, map[string]bool{}
 		for _, s := range svcs {
 			have[s.Key()] = true
@@ -463,12 +479,18 @@ func cmdScan(args []string) {
 			}
 		}
 		if n > 0 {
-			tr.Logf("confirm: %d services vanished since %s on live hosts - re-checking", n, prev)
+			tr.Logf("confirm: %d services vanished since %s on live hosts - re-checking", n, orStr(prev, "the last known state"))
 			args := append(strings.Fields("-sT -sV --version-light -Pn -T3 --max-retries 4"), "--max-rate", perProc)
 			hosts := scanner.Confirm(ctx, recheck, args, *parallel, filepath.Join(dir, "confirm"), pol, perProcN, tr.Logf)
 			confirmed := nmapad.FromHosts(hosts)
-			keep(confirmed)
-			rec.observations("confirm", confirmed)
+			filtered := nmapad.Filtered(hosts, recheck)
+			filteredPorts = len(filtered)
+			confirmObs := append(append([]obs.Observation(nil), confirmed...), filtered...)
+			keep(confirmObs)
+			rec.observations("confirm", confirmObs)
+			if filteredPorts > 0 {
+				tr.Logf("confirm: firewall detected - %d known port(s) filtered: result INCOMPLETE, not counted as missing", filteredPorts)
+			}
 			back := findings.FromObservations(confirmed, meta)
 			for i := range back {
 				back[i].Tags = append(back[i].Tags, "unstable")
@@ -476,8 +498,8 @@ func cmdScan(args []string) {
 			}
 			svcs = append(svcs, back...)
 			tr.Update(func(s *progress.State) { s.Open += len(back) })
-			if len(back) < n {
-				tr.Logf("confirm: %d services really gone", n-len(back))
+			if len(back)+filteredPorts < n {
+				tr.Logf("confirm: %d services really gone", n-len(back)-filteredPorts)
 			}
 		}
 	}
@@ -623,9 +645,13 @@ func cmdScan(args []string) {
 			closeOld = false
 			tr.Logf("dojo: close_old disabled - %d known service(s) outside the ports chosen for their targets", outsidePorts)
 		}
+		if filteredPorts > 0 {
+			closeOld = false
+			tr.Logf("dojo: close_old disabled - %d port(s) filtered by a firewall", filteredPorts)
+		}
 		uploadBatch(dd, ddTarget, svcs, closeOld, tr)
 		// SEC-7: raw httpx / nuclei output -> native DD parsers, tests asi-httpx / asi-nuclei
-		exportNative(dd, ddTarget, dir, !interrupted, tr.Logf)
+		exportNative(dd, ddTarget, dir, !interrupted && filteredPorts == 0, tr.Logf)
 	}
 
 	status := "done"
@@ -648,14 +674,14 @@ func cmdScan(args []string) {
 		"interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL,
 		"phases": snap.Phases, "parallel": *parallel, "rate_pps": *rate,
 		"discovery_args": *discArgs, "nmap_args": *svcArgs, "pending": pending, "resume_of": *resume,
-		"policy": pol.Summary(),
+		"policy": pol.Summary(), "filtered_ports": filteredPorts, "incomplete": filteredPorts > 0,
 	})
 	dbStatus := "completed"
 	if interrupted {
 		dbStatus = "partial" // coverage rule: unscanned chunks must not produce "missing"
 	}
 	rec.finish(dbStatus, map[string]any{"duration_s": snap.Elapsed, "targets": len(ips), "skipped": len(plan.Skipped),
-		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL})
+		"hosts_up": len(up), "open": len(svcs), "interest_high": hi, "interest_medium": med, "dojo_test": snap.Upload.TestURL, "filtered_ports": filteredPorts})
 	rec.pending(pending)
 	rec.reconcile(*recCfg)
 	if rec != nil {
@@ -664,7 +690,7 @@ func cmdScan(args []string) {
 		for _, ip := range ips {
 			scope[ip] = true
 		}
-		exportChanges(dd, rec.st, ddTarget, !interrupted, scope, dir, tr.Logf)
+		exportChanges(dd, rec.st, ddTarget, !interrupted && filteredPorts == 0, scope, dir, tr.Logf)
 	}
 	tr.Update(func(s *progress.State) { s.Status = status })
 	tr.Logf("run %s %s: %d/%d hosts up, %d open services (%d high, %d medium) -> %s", runID, status, len(up), len(ips), len(svcs), hi, med, dir)
@@ -810,6 +836,10 @@ func cmdUpload(args []string) {
 				log.Printf("%s: %s incomplete (%s) - close_old=false (override with -close-old=true)", *run, st, why)
 			}
 		}
+	}
+	if !closeSet && runIsFiltered(*run) {
+		*closeOld = false
+		log.Printf("%s: firewall detected, incomplete result - close_old=false (override with -close-old=true)", *run)
 	}
 	t := dojo.Target{ProductType: envOr("DD_PRODUCT_TYPE", "Research and Development"), Product: *product, Engagement: *eng, Tags: []string{"asi"}}
 	var res dojo.Result

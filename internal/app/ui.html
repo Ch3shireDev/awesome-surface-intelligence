@@ -287,9 +287,9 @@ iframe.live{width:100%;height:1180px;border:1px solid var(--line);border-radius:
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LV={viewer:1,analyst:2,operator:3,admin:4};
-const TYPES=['new','reappeared','changed','reverted','missing','gone','flapping'];
-const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',reverted:'var(--flap)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)'};
-const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',reverted:'cofnięta zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',active:'aktywny',
+const TYPES=['new','reappeared','changed','reverted','missing','gone','flapping','filtered'];
+const TCOL={new:'var(--ok)',reappeared:'#2a9d8f',changed:'var(--warn)',reverted:'var(--flap)',missing:'#d99a3d',gone:'var(--bad)',flapping:'var(--flap)',filtered:'#7a869a'};
+const PL={new:'nowy',reappeared:'powrót',changed:'zmiana',reverted:'cofnięta zmiana',missing:'brak',gone:'zniknął',flapping:'niestabilny',filtered:'firewall: wynik niepełny',active:'aktywny',
   running:'w toku',completed:'zakończony',partial:'częściowy',failed:'błąd',cancelled:'anulowany',deferred:'odłożony'};
 let me=null, curSet='default', timer=null;
 
@@ -503,7 +503,7 @@ async function loadAssets(){
 $('a-go').onclick=()=>{assetSvc='';loadAssets()};$('a-int').onchange=loadAssets;$('a-slow').onchange=loadAssets;
 // przejscie z kafelka KPI: ustaw filtry i otworz zakladke Assety
 let assetSvc='',assetRun='',assetEvents='';
-const PL_EV={'new,reappeared':'nowe i powracające','new':'nowe','reappeared':'powracające','changed':'zmienione','missing':'braki','gone':'zniknięte'};
+const PL_EV={'new,reappeared':'nowe i powracające','new':'nowe','reappeared':'powracające','changed':'zmienione','missing':'braki','gone':'zniknięte','filtered':'za firewallem'};
 function showAssets(f){$('a-q').value='';$('a-state').value=f.state||'';$('a-kind').value=f.kind||'';
   $('a-flap').checked=!!f.flap;$('a-slow').checked=!!f.slow;$('a-int').value=f.interest||'';
   assetRun=f.run||'';assetEvents=f.events||'';go('assets')}$('a-q').onkeydown=e=>{if(e.key==='Enter')loadAssets()};

@@ -308,7 +308,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request, u store.User) {
 
 // parseEventTypes keeps only the event types the schema allows (asset_events.type CHECK).
 func parseEventTypes(v string) []string {
-	allowed := map[string]bool{"new": true, "reappeared": true, "changed": true, "reverted": true, "missing": true, "gone": true, "flapping": true}
+	allowed := map[string]bool{"new": true, "reappeared": true, "changed": true, "reverted": true, "missing": true, "gone": true, "flapping": true, "filtered": true}
 	out := []string{}
 	for _, t := range strings.Split(v, ",") {
 		if t = strings.TrimSpace(t); allowed[t] {
