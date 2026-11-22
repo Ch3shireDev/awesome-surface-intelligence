@@ -326,9 +326,13 @@ func cmdScan(args []string) {
 	if portNote != "" {
 		tr.Logf("ports: %s", portNote)
 	}
-	rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
+	recording := rec.start(setLabel, *trigger, *scheduleID, *resume, map[string]any{"parallel": *parallel, "rate_pps": *rate,
 		"discovery_args": *discArgs, "nmap_args": *svcArgs, "ports": *ports, "target_ports": byPorts.count, "window": window.String(), "targets": len(ips),
 		"policy": pol.Summary()})
+	if rec != nil && !recording {
+		tr.Logf("db: run %s is not ours - not writing to the database, results only in %s", runID, dir)
+		rec = nil
+	}
 
 	tunePath := filepath.Join(*outRoot, "tuning.json")
 	tune := loadTuning(tunePath)

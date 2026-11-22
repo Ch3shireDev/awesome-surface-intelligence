@@ -69,15 +69,17 @@ func (d *dbRecorder) ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 30*time.Second)
 }
 
-func (d *dbRecorder) start(set, trigger string, scheduleID int64, resumeOf string, profile any) {
+// start reports whether this process owns the run row. If it does not (e.g. another scan took the
+// same id within one second), the caller must drop the recorder: writing would land in the other run.
+func (d *dbRecorder) start(set, trigger string, scheduleID int64, resumeOf string, profile any) bool {
 	if d == nil {
-		return
+		return false
 	}
 	c, cancel := d.ctx()
 	defer cancel()
 	if err := d.st.CreateRun(c, d.runID, set, trigger, profile); err != nil {
 		d.logf("db: create run: %v", err)
-		return
+		return false
 	}
 	if scheduleID > 0 || resumeOf != "" {
 		if err := d.st.SetRunLinks(c, d.runID, scheduleID, resumeOf); err != nil {
@@ -87,6 +89,7 @@ func (d *dbRecorder) start(set, trigger string, scheduleID int64, resumeOf strin
 	if scheduleID > 0 {
 		d.st.SetScheduleLastRun(c, scheduleID, d.runID)
 	}
+	return true
 }
 
 func (d *dbRecorder) pending(p []string) {

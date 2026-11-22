@@ -9,7 +9,7 @@ Legenda: ✅ zrobione · 🔨 w toku · ⏳ następne · ⬜ nie zaczęte · ⏸
 M0 Stack + PoC            ██████████ 100%  ✅
 M1 Silnik skanowania      ██████████ 100%  ✅
 M2 Fundament (kontrakt+DB)██████████ 100%  ✅  DEV-0/1 ✅, SEC-1/2/3 ✅
-M3 Historia i stany       █████████░  90%  🔨  działa; LAB-T11 ✅; otwarte: kolizja ID przebiegu, LAB-T13 (gubione porty)
+M3 Historia i stany       █████████░  90%  🔨  działa; LAB-T11 ✅; otwarte: LAB-T13 (gubione porty)
 M4 Web GUI                ██████████ 100%  ✅  kod gotowy (porty per cel, hosty przy portach); panel demo do przebudowy
 M5 Fingerprint i sygnatury██████████ 100%  ✅  SEC-4/5/10 ✅, LAB-T3/T4/T6/T9/T10/T12 ✅ (34 sygnatury), DEV-7 ✅
 M6 Ochrona danych i role  ██████████ 100%  ✅  SEC-6 ✅ (pg_tde + AES-GCM + reseal), DEV-3/11/12 ✅ (4 role, konta, tokeny)
@@ -79,7 +79,7 @@ Właściciele według podziału z 10:13 CET. Zadania zamknięte: [`TASKS.md`](TA
 | **P0** | wdrożenie demo | po LAB-7 `make up` z `origin/main`; migracje 008 i 009; działa: logowanie, dodanie celu z portami, skan, eksport | do przypisania | ⏳ |
 | **P0** | SEC-9: kontrola publicznego repo | przegląd przed oddaniem potwierdzony przez właściciela | Daniel | 🟡 |
 | **P1** | LAB-7: skan zdalny | 3 przebiegi **po kolei, z jednego procesu**, na nowym zbiorze (`20261122-091214` nie liczy się: zmieszane dwa skany); wynik w `lab-organizers.md` | goose + fatusia-2 | 🔨 |
-| **P0** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | dwa skany z tej samej sekundy mają osobne ID, a błąd `create run` wyłącza zapis do bazy. Dziś drugi skan dopisuje obserwacje do cudzego przebiegu, przelicza go i zamyka. Do naprawy: jeden skan naraz | do przypisania | ⏳ |
+| **P2** | kolizja ID przebiegu (`runID` z dokładnością do sekundy) | cudzy przebieg jest już chroniony: skan, który przegrał wyścig o ID, nie pisze do bazy. Zostaje: unikalne ID, żeby zapisywały się oba skany | do przypisania | 🟡 |
 | **P1** | LAB-T13: gubione porty przy pełnym TCP | poprawka albo opisane znane ograniczenie | do przypisania | ⏳ |
 | **P1** | histogram na górze dashboardu (`7f3ff19`) | commit jest w `origin/main` przed przebudową panelu, inaczej zniknie z demo | do przypisania | ⏳ |
 | **P2** | OPS-1: dokumentacja tylko lokalnie | działający proces na 4173 słucha na `127.0.0.1` (Makefile już poprawiony) | agy | 🟡 |
@@ -90,6 +90,7 @@ Właściciele według podziału z 10:13 CET. Zadania zamknięte: [`TASKS.md`](TA
 
 | kiedy | co się zmieniło |
 |---|---|
+| 22.11 10:22 | kolizja ID przebiegu: skan bez własnego wiersza `runs` nie pisze do bazy (odtworzone dwoma równoczesnymi skanami loopback, testy z integracyjnymi zielone) |
 | 22.11 10:18 | LAB-T11 (`691406a`): wykryty firewall = wynik niepełny, zdarzenie `filtered`, migracja 009 |
 | 22.11 10:16 | przegląd przed oddaniem: porty per cel (`ad0fc60`), hosty przy portach (`835fbbc`, `19b0913`), zawężony zakres formularza celów (`acf0e23`); `go test` i `go vet` zielone na `acf0e23` (bez testów integracyjnych bazy); M3, M7, M8 skorygowane o otwarte braki |
 | 22.11 ~10:00 | ALL-1: prezentacja `docs/presentation/asi.tex` uzupełniona o wyniki LAB-1…6, prawdziwe zrzuty z `:18090` (dashboard + porównanie przebiegów), zostaje `\author`; DEV-13 potwierdzone na `:18090` (`/live/` 200, 0 błędów JS); OPS-1 (`make docs` na `127.0.0.1`); aktualizacja `ROADMAP.md` i `status.md` |
