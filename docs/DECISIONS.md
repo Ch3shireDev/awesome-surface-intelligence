@@ -337,7 +337,9 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
     - Teraz: **jeden panel na 18090**. `asi serve` i `make asi-serve` usunięte (wypisują, gdzie jest panel);
       historia i porównanie przebiegów są w panelu (z bazy, LAB-T5). `make asi-scan` bez osobnej strony: pasek w
       terminalu, przebieg zapisuje się do bazy na bieżąco i widać go w panelu (Skany, Dashboard).
-    - 8091 zostaje jako wewnętrzny element panelu (proxy `/live/` dla skanu z GUI), nie jako osobny panel.
+    - Podgląd na żywo skanu z panelu jest pod `/live/` panelu. Proces skanu wystawia go na gnieździe uniksowym
+      `ASI_LIVE_ADDR=unix:/tmp/asi-live.sock` (prawa 600, w kontenerze), a panel robi do niego proxy - **jedynym
+      portem ASI jest 18090** (wcześniej TCP 8091). Stary `.env` z `127.0.0.1:8091` dalej działa.
       `asi scan -ui` zostaje tylko jako opcja deweloperska.
 
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)

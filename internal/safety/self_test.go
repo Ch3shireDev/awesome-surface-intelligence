@@ -17,7 +17,7 @@ func TestSelfPortsFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := p.SelfPorts.String(); got != "5433,8091,18080,18090" {
+	if got := p.SelfPorts.String(); got != "5433,18080,18090" {
 		t.Fatalf("self ports: %s", got)
 	}
 	p.AddSelfPorts("127.0.0.1:9999", "")
@@ -64,7 +64,7 @@ func TestSelfPortsFromEnv(t *testing.T) {
 		t.Fatalf("false: %v %v", p, err)
 	}
 	t.Setenv("ASI_SELF_PORTS", "auto")
-	if p, err = FromEnv(); err != nil || p.SelfPorts.String() != "5433,8091,18080,18090" {
+	if p, err = FromEnv(); err != nil || p.SelfPorts.String() != "5433,18080,18090" {
 		t.Fatalf("auto: %v %v", p, err)
 	}
 	t.Setenv("ASI_SELF_PORTS", "22,8080")

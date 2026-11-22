@@ -692,15 +692,27 @@ func uploadBatch(dd *dojo.Client, t dojo.Target, svcs []findings.Service, closeO
 }
 
 func startUI(addr string, s *web.Server) *http.Server {
-	ln, err := net.Listen("tcp", addr)
+	network := "tcp"
+	if path, ok := strings.CutPrefix(addr, "unix:"); ok { // live panel behind the main panel (decision 24)
+		network, addr = "unix", path
+		os.Remove(path) // stale socket of a killed scan
+	}
+	ln, err := net.Listen(network, addr)
 	must(err)
+	if network == "unix" {
+		os.Chmod(addr, 0o600)
+	}
 	srv := &http.Server{Handler: s.Handler()}
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("ui: %v", err)
 		}
 	}()
-	fmt.Fprintf(os.Stderr, "panel: http://%s\n", addr)
+	if network == "unix" {
+		fmt.Fprintf(os.Stderr, "podglad skanu: w panelu ASI pod /live/ (gniazdo %s)\n", addr)
+	} else {
+		fmt.Fprintf(os.Stderr, "panel: http://%s\n", addr)
+	}
 	return srv
 }
 

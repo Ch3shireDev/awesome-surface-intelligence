@@ -7,12 +7,14 @@
 package app
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -874,9 +876,7 @@ func (a *App) live(w http.ResponseWriter, r *http.Request, u store.User) {
 		fail(w, 404, "no running scan")
 		return
 	}
-	target, _ := url.Parse("http://" + a.LiveAddr)
-	p := httputil.NewSingleHostReverseProxy(target)
-	p.FlushInterval = -1 // SSE
+	p := liveProxy(a.LiveAddr)
 	p.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -886,6 +886,24 @@ func (a *App) live(w http.ResponseWriter, r *http.Request, u store.User) {
 	r2.URL.Path = strings.TrimPrefix(r.URL.Path, "/live")
 	r2.Header.Del("Cookie") // the scan panel does not need our session
 	p.ServeHTTP(w, r2)
+}
+
+// liveProxy reaches the live panel of the running scan: a unix socket ("unix:/path", default - nothing listens
+// on a TCP port besides the panel itself, decision 24) or a TCP address (older .env: "127.0.0.1:8091").
+func liveProxy(addr string) *httputil.ReverseProxy {
+	target, _ := url.Parse("http://asi-live")
+	if !strings.HasPrefix(addr, "unix:") {
+		target, _ = url.Parse("http://" + addr)
+	}
+	p := httputil.NewSingleHostReverseProxy(target)
+	p.FlushInterval = -1 // SSE
+	if path, ok := strings.CutPrefix(addr, "unix:"); ok {
+		p.Transport = &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, "unix", path)
+		}}
+	}
+	return p
 }
 
 var errBusy = errors.New("skan już trwa")

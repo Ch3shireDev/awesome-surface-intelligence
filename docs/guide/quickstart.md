@@ -21,12 +21,12 @@ make asi ARGS=diff                      # zmiany względem poprzedniego przebieg
 **Jest jeden panel: http://127.0.0.1:18090** (`asi server`, stawia go `make up`, logowanie `admin` +
 `ASI_ADMIN_PASSWORD`). Tam są cele, skany z postępem na żywo, wyniki, historia, porównanie przebiegów, role i
 eksport. Skan uruchomiony z terminala (`make asi-scan`) pokazuje pasek w terminalu, a jego przebieg i wyniki są w
-tym samym panelu (decyzja 24; dawne osobne podglądy na 8094 i 8095 usunięte).
+tym samym panelu. Podgląd na żywo skanu uruchomionego z panelu jest częścią panelu (`/live/`, przez gniazdo
+`unix:/tmp/asi-live.sock` w kontenerze, bez osobnego portu). Decyzja 24; dawne osobne podglądy na 8091, 8094 i 8095 usunięte.
 
 | port | co |
 |---|---|
 | **18090** | panel ASI |
-| 8091 | wewnętrzny podgląd postępu skanu, wyświetlany w panelu (zakładka Skany); nie otwiera się go osobno |
 | 8080 (fatusia-1: 18080) | DefectDojo |
 | 5433 | baza `asi-db` (tylko `127.0.0.1`) |
 | 4173 | dokumentacja (`make docs`) |

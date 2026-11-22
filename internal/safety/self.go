@@ -21,7 +21,7 @@ import (
 var defaultSelfPorts = []struct{ env, def string }{
 	{"DD_PORT", "8080"},
 	{"ASI_WEB_ADDR", "18090"},
-	{"ASI_LIVE_ADDR", "8091"},
+	{"ASI_LIVE_ADDR", "unix:/tmp/asi-live.sock"}, // unix socket: no port (decision 24)
 	{"ASI_DB_PORT", "5433"},
 }
 
