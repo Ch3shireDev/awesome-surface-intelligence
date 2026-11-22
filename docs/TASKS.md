@@ -8,6 +8,7 @@ Stan na 21.11.2026, ~20:00 CET. Źródła: PDF zadania, `VISION.md` (architektur
 | pole | wartość |
 |---|---|
 | nazwa projektu | **Asia - Attack Surface Intelligence Aggregator** |
+| zespół | **Raz Kozie Śmierć**, stolik 10A: Fatoumata Bocar (team lead), Daniel Gustaw, Igor Nowicki, Borys Rogizny |
 | repozytorium | https://github.com/Ch3shireDev/awesome-surface-intelligence |
 | zadanie | Attack Surface Intelligence (CBI AGH) |
 | terminy | **21.11 20:00 DRAFT ✅ złożone**, **22.11 11:00 FINALNE** (wszystkie pola + prezentacja i materiały) |
