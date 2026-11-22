@@ -81,7 +81,7 @@ jobs:
           set -o pipefail
           for t in roles users tokens; do
             bash scripts/test-$t.sh | tee /tmp/test-$t.log
-            if grep -qE '^ *FAIL |FAIL=[1-9]|[1-9][0-9]* FAIL' /tmp/test-$t.log; then
+            if grep -qE '^ *FAIL |FAIL=[1-9]|, *[1-9][0-9]* FAIL' /tmp/test-$t.log; then
               echo "::error::test-$t"; exit 1
             fi
           done
