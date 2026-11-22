@@ -492,8 +492,9 @@ async function loadAssets(){
       :esc(a.service||'');
     return `<tr class="click${isH?' host-row':''}" data-k="${esc(a.key)}"><td class="mono${!isH&&hasHost[a.ip]?' port-sub':''}">${esc(a.key)}</td><td>${svcCell}</td><td>${fmtHTTPMs(a.http_ms,a.slow_http)}</td><td>${badge(a.state,'s')}${a.flapping?' '+badge('flapping'):''}</td><td class="i-${a.interest||'low'}">${a.interest||''}${a.verdict?` <span class="badge s-active" title="ocena analityka">${a.verdict==='false_positive'?'fałszywy alarm':'zaakceptowane'}</span>`:''}</td><td>${a.seen_count}×</td><td>${fmtT(a.last_seen)}</td><td>${tags(a.user_tags)}${a.user_note?' <span title="notatka">✎</span>':''}</td></tr>`;
   }).join('')||'<tr><td class="empty" colspan="8">Brak assetów. Uruchom skan.</td></tr>';
+  const hostWord=n=>n===1?'host':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'hosty':'hostów');
   const hostN=Object.keys(hasHost).length, portN=rows.length-hostN;
-  const sumTxt=hostN&&portN?`${rows.length} assetów (${hostN} hostów, ${portN} portów)`:`${rows.length} assetów`;
+  const sumTxt=hostN&&portN?`${rows.length} assetów (${hostN} ${hostWord(hostN)}, ${portN} ${portWord(portN)})`:`${rows.length} assetów`;
   $('a-count').innerHTML=sumTxt+(assetSvc?` · usługa zawiera „${esc(assetSvc)}” <button class="link" id="a-svc-x">wyczyść</button>`:'')
     +(assetRun?` · zmiany z przebiegu <b>${esc(assetRun)}</b> (${esc(PL_EV[assetEvents]||assetEvents)}) <button class="link" id="a-run-x">wyczyść</button>`:'');
   if($('a-run-x'))$('a-run-x').onclick=()=>{assetRun='';assetEvents='';loadAssets()};
