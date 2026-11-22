@@ -110,10 +110,10 @@
     \column{0.47\textwidth}
     \begin{block}{Test skali (\cmd{127.0.0.0/18})}
       \small
-      \textbf{16 384 adresy} w \textbf{86 s} end-to-end (182 MB RAM),
+      Rdzeń: \textbf{16 384 adresy} w \textbf{86 s} (loopback, 2 porty, bez \cmd{-sV} i HTTP), 182 MB RAM;
       dashboard \textbf{0,22 s} przy 49 tys. assetów.
     \end{block}
-    \begin{block}{Lab organizatorów (LAB-1…LAB-6)}
+    \begin{block}{Lab organizatorów}
       \small
       Wszystkie 4 stacki (\cmd{custom-network}, \cmd{modern}, \cmd{modern-proxy}, \cmd{vulnerable}):
       40--128 s/przebieg; Toxiproxy 500 ms wykryte (próg 300 ms) bez fałszywego \cmd{changed}.
@@ -168,7 +168,7 @@
     \shot{0.97\linewidth}{img/diff.png}
 
     \vspace{1.5mm}\scriptsize
-    Demo 2 przebiegów: nowy host (\cmd{.16}), brakujący host (\cmd{.14}), zmiana serwera (\cmd{.15:80}), spójne nazwy z historią (LAB-T5).
+    Demo 2 przebiegów: nowy host (\cmd{.16}), brakujący host (\cmd{.14}), zmiana serwera (\cmd{.15:80}), spójne nazwy z historią.
   \end{columns}
 \end{frame}
 
@@ -184,7 +184,7 @@
     \end{itemize}
     \scriptsize
     \begin{tabular}{@{}ll@{}}\toprule
-      rola & uprawnienia (1:1 z PDF) \\\midrule
+      rola & uprawnienia \\\midrule
       \cmd{admin} & administracja, konta, audit log \\
       \cmd{operator} & dodawanie, usuwanie, modyfikacja \\
       \cmd{analyst} & modyfikacja i odczyt \\
@@ -194,7 +194,7 @@
     \shot{0.97\linewidth}{img/dashboard.png}
 
     \vspace{1.5mm}\scriptsize
-    Jedynym portem ASI jest \cmd{18090}; tokeny API (SHA-256) w zakładce Konto; testy \cmd{test-roles} 28/28, \cmd{test-users} 35/35, \cmd{test-tokens} 24/24, \cmd{test-router} 49/49.
+    Jedynym portem ASI jest \cmd{18090}; tokeny API (SHA-256) w zakładce Konto; role sprawdzane testami API.
   \end{columns}
 \end{frame}
 
@@ -202,7 +202,7 @@
 \begin{frame}{Bezpieczeństwo skanowania i danych}
   \begin{columns}[T]
     \column{0.48\textwidth}
-    \textbf{Bezpieczne skanowanie (SEC-8, LAB-T2)}
+    \textbf{Bezpieczne skanowanie}
     \begin{itemize}\small
       \item zakres i wykluczenia sprawdzane w planie \textbf{i w workerze} (wbudowane blokady metadanych 169.254/16, multicast)
       \item twarde limity \cmd{ASI\_MAX\_RATE} i \cmd{ASI\_MAX\_PARALLEL}, allowlista flag nmapa i portów
@@ -210,7 +210,7 @@
       \item sygnatury bez exploitów i logowania (lint w testach, nuclei \cmd{-ni -duc})
     \end{itemize}
     \column{0.48\textwidth}
-    \textbf{Ochrona danych w spoczynku (SEC-6)}
+    \textbf{Ochrona danych w spoczynku}
     \begin{itemize}\small
       \item PostgreSQL z TDE (\cmd{pg\_tde}): 15/15 tabel, indeksy i WAL szyfrowane AES-256
       \item pola wrażliwe (\cmd{\_enc}) dodatkowo AES-256-GCM w aplikacji z rotacją kluczy (\cmd{asi db reseal})
@@ -238,7 +238,7 @@
     \end{tabular}
 
     \medskip\footnotesize
-    \textbf{Wynik LAB-6} (5 przebiegów, zmiana stacku i powrót):
+    \textbf{Wynik na labie organizatorów} (5 przebiegów, zmiana stacku i powrót):
     \cmd{missing} $\rightarrow$ \cmd{gone} po progu, po powrocie \textbf{reactivated 7 / created 0},
     \textbf{0 duplikatów} w API we wszystkich 4 testach. Przebieg częściowy lub po \cmd{timedout} nigdy nie zamyka wyników.
     \column{0.39\textwidth}
@@ -256,13 +256,13 @@
     \column{0.52\textwidth}
     \textbf{Co dostarczamy:}
     \begin{itemize}\small
-      \item Discovery \textbf{16 384 IP w 86 s} z kontrolą tempa, oknami czasowymi i wznawianiem.
+      \item Duże zakresy (rdzeń sprawdzony na \textbf{16 384 IP}) z kontrolą tempa, oknami czasowymi i wznawianiem.
       \item Historia zmian, hosty niestabilne i porównanie przebiegów (panel + DefectDojo bez duplikatów).
       \item Fingerprint HTTP/TLS, czas odpowiedzi i \textbf{34 bezpieczne sygnatury} (CMS, panele, IoT).
       \item Jeden panel \cmd{:18090}, 4 role RBAC, audit log, szyfrowanie \cmd{pg\_tde} + AES-256-GCM.
     \end{itemize}
     \column{0.44\textwidth}
-    \textbf{Czysty start od zera (zweryfikowany)}\\
+    \textbf{Uruchomienie od zera}\\
     \cmd{make env \&\& make up \&\& make demo}
 
     \medskip
