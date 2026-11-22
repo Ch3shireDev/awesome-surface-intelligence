@@ -88,6 +88,7 @@ TCP (`tcp: inputs/data`).
 | `asi-adminer` | low | panel bazy danych Adminer (tytuł/formularz, wersja) |
 | `asi-dvwa` | medium | Damn Vulnerable Web Application (celowo podatna aplikacja testowa/labowa) |
 | `asi-gitea` | info | serwer repozytoriów Gitea (`i_like_gitea`, stopka, wersja) |
+| `asi-gitea-install` | high | Gitea w trybie instalacji: instalator dostępny bez logowania = przejęcie instancji (tytuł `Installation - Gitea` + pola formularza, tylko GET; LAB-T6) |
 | `asi-rabbitmq-management` | low | panel zarządzania RabbitMQ Management (tytuł lub `WWW-Authenticate`) |
 | `asi-nginx-proxy-manager` | low | panel Nginx Proxy Manager (`/` lub `/api/` z wersją) |
 | `asi-traefik-dashboard` | medium | dashboard/API Traefik bez uwierzytelniania (`--api.insecure`, `/api/version`, `/dashboard/`) |

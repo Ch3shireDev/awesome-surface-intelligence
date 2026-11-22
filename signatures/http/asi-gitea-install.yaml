@@ -1,0 +1,30 @@
+id: asi-gitea-install
+info:
+  name: Gitea - niedokończona instalacja (instalator dostępny bez logowania)
+  author: asi
+  severity: high
+  description: >-
+    Gitea działa w trybie instalacji: formularz instalatora (baza danych, konto administratora) jest
+    dostępny dla każdego, kto otworzy stronę. Pierwsza osoba, która go wypełni, przejmuje instancję
+    (konto administratora, dostęp do repozytoriów). Wykrywanie wyłącznie po treści strony głównej (GET),
+    sygnatura niczego nie wysyła. Znalezione na labie organizatorów (LAB-1, LAB-T6).
+  tags: asi,gitea,install,exposure,misconfig
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex: ['(?i)<title>\s*installation\s*-\s*gitea']
+      - type: regex
+        part: body
+        regex: ['(?i)(action=["''][^"'']*/(user/)?install["'']|name=["'']admin_name["'']|name=["'']db_type["''])']
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex: ['(?i)<title>([^<]{1,80})</title>']

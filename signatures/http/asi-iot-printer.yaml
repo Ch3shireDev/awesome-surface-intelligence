@@ -12,6 +12,7 @@ http:
       - "{{BaseURL}}/hp/device/DeviceInformation/View"
       - "{{BaseURL}}/PRESENTATION/HTML/TOP/PRTINFO.HTML"
       - "{{BaseURL}}/general/status.html"
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: and
     matchers:
       - type: regex

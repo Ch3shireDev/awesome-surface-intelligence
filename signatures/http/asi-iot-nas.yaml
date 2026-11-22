@@ -10,6 +10,7 @@ http:
     path:
       - "{{BaseURL}}/"
       - "{{BaseURL}}/webman/index.cgi"
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: or
     matchers:
       - type: regex

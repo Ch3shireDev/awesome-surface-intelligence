@@ -10,6 +10,7 @@ http:
     path:
       - "{{BaseURL}}/"
       - "{{BaseURL}}/doc/page/login.asp"
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: or
     matchers:
       - type: regex

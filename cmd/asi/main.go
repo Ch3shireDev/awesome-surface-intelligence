@@ -555,6 +555,9 @@ func cmdScan(args []string) {
 	}
 	findings.Sort(svcs)
 	findings.ApplyVerdicts(svcs, verdicts)
+	// LAB-T12: one score everywhere - services.json and the DefectDojo report use the panel's Rank
+	// (HTTP + signatures + verdicts), not the nmap-only score
+	rankServices(svcs, allObs, verdicts, time.Now())
 	must(findings.Save(filepath.Join(dir, "services.json"), svcs))
 	must(os.WriteFile(filepath.Join(dir, "findings_defectdojo.json"), findings.GenericJSON(svcs), 0o644))
 	obs.Sort(allObs)

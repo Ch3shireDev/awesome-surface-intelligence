@@ -31,6 +31,13 @@ Globalnie: `results/tuning.json` — zmierzone `s/host` dla faz (start następne
   "assets": ["sh"],
   "tags": ["prod", "public", "domain", "monitoring", "admin"],
   "interest": "medium",
+  "score": 50,
   "interest_reason": "alt HTTP / dev on a public IP"
 }
 ```
+
+`interest`, `score` (0–100) i `interest_reason` liczy ta sama funkcja co dashboard panelu
+(`findings.Rank`, [ocena](/guide/insights)): port i usługa z nmapa, sygnatury, sygnały HTTP/TLS i ocena
+analityka (LAB-T12). Ta sama wartość trafia do severity i tagu `interest-…` w teście `ASI discovery`
+w DefectDojo. Panel dodaje jeszcze dwa składniki z historii w bazie, których plik przebiegu nie zna:
++10 za nową ekspozycję i +5 za niestabilność (flapping), więc wynik w panelu może być o tyle wyższy.

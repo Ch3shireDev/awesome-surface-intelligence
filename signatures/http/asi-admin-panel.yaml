@@ -13,7 +13,7 @@ http:
       - "{{BaseURL}}/login"
       - "{{BaseURL}}/wp-admin/"
       - "{{BaseURL}}/manager/html"
-    stop-at-first-match: false
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: and
     matchers:
       - type: status

@@ -11,7 +11,7 @@ http:
       - "{{BaseURL}}/version"
       - "{{BaseURL}}/api/version"
       - "{{BaseURL}}/actuator/info"
-    stop-at-first-match: false
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: and
     matchers:
       - type: status

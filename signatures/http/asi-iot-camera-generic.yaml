@@ -10,6 +10,7 @@ http:
     path:
       - "{{BaseURL}}/"
       - "{{BaseURL}}/index.htm"
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: and
     matchers:
       - type: regex

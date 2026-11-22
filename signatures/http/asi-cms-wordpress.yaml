@@ -10,7 +10,7 @@ http:
     path:
       - "{{BaseURL}}/wp-login.php"
       - "{{BaseURL}}/readme.html"
-    stop-at-first-match: false
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: or
     matchers:
       - type: word

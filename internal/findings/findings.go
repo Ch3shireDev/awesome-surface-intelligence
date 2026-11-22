@@ -28,7 +28,8 @@ type Service struct {
 	Domains   []string `json:"domains,omitempty"`
 	Assets    []string `json:"assets,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
-	Interest  string   `json:"interest"` // high | medium | low
+	Interest  string   `json:"interest"`        // high | medium | low
+	Score     int      `json:"score,omitempty"` // 0-100 from Rank (same as the panel), set at the end of a scan
 	Reason    string   `json:"interest_reason,omitempty"`
 	Verdict   string   `json:"verdict,omitempty"` // analyst: false_positive | accepted ("" = none)
 }

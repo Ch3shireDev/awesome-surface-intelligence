@@ -10,6 +10,7 @@ http:
     path:
       - "{{BaseURL}}/cgi-bin/luci"
       - "{{BaseURL}}/luci/"
+    stop-at-first-match: true # LAB-T12: one hit per port
     matchers-condition: and
     matchers:
       - type: status
