@@ -166,10 +166,10 @@ type launchOpts struct {
 func (a *App) launch(ctx context.Context, req ScanRequest, by string, o launchOpts) error {
 	req.Set = setName(req.Set)
 	if req.Parallel == 0 {
-		req.Parallel = 5
+		req.Parallel = 1
 	}
 	if req.Rate == 0 {
-		req.Rate = 300
+		req.Rate = 1000
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()

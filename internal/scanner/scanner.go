@@ -70,6 +70,9 @@ func (z *Sizer) Next(remaining, parallel int) int {
 	z.mu.Lock()
 	defer z.mu.Unlock()
 	n := z.Fixed
+	if n > 0 && z.Max > 0 {
+		n = min(n, z.Max)
+	}
 	if n <= 0 {
 		n = z.Start
 		if z.ewma > 0 {
@@ -203,6 +206,8 @@ func RunPhase(ctx context.Context, cfg PhaseConfig, ips []string, tr *progress.T
 		n := nSelf - next
 		if !self {
 			n = cfg.Sizer.Next(len(ips)-next, cfg.Parallel)
+		} else if cfg.Sizer.Max > 0 {
+			n = min(n, cfg.Sizer.Max) // the host timeout applies to the scanner host as well
 		}
 		if cfg.Group != nil {
 			g := cfg.Group(ips[next])

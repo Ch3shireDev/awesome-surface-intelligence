@@ -103,7 +103,12 @@ func (a *App) saveSchedule(w http.ResponseWriter, r *http.Request, u store.User)
 		return
 	}
 	if id := r.PathValue("id"); id != "" {
-		sc.ID, _ = strconv.ParseInt(id, 10, 64)
+		n, err := strconv.ParseInt(id, 10, 64)
+		if err != nil || n <= 0 { // id 0 would INSERT: creating needs the operator route
+			fail(w, 404, "nie ma harmonogramu o tym id")
+			return
+		}
+		sc.ID = n
 	}
 	sc.Name, sc.Set = strings.TrimSpace(sc.Name), setName(sc.Set)
 	if sc.Name == "" || len(sc.Name) > 80 {
@@ -127,10 +132,10 @@ func (a *App) saveSchedule(w http.ResponseWriter, r *http.Request, u store.User)
 		}
 	}
 	if req.Parallel == 0 {
-		req.Parallel = 5
+		req.Parallel = 1
 	}
 	if req.Rate == 0 {
-		req.Rate = 300
+		req.Rate = 1000
 	}
 	req.Window = ""
 	if _, err := req.args("x", a.ResultsDir, a.LiveAddr); err != nil { // same validation as a manual scan

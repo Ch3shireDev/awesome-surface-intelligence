@@ -2,7 +2,7 @@
 //
 //	asi convert -in targets/targets.csv -out targets/targets.json
 //	asi plan    [-targets targets/targets.csv]
-//	asi scan    [-targets ...] [-parallel 5] [-rate 300] [-upload live|end|off]
+//	asi scan    [-targets ...] [-parallel 1] [-rate 1000] [-upload live|end|off]
 //	asi upload  [-run results/<id>]
 //	asi diff    [runA runB]          (default: two latest)
 package main
@@ -197,8 +197,8 @@ func loadTuning(path string) tuning {
 func cmdScan(args []string) {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	pf := addPlanFlags(fs)
-	parallel := fs.Int("parallel", 5, "nmap processes at once")
-	rate := fs.Int("rate", 300, "GLOBAL packet rate limit (pps), split evenly between nmap processes")
+	parallel := fs.Int("parallel", 1, "nmap processes at once")
+	rate := fs.Int("rate", 1000, "GLOBAL packet rate limit (pps), split evenly between nmap processes")
 	chunk := fs.Int("chunk", 0, "fixed hosts per service chunk (0 = adaptive)")
 	target := fs.Duration("chunk-target", 45*time.Second, "adaptive: desired duration of one service chunk")
 	dChunk := fs.Int("discovery-chunk", 0, "fixed hosts per discovery chunk (0 = adaptive)")
@@ -410,9 +410,25 @@ func cmdScan(args []string) {
 		svcs  []findings.Service
 	)
 	z := &scanner.Sizer{Fixed: *chunk, Target: *target, Min: 1, Max: 64, Start: 4}
+	svcTimeout := *chunkTimeout
+	fit := func(args string) string {
+		fitted, hosts, to := nmapad.FitTimeout(args, perProcN)
+		if hosts > 0 {
+			z.Max = min(z.Max, hosts)
+		}
+		if to > 0 {
+			svcTimeout = max(svcTimeout, to+2*time.Minute)
+			tr.Logf("services: %d pps per process is slow for this port range - host timeout raised to %s", perProcN, to.Round(time.Second))
+		}
+		return fitted
+	}
+	*svcArgs = fit(*svcArgs)
+	for spec, args := range byPorts.args {
+		byPorts.args[spec] = fit(args)
+	}
 	z.Seed(tune["services"])
 	svcRes := scanner.RunPhase(ctx, scanner.PhaseConfig{Name: "services", RunID: runID, Adapter: nmapad.Services(*svcArgs),
-		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: *chunkTimeout,
+		Stage: stageCfg, Parallel: *parallel, Sizer: z, ChunkTimeout: svcTimeout,
 		OutDir: filepath.Join(dir, "services"), OnStart: rec.chunkStart("services"), Guard: pol,
 		Group: byPorts.group(), AdapterFor: byPorts.adapter(nmapad.Services(*svcArgs))}, up, tr,
 		func(r scanner.ChunkResult) {

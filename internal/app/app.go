@@ -664,7 +664,7 @@ func (a *App) updateTarget(w http.ResponseWriter, r *http.Request, u store.User)
 	// DEV-12: PUT edytuje ISTNIEJĄCY cel (rola analyst wystarcza). Zmiana samej wartości
 	// to w praktyce usunięcie starego i dodanie nowego, więc wymaga operatora.
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	cur, err := a.St.TargetValueByID(r.Context(), id)
+	cur, set, err := a.St.TargetByID(r.Context(), id)
 	if err != nil {
 		fail(w, 404, "nie ma celu o tym id")
 		return
@@ -677,7 +677,7 @@ func (a *App) updateTarget(w http.ResponseWriter, r *http.Request, u store.User)
 		fail(w, 400, err.Error())
 		return
 	}
-	_, err = a.St.UpsertTargets(r.Context(), setName(t.Set), []targets.Target{{Target: t.Value, Asset: t.Asset,
+	_, err = a.St.UpsertTargets(r.Context(), set, []targets.Target{{Target: t.Value, Asset: t.Asset,
 		Owner: t.Owner, Tags: t.Tags, Enabled: t.Enabled, Note: t.Note, Ports: t.Ports}})
 	if err != nil {
 		fail(w, 500, err.Error())

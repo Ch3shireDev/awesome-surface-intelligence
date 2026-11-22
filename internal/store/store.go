@@ -489,13 +489,12 @@ func (s *Store) TargetSets(ctx context.Context) ([]string, error) {
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-// TargetValueByID returns the value (IP/CIDR/domain) of a target row. Used by the GUI
+// TargetByID returns the value (IP/CIDR/domain) and the set of a target row. Used by the GUI
 // edit path (DEV-12), where analyst may modify enabled/tags/note/owner of an EXISTING
-// target but may not create one by changing its value.
-func (s *Store) TargetValueByID(ctx context.Context, id int64) (string, error) {
-	var v string
-	err := s.DB.QueryRow(ctx, `SELECT value FROM targets WHERE id=$1`, id).Scan(&v)
-	return v, err
+// target but may not create one by changing its value or by naming another set.
+func (s *Store) TargetByID(ctx context.Context, id int64) (value, set string, err error) {
+	err = s.DB.QueryRow(ctx, `SELECT t.value, ts.name FROM targets t JOIN target_sets ts ON ts.id=t.set_id WHERE t.id=$1`, id).Scan(&value, &set)
+	return value, set, err
 }
 
 func (s *Store) DeleteTarget(ctx context.Context, id int64) (string, error) {

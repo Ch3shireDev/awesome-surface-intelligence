@@ -19,8 +19,8 @@ Plus flagi `plan`.
 
 | flaga | domyślnie | opis |
 |---|---|---|
-| `-parallel` | `5` | procesy nmap naraz |
-| `-rate` | `300` | globalny limit pps |
+| `-parallel` | `1` | procesy nmap naraz |
+| `-rate` | `1000` | globalny limit pps |
 | `-chunk` | `0` (adaptacyjnie) | stały rozmiar paczki usług |
 | `-chunk-target` | `45s` | docelowy czas paczki usług |
 | `-discovery-chunk` | `0` (adaptacyjnie) | stały rozmiar paczki discovery |

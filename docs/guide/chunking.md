@@ -63,7 +63,7 @@ postęp = (ukończone + X% · (hosty − ukończone) · 0.95) / hosty     # mono
 
 | flaga | działanie |
 |---|---|
-| `-rate 300` | **globalny** limit pps, dzielony równo: każdy nmap dostaje `--max-rate rate/parallel` |
+| `-rate 1000` | **globalny** limit pps, dzielony równo: każdy nmap dostaje `--max-rate rate/parallel` |
 | `-chunk-timeout 20m` | zabija pojedynczy nmap (zawieszony host nie blokuje workera) |
 | `-window 2h` | po upływie okna: zabicie trwających nmapów, nowe paczki nie startują, run = `interrupted` |
 | Ctrl+C | jak `-window` — częściowe wyniki są zapisywane |

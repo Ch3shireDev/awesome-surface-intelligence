@@ -53,7 +53,7 @@ printf '192.0.2.1   # brama labu\n' > targets/exclude.txt
 | `--min-rate` | **zabronione** | omijałoby limit tempa |
 | timing | maks. `-T4` | `-T5` (insane) odrzucone |
 | `--max-retries` | 1 (discovery) / 2 (usługi), maks. 10 | |
-| `--host-timeout` | 10 min na host | |
+| `--host-timeout` | 10 min na host | przy pełnym TCP i niskim tempie na proces wydłużany automatycznie, a paczka zmniejszana, żeby host nie oddał zera usług |
 | `-chunk-timeout` | 20 min na paczkę | |
 | `-window` | twarde okno czasowe całego przebiegu | |
 | `-sV --version-light` | lekkie sondy wersji (intensywność 2 zamiast 7) | |
