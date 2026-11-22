@@ -20,7 +20,7 @@ więc jeden przebieg trwa ok. 20–30 s.
 
 ## Pliki celów do wgrania
 
-Gotowe pliki do formularza **Cele → Import** w panelu (`asi server`, :8090) albo do CLI
+Gotowe pliki do formularza **Cele → Import** w panelu (`asi server`, :18090) albo do CLI
 (`asi scan -targets …`). Wszystkie trzy formaty opisują ten sam zakres labu: 12 adresów,
 192.0.2.8–.15 i .16–.19.
 

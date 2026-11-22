@@ -46,21 +46,25 @@ zestawem są:
 
 ### 2. Konflikty portów z naszym stackiem
 
+Od 22.11 (decyzja 23) **panel ASI ma domyślnie port 18090**, więc DVWA z `vulnerable` (8090) już z nim nie koliduje.
+Zostaje jeden konflikt:
+
 | port | lab | ASI |
 |---|---|---|
-| `8080` | `modern`: WordPress | DefectDojo (`DD_PORT`) |
-| `8090` | `vulnerable`: DVWA | panel ASI (`ASI_WEB_ADDR`) |
+| `8080` | `modern`: WordPress | DefectDojo (`DD_PORT`, domyślnie 8080) |
 
-Przed testem `modern` / `vulnerable` przenieść nasze porty w `.env` (np. `DD_PORT=18080`,
-`DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` na 18080, `ASI_WEB_ADDR=127.0.0.1:18090`) i `make up`.
+W zespole ten konflikt nie występuje: DefectDojo stoi tylko na maszynie kanonicznej (fatusia-1) i to na 18080
+(decyzja 22), pozostałe VM mają sam skaner. Dotyczy jedynie pełnego stacku z domyślnym DD (np. jury na jednej
+maszynie): przed `modern` przenieść DefectDojo w `.env` (`DD_PORT=18080`, `DD_SITE_URL` i
+`DD_CSRF_TRUSTED_ORIGINS` na 18080) i `make up`.
 
 ### 3. Skanujemy sami siebie
 
 Cel to `127.0.0.1` (albo IP VM), na którym działa też ASI i DefectDojo. **Załatwione przez LAB-T2:** na hoście
 skanera porty naszego stacku (z `.env`: `DD_PORT`, `ASI_WEB_ADDR`, `ASI_LIVE_ADDR`, `ASI_DB_PORT` + 8094, 8095)
 są pomijane automatycznie, a reszta portów jest skanowana normalnie. Ręczna lista portów bez naszych nie jest
-już potrzebna. Po przeniesieniu portów w `.env` (pkt 2) wykluczenie idzie za nimi, więc WordPress na 8080
-i DVWA na 8090 są skanowane. Szczegóły: [Bezpieczeństwo](safety.md#skaner-nie-skanuje-samego-siebie-lab-t2).
+już potrzebna. Wykluczenie idzie za wartościami z `.env`, więc DVWA na 8090 (panel jest na 18090) i, po
+przeniesieniu DD (pkt 2), WordPress na 8080 są skanowane. Szczegóły: [Bezpieczeństwo](safety.md#skaner-nie-skanuje-samego-siebie-lab-t2).
 
 ### 4. Fingerprint: co powinniśmy rozpoznać
 
@@ -208,7 +212,7 @@ przebiegami. To prawdziwe usługi hosta skanera, w labie jury poza zakresem.
 ## Wyniki LAB-4 (21.11, `vulnerable`, VM fatusia-hacknation-1)
 
 Własna kopia labu, stack **z nakładką** `docker/lab-org/vulnerable.bind.yml` (wszystkie 15 portów tylko na
-`127.0.0.1`, sprawdzone `ss -ltn`). Panel ASI przeniesiony na `ASI_WEB_ADDR=127.0.0.1:18090` (DVWA zajmuje 8090),
+`127.0.0.1`, sprawdzone `ss -ltn`). Panel ASI na `ASI_WEB_ADDR=127.0.0.1:18090` (DVWA zajmuje 8090; od decyzji 23 to domyślny port panelu),
 DD na 18080. Domyślne ustawienia skanera (`-ports auto`, pełne TCP), jeden przebieg 124 s.
 
 | kryterium | wynik |
@@ -284,7 +288,8 @@ Oczekiwane wyniki i kryteria zaliczenia: zadania `LAB-1` … `LAB-7` w [TASKS](.
 ## Kilka maszyn w tailnecie (decyzja 19)
 
 Zespół ma kilka VM w Tailscale. **Jeden stack naraz na maszynę**, ale na wielu maszynach jednocześnie. Stacki
-nie kolidują portami między sobą, tylko z naszym stackiem (`modern` 8080 = DefectDojo, `vulnerable` 8090 = panel ASI).
+nie kolidują portami między sobą. Z naszym stackiem koliduje już tylko `modern` (8080 = domyślny DefectDojo); panel ASI
+ma od decyzji 23 port 18090.
 
 | gdzie stoi skaner | cel w pliku celów | co widać |
 |---|---|---|
@@ -330,9 +335,15 @@ czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyst
 
    | stack labu | koliduje z | w `.env` |
    |---|---|---|
-   | `modern` | kanoniczny DD (tylko na maszynie z DD) | `DD_PORT=18080`, `DD_SITE_URL` i `DD_CSRF_TRUSTED_ORIGINS` na 18080 |
-   | `vulnerable` | panel ASI 8090 | `ASI_WEB_ADDR=127.0.0.1:18090` |
-   | `custom-network`, `modern-proxy` | — | — |
+   | stack labu | koliduje z | w `.env` |
+   |---|---|---|
+   | wszystkie cztery | — | — |
+
+   Od 22.11 nic nie trzeba przenosić: DefectDojo stoi tylko na maszynie kanonicznej (fatusia-1) i to na **18080**
+   (decyzja 22), a panel ASI ma domyślnie **18090** (decyzja 23), więc 8080 (`modern`) i 8090 (`vulnerable`)
+   są wolne dla labu. Wyjątek: starszy `.env` może mieć jeszcze `ASI_WEB_ADDR=127.0.0.1:8090` albo lokalny DD
+   na 8080 (`make env-sync` nie zmienia istniejących wartości) - wtedy ustaw `ASI_WEB_ADDR=127.0.0.1:18090`
+   i `make up` przed `vulnerable`/`modern`.
 
    Wykluczenie własnych portów ze skanu (LAB-T2) samo idzie za nowymi wartościami.
 5. **Start z nakładką** (porty labu tylko na `LAB_BIND`, domyślnie `127.0.0.1`):
@@ -347,6 +358,10 @@ czasie (LAB-6 na fatusia-1 szedł równolegle z LAB-5 na fatusia-2, wyniki czyst
    Sprawdzone `docker compose config`: bez nakładki 31 portów czterech stacków na `0.0.0.0`, z nakładką wszystkie na `127.0.0.1`.
 6. **Wynik** w tabeli zadania i w sekcji „Wyniki LAB-n” niżej, z nazwą VM (różne VM = różny szum własnych usług,
    dlatego engagement nazywamy `lab-org@<vm>`).
+7. **Sprzątanie po teście:** `docker compose -f docker-compose-<stack>.yml -f ~/asi/docker/lab-org/<stack>.bind.yml down -v`.
+   Portów naszego stacku nie przestawiamy (krok 4), więc nie ma czego przywracać. Kontrola:
+   `grep -E '^(ASI_WEB_ADDR|DD_PORT)=' .env` i `ss -ltn | grep -E ':(18090|18080) '`. (Lekcja z LAB-4: panel
+   przeniesiony na czas testu i nieprzywrócony „zniknął” z 8090 - stąd decyzja 23.)
 
 **Firewall po drodze:** jeśli porty nie odpowiadają, bo po drodze stoi filtr (tailscale ACL, firewall VM), ASI
 ma to pokazać jako „nie da się sprawdzić”, nie jako brak usług - patrz decyzja 20 i `LAB-T11`.

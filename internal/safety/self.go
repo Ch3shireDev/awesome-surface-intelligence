@@ -20,7 +20,7 @@ import (
 // Default ports of the stack when .env does not say otherwise.
 var defaultSelfPorts = []struct{ env, def string }{
 	{"DD_PORT", "8080"},
-	{"ASI_WEB_ADDR", "8090"},
+	{"ASI_WEB_ADDR", "18090"},
 	{"ASI_LIVE_ADDR", "8091"},
 	{"ASI_DB_PORT", "5433"},
 }
@@ -57,7 +57,7 @@ func loadSelf(p *Policy) error {
 	return nil
 }
 
-// portOf returns the port of "8080", ":8090" or "127.0.0.1:8090" ("" if none).
+// portOf returns the port of "8080", ":18090" or "127.0.0.1:18090" ("" if none).
 func portOf(v string) string {
 	v = strings.TrimSpace(v)
 	if i := strings.LastIndexByte(v, ':'); i >= 0 {

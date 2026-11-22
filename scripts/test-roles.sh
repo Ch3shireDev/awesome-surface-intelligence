@@ -3,9 +3,9 @@
 # Macierz: viewer = odczyt, analyst = + modyfikacja istniejących wartości, operator =
 # + dodawanie/usuwanie/uruchamianie, admin = + konta. Tylko localhost; tworzy i usuwa
 # konta test-roles-* oraz zbiór celów test-roles-*.
-# Użycie: BASE=http://127.0.0.1:8090 bash scripts/test-roles.sh
+# Użycie: BASE=http://127.0.0.1:18090 bash scripts/test-roles.sh
 set -u
-BASE=${BASE:-http://127.0.0.1:8090}
+BASE=${BASE:-http://127.0.0.1:18090}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 J=$(mktemp); rm -f "$J"
 set -a; . "$ROOT/.env"; set +a

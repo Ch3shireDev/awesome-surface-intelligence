@@ -80,7 +80,7 @@ panel, DefectDojo i asi-db jako „znaleziska” i wysyłał do nich sondy `-sV`
 | porty stacku (domyślnie z `.env`) | |
 |---|---|
 | `DD_PORT` | DefectDojo (8080) |
-| port z `ASI_WEB_ADDR`, `ASI_LIVE_ADDR` | panel ASI i postęp na żywo (8090, 8091) |
+| port z `ASI_WEB_ADDR`, `ASI_LIVE_ADDR` | panel ASI i postęp na żywo (18090, 8091) |
 | `ASI_DB_PORT` | asi-db (5433) |
 | 8094, 8095 + port z `-ui` bieżącego skanu | panele `make asi-scan` / `make asi-serve` |
 

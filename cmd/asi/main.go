@@ -2,10 +2,10 @@
 //
 //	asi convert -in targets/targets.csv -out targets/targets.json
 //	asi plan    [-targets targets/targets.csv]
-//	asi scan    [-targets ...] [-parallel 5] [-rate 300] [-ui 127.0.0.1:8090] [-upload live|end|off]
+//	asi scan    [-targets ...] [-parallel 5] [-rate 300] [-ui 127.0.0.1:8094] [-upload live|end|off]
 //	asi upload  [-run results/<id>]
 //	asi diff    [runA runB]          (default: two latest)
-//	asi serve   [-addr 127.0.0.1:8090]
+//	asi serve   [-addr 127.0.0.1:8095]
 package main
 
 import (
@@ -205,7 +205,7 @@ func cmdScan(args []string) {
 	window := fs.Duration("window", 0, "scan window: stop everything after this (e.g. 2h), 0 = no limit")
 	outRoot := fs.String("out", "results", "results directory")
 	uiWait := fs.Bool("ui-wait", true, "with -ui: keep the panel open after the scan until Ctrl+C")
-	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8090")
+	ui := fs.String("ui", "", "serve live web panel on this address, e.g. 127.0.0.1:8094")
 	dbURL := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL; empty = files only (env ASI_DATABASE_URL)")
 	recCfg := reconcileFlags(fs)
 	httpStage := fs.String("http", "auto", "HTTP fingerprint stage (httpx): auto (if httpx is installed) | on | off")
@@ -886,7 +886,7 @@ func hasHistory(d findings.Diff) bool {
 
 func cmdServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", "127.0.0.1:8090", "listen address")
+	addr := fs.String("addr", "127.0.0.1:8095", "listen address")
 	root := fs.String("results", "results", "results directory")
 	fs.Parse(args)
 	srv := startUI(*addr, &web.Server{ResultsDir: *root})

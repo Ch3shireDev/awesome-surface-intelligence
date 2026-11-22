@@ -63,7 +63,7 @@ terminalem i nmap jest procesem pierwszoplanowym. Skaner uruchamia więc nmapa z
 ## Panel web
 
 ```bash
-./asi scan -ui 127.0.0.1:8090          # panel na żywo w trakcie skanu
+./asi scan -ui 127.0.0.1:8094          # panel na żywo w trakcie skanu
 ./asi serve                            # tylko historia + stan ostatniego przebiegu
 ```
 

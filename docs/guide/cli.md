@@ -30,7 +30,7 @@ Plus flagi `plan`.
 | `-chunk-timeout` | `20m` | limit jednej paczki |
 | `-window` | `0` | okno czasowe runu |
 | `-out` | `results` | katalog wyników |
-| `-ui` | — | adres panelu web, np. `127.0.0.1:8090` |
+| `-ui` | — | adres panelu postępu tego skanu, np. `127.0.0.1:8094` (panel główny `asi server` jest na 18090) |
 | `-upload` | `off` | `off` / `end` / `live` |
 | `-product`, `-engagement` | `ASI PoC`, `discovery` | kontekst DefectDojo |
 

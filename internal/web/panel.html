@@ -159,7 +159,7 @@ function render(s){
   lastFrame=Date.now();
   $('runid').textContent=s.run_id||'';
   const st=s.status||'idle';$('status').textContent=PL[st]||st;$('status').style.color=statusColor[st]||'var(--muted)';
-  if(st==='idle'){$('times').textContent='Brak aktywnego skanu. Uruchom go w panelu (Skany → Nowy skan) albo: asi scan -ui 127.0.0.1:8090';$('now').textContent='';return}
+  if(st==='idle'){$('times').textContent='Brak aktywnego skanu. Uruchom go w panelu (Skany → Nowy skan) albo: asi scan -ui 127.0.0.1:8094';$('now').textContent='';return}
   const pct=s.percent||0;
   $('pct').textContent=(st==='done'?100:pct).toFixed(st==='done'?0:1)+'%';
   $('times').textContent=`upłynęło ${t(s.elapsed)}`+(st==='running'&&s.eta>0?` · pozostało ok. ${t(s.eta)}`:'')+(s.window?` · okno ${s.window}`:'');

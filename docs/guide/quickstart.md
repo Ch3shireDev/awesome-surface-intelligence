@@ -11,7 +11,7 @@ make env                                # .env: sekrety + hasło admina DefectDo
 make up                                 # DefectDojo 3.5.202 :8080 + nmap-scanner
 cp targets/example.csv targets/targets.csv
 make asi ARGS=plan                      # co będzie skanowane, a co pominięte i dlaczego
-make asi-scan                           # pasek w terminalu + panel http://127.0.0.1:8090 + upload live do DD
+make asi-scan                           # pasek w terminalu + panel http://127.0.0.1:18090 + upload live do DD
 make asi ARGS=diff                      # zmiany względem poprzedniego przebiegu
 make asi-serve                          # panel z historią bez skanowania
 ```
@@ -32,7 +32,7 @@ i wolumenów. Doinstalowane tylko `docker.io` i `make` z repozytorium Debiana. K
 | krok | wynik |
 |---|---|
 | `git clone … && make env` | `.env` z wygenerowanymi hasłami i kluczem szyfrowania (prawa `600`) |
-| `make up` | **3 min 49 s** (pobranie DefectDojo, build skanera), kod 0; panel :8090 od razu, DefectDojo :8080 po kilkunastu sekundach migracji |
+| `make up` | **3 min 49 s** (pobranie DefectDojo, build skanera), kod 0; panel :8090 od razu (wtedy domyślny port; od decyzji 23 panel jest na 18090), DefectDojo :8080 po kilkunastu sekundach migracji |
 | `make demo` | **150 s**, kod 0: przebieg 1 → zmiany w labie → przebieg 2; diff: `legacy` zniknął, `app` zmieniony, `jenkins` nowy, usługa niestabilna potwierdzona (`unstable`); DD: 4 testy z deltą (`ASI discovery` closed 3 / created 2, `asi-changes` 2 warunki, `asi-httpx`, `asi-nuclei`) |
 | `make crypto-check` | **9 OK, 0 FAIL** |
 | import (krok 4 ścieżki jury) | `rows 6, hosts 3, new 8`. **Znaleziony problem:** na świeżym klonie `results/` zakładał docker jako root, więc nie dało się tam wrzucić pliku. Poprawione: `make up` tworzy `results/` jako użytkownik, a ścieżka jury używa `targets/` |
@@ -66,7 +66,7 @@ i sam pobiera token API. Nie trzeba ręcznie kopiować tokenu.
 ```bash
 make build && make test
 set -a; . ./.env; set +a                # DD_* dla uploadu
-./asi scan -ui 127.0.0.1:8090 -upload live
+./asi scan -ui 127.0.0.1:8094 -upload live
 ./asi diff
 ```
 

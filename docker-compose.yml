@@ -128,7 +128,7 @@ services:
     build:
       context: .
       dockerfile: docker/nmap/Dockerfile
-    # panel web ASI (DEV-4) na ${ASI_WEB_ADDR:-127.0.0.1:8090}; skany z GUI to podprocesy `asi scan`
+    # panel web ASI (DEV-4) na ${ASI_WEB_ADDR:-127.0.0.1:18090}; skany z GUI to podprocesy `asi scan`
     # w tym samym kontenerze. `docker compose exec nmap-scanner asi ...` dalej dziala (CLI).
     entrypoint: ["asi", "server"]
     depends_on:

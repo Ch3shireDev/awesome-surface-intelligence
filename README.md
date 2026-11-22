@@ -34,10 +34,10 @@ szyfrowanie → bezpieczeństwo, z oczekiwanymi wynikami): [`docs/guide/jury.md`
 
 | co | adres | login |
 |---|---|---|
-| panel ASI | http://127.0.0.1:8090 | `admin`, hasło: `grep ASI_ADMIN_PASSWORD .env` |
+| panel ASI | http://127.0.0.1:18090 | `admin`, hasło: `grep ASI_ADMIN_PASSWORD .env` |
 | DefectDojo | http://127.0.0.1:8080 | `admin`, hasło: `grep DD_ADMIN_PASSWORD .env` |
 
-Panel słucha domyślnie tylko na `127.0.0.1`. Dostęp z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:8090` w `.env`
+Panel słucha domyślnie tylko na `127.0.0.1`. Dostęp z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:18090` w `.env`
 i `make up`.
 
 ### Własne cele

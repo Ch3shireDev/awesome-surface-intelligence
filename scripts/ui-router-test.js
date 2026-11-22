@@ -1,13 +1,13 @@
 // Test routera panelu ASI (DEV-14): adres w pasku = widok + obiekt.
 // Wymaga: node, Chrome/Chromium oraz dzialajacego panelu (make up albo ./asi server) i .env z kontem admina.
-//   make test-router                 # panel 127.0.0.1:8090 z .env
+//   make test-router                 # panel 127.0.0.1:18090 z .env
 //   BASE=http://127.0.0.1:8092 node scripts/ui-router-test.js
 // Skrypt nie zmienia danych poza utworzeniem i usunieciem tymczasowego konta viewer na potrzeby testu rol.
 const fs = require('fs');
 let puppeteer;
 try { puppeteer = require('puppeteer-core'); } catch { console.error('brak modułu puppeteer-core: npm i puppeteer-core (albo NODE_PATH=/tmp/uitest/node_modules)'); process.exit(2); }
 const path = require('path');
-const BASE = process.env.BASE || 'http://127.0.0.1:8090';
+const BASE = process.env.BASE || 'http://127.0.0.1:18090';
 const ROOT = path.resolve(__dirname, '..');
 const envFile = [path.join(ROOT, '.env'), path.join(process.env.HOME || '', 'asi', '.env')].find(f => fs.existsSync(f));
 if (!envFile) { console.error('brak .env (make env) — potrzebne ASI_ADMIN_USER/ASI_ADMIN_PASSWORD'); process.exit(2); }

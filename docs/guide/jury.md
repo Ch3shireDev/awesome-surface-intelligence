@@ -33,17 +33,17 @@ Sekcja 6 i wymagania 14–16 obejmują ponadto [3. Edycję znalezisk trwałą mi
 ```bash
 git clone https://github.com/Ch3shireDev/awesome-surface-intelligence.git asi && cd asi
 make env      # .env: wygenerowane hasła, sekrety DefectDojo, COMPOSE_FILE (TDE), ASI_ENCRYPTION_KEYS
-make up       # DefectDojo :8080, asi-db (szyfrowana, pg_tde), skaner + panel ASI :8090
+make up       # DefectDojo :8080, asi-db (szyfrowana, pg_tde), skaner + panel ASI :18090
 grep -E '^(ASI_ADMIN_PASSWORD|DD_ADMIN_PASSWORD)=' .env    # hasła do obu paneli (login: admin)
 ```
 
 | oczekiwany wynik | |
 |---|---|
 | `make up` kończy się bez błędu, `docker compose ps` pokazuje kontenery `asi-*` jako `running`/`healthy` | |
-| http://127.0.0.1:8090: logowanie do panelu ASI (`admin` + `ASI_ADMIN_PASSWORD`) | |
+| http://127.0.0.1:18090: logowanie do panelu ASI (`admin` + `ASI_ADMIN_PASSWORD`) | |
 | http://127.0.0.1:8080: logowanie do DefectDojo (`admin` + `DD_ADMIN_PASSWORD`) | DefectDojo startuje dłużej (migracje), po 1–3 min |
 
-Panel słucha tylko na `127.0.0.1`. Test z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:8090` w `.env` i ponownie `make up`.
+Panel słucha tylko na `127.0.0.1`. Test z innej maszyny: `ASI_WEB_ADDR=0.0.0.0:18090` w `.env` i ponownie `make up`.
 
 **Zarządzanie kontami z CLI (`asi user`)** — konto `admin` tworzy się raz przy pustej bazie; odzyskanie hasła
 lub dodanie konta testowego z terminala:
@@ -106,9 +106,9 @@ make asi ARGS='scan -targets targets/lab-org.csv -ports auto -upload end'
 ```
 
 > [!NOTE]
-> Stacki `modern` (WordPress `:8080`) i `vulnerable` (DVWA `:8090`) kolidują z domyślnymi portami DefectDojo
-> (`8080`) i panelu ASI (`8090`). Przed ich uruchomieniem przenieś `DD_PORT` / `ASI_WEB_ADDR` w `.env` i wykonaj
-> `make up` ([Lab organizatorów](/guide/lab-organizers#_2-konflikty-portow-z-naszym-stackiem)).
+> Stack `modern` (WordPress `:8080`) koliduje z domyślnym portem DefectDojo (`8080`). Przed jego uruchomieniem
+> przenieś `DD_PORT` w `.env` i wykonaj `make up` ([Lab organizatorów](/guide/lab-organizers#_2-konflikty-portow-z-naszym-stackiem)).
+> Panel ASI ma port 18090, więc `vulnerable` (DVWA `:8090`) nie wymaga zmian.
 
 ## 2. Przegląd wyników, fingerprint HTTP/HTTPS, sygnatury i zmiany {#krok-2}
 
@@ -299,8 +299,8 @@ Eksport przez API (zapis do `results/`, dzięki czemu plik nadaje się od razu d
 
 ```bash
 export ASI_TOKEN="asi_..."
-curl -fsS -H "Authorization: Bearer $ASI_TOKEN" http://127.0.0.1:8090/api/v1/export/assets.csv -o results/export.csv
-curl -fsS -H "Authorization: Bearer $ASI_TOKEN" http://127.0.0.1:8090/api/v1/export/assets.json -o results/export.json
+curl -fsS -H "Authorization: Bearer $ASI_TOKEN" http://127.0.0.1:18090/api/v1/export/assets.csv -o results/export.csv
+curl -fsS -H "Authorization: Bearer $ASI_TOKEN" http://127.0.0.1:18090/api/v1/export/assets.json -o results/export.json
 head -n 5 results/export.csv
 ```
 
@@ -366,7 +366,7 @@ rm -f targets/policy-demo.csv
 | przemycony cel i `--script vuln` kończą się błędem **przed wysłaniem pakietu** (`targets come only from the plan`, `--script vuln is not allowed`) | allowlista flag nmapa |
 | `169.254.169.254` (metadane chmury) automatycznie trafia do `skipped` | wykluczenia wbudowane |
 | żądanie `-rate 5000` jest obniżane do twardego limitu `ASI_MAX_RATE=1000` z `.env`; w logu `policy: profile=… max_rate=…pps …` i w `run.json` pole `policy` | kontrola intensywności |
-| skan `127.0.0.1` automatycznie pomija własne porty ASI i DefectDojo (`8080`, `8090`, `8091`, `5433`, `8094`, `8095`) | LAB-T2 (`ASI_SELF_PORTS`) |
+| skan `127.0.0.1` automatycznie pomija własne porty ASI i DefectDojo (`8080`, `18090`, `8091`, `5433`, `8094`, `8095`) | LAB-T2 (`ASI_SELF_PORTS`) |
 
 Testy jednostkowe polityki i bezpieczeństwa sygnatur (na hoście z Go):
 

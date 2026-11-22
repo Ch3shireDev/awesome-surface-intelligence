@@ -43,7 +43,7 @@ help:
 	@echo "  make clean            - usun lokalne wyniki skanow"
 	@echo ""
 	@echo "Silnik asi (Go):"
-	@echo "  make up               - panel web ASI na http://127.0.0.1:8090 (login: ASI_ADMIN_USER/ASI_ADMIN_PASSWORD z .env)"
+	@echo "  make up               - panel web ASI na http://127.0.0.1:18090 (login: ASI_ADMIN_USER/ASI_ADMIN_PASSWORD z .env)"
 	@echo "  make asi ARGS='plan'  - dowolna komenda asi w kontenerze skanera (cele: targets/, wyniki: results/)"
 	@echo "  make asi-scan         - skan targets/targets.csv: panel CLI :8094, upload live do DefectDojo"
 	@echo "  make asi-serve        - stary panel plikowy z historia/diffem (:8095)"
@@ -205,19 +205,22 @@ test:
 	go vet ./... && go test ./...
 
 # Test tokenow API w GUI (DEV-3). Wymaga dzialajacego panelu i .env z kontem admina.
+# adres panelu z .env (ASI_WEB_ADDR, domyslnie 127.0.0.1:18090); 0.0.0.0 -> 127.0.0.1. Nadpisanie: BASE=...
+ASI_BASE ?= http://$(shell (grep -E '^ASI_WEB_ADDR=' .env 2>/dev/null || echo ASI_WEB_ADDR=127.0.0.1:18090) | tail -1 | cut -d= -f2 | sed 's/^0\.0\.0\.0/127.0.0.1/')
+
 test-tokens:
-	bash scripts/test-tokens.sh
+	BASE=$${BASE:-$(ASI_BASE)} bash scripts/test-tokens.sh
 
 test-users:
-	bash scripts/test-users.sh
+	BASE=$${BASE:-$(ASI_BASE)} bash scripts/test-users.sh
 
 test-roles:
-	bash scripts/test-roles.sh
+	BASE=$${BASE:-$(ASI_BASE)} bash scripts/test-roles.sh
 
 # Test routera panelu w prawdziwej przegladarce (DEV-14). Wymaga node + Chrome/Chromium i dzialajacego panelu.
 test-router:
 	@command -v node >/dev/null || { echo "brak node (test opcjonalny, tylko dev machine)"; exit 1; }
-	node scripts/ui-router-test.js
+	BASE=$${BASE:-$(ASI_BASE)} node scripts/ui-router-test.js
 
 docs:
 	cd docs && pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 127.0.0.1 --port 4173
@@ -261,5 +264,5 @@ demo:
 	@echo "== zmiany w labie: legacy (.14) znika, app (.15) zmienia serwer, jenkins (.16) dochodzi"
 	$(LAB) rm -sf legacy app
 	$(LAB) --profile pass2 up -d app-v2 jenkins
-	@echo "== przebieg 2 (na koncu diff wzgledem przebiegu 1; pelna historia w panelu :8090)"
+	@echo "== przebieg 2 (na koncu diff wzgledem przebiegu 1; pelna historia w panelu :18090)"
 	$(LAB_SCAN)

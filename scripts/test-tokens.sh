@@ -2,7 +2,7 @@
 # Test DEV-3 (tokeny API w GUI) na dzialajacej instancji panelu. Tylko localhost.
 # Uzycie: BASE=http://127.0.0.1:8099 bash scripts/test-tokens.sh
 set -u
-BASE=${BASE:-http://127.0.0.1:8090}
+BASE=${BASE:-http://127.0.0.1:18090}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 J=$(mktemp); rm -f "$J"
 set -a; . "$ROOT/.env"; set +a

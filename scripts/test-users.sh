@@ -1,9 +1,9 @@
 #!/bin/bash
 # Test DEV-11 (zarzadzanie kontami: role, blokada, reset hasla, usuwanie) na dzialajacej
 # instancji panelu. Tylko localhost. Tworzy konto test-users-* i je usuwa.
-# Uzycie: BASE=http://127.0.0.1:8090 bash scripts/test-users.sh
+# Uzycie: BASE=http://127.0.0.1:18090 bash scripts/test-users.sh
 set -u
-BASE=${BASE:-http://127.0.0.1:8090}
+BASE=${BASE:-http://127.0.0.1:18090}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 AJ=$(mktemp); UJ=$(mktemp); A2J=$(mktemp); rm -f "$AJ" "$UJ" "$A2J" "$A2J"
 set -a; . "$ROOT/.env"; set +a

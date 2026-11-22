@@ -4,7 +4,7 @@
 **nakładką na CLI i bazę**: skan z panelu to podproces `asi scan`, a dane pochodzą z `asi-db`.
 
 ```bash
-make env && make up            # panel: http://127.0.0.1:8090
+make env && make up            # panel: http://127.0.0.1:18090
 grep ASI_ADMIN_PASSWORD .env   # login: admin
 ```
 
@@ -61,7 +61,7 @@ Test w prawdziwej przeglądarce (dev machine: `node` + Chrome; panel może dzia�
 
 ```bash
 make test-router        # 49/49: menu, kafelki KPI, szuflady, wstecz/dalej, F5, deep linki, %2F, role
-BASE=http://127.0.0.1:8090 NODE_PATH=/tmp/node_modules node scripts/ui-router-test.js
+BASE=http://127.0.0.1:18090 NODE_PATH=/tmp/node_modules node scripts/ui-router-test.js
 ```
 
 ## Role
@@ -121,7 +121,7 @@ wtedy, gdy istnieje drugi admin, a GUI dodatkowo ostrzega. Wszystkie zmiany traf
 Zakładka **Konto** wydaje tokeny do automatyzacji (skrypty, cron, integracje). Token działa jak hasło:
 
 ```bash
-curl -s -H "Authorization: Bearer asi_…" http://127.0.0.1:8090/api/v1/assets
+curl -s -H "Authorization: Bearer asi_…" http://127.0.0.1:18090/api/v1/assets
 ```
 
 - Wartość tokenu jest pokazywana **tylko raz**, przy tworzeniu; w bazie leży wyłącznie SHA-256 (`api_tokens`).
@@ -133,7 +133,7 @@ curl -s -H "Authorization: Bearer asi_…" http://127.0.0.1:8090/api/v1/assets
 - Utworzenie i unieważnienie trafiają do `audit_log` (`token_create`, `token_revoke`).
 - Żądania z `Bearer` nie wymagają nagłówka `X-ASI` (CSRF dotyczy tylko ciasteczka).
 
-Test: `BASE=http://127.0.0.1:8090 bash scripts/test-tokens.sh` (24 sprawdzenia: brak sesji, CSRF, Bearer,
+Test: `BASE=http://127.0.0.1:18090 bash scripts/test-tokens.sh` (24 sprawdzenia: brak sesji, CSRF, Bearer,
 unieważnienie, audyt, walidacja wejścia).
 
 ## API

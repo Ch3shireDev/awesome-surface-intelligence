@@ -28,7 +28,7 @@ Na maszynie deweloperskiej: Go 1.27, opcjonalnie nmap ≥ 7.9 i Node + pnpm (tyl
 ```bash
 make build && make test          # go vet + go test
 set -a; . ./.env; set +a         # zmienne DD_* / ASI_* dla ./asi poza kontenerem
-./asi scan -targets targets/targets.csv -ui 127.0.0.1:8090 -upload live
+./asi scan -targets targets/targets.csv -ui 127.0.0.1:8094 -upload live
 make docs                        # VitePress na http://127.0.0.1:4173
 make slides                      # prezentacja (Beamer) -> docs/presentation/asi.pdf
 ```

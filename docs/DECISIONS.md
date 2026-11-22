@@ -316,6 +316,17 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
       na maszynie demo (albo pokazujemy UI fatusia-1 przez tailnet). Świadoma decyzja: historia diff z DD jest
       mniej warta niż to, że demo nie zależy od drugiej maszyny.
 
+23. **Panel ASI domyślnie na `127.0.0.1:18090`, nie 8090** (22.11, fatusia).
+    - Powód: lab organizatorów `vulnerable` publikuje DVWA na 8090. Przy panelu na 8090 każdy test LAB-4 wymagał
+      przeniesienia panelu w `.env` i przywrócenia po teście; po LAB-4 na fatusia-1 port nie wrócił i panel
+      „zniknął” z 8090. Zgodne z decyzją 22 pkt (4): 8080/8090 zostawiamy labom.
+    - Zmienione: `.env.example`, domyślne `asi server -addr`, komentarz w compose, domyślne porty własne skanera
+      (LAB-T2), skrypty `make test-*` (adres panelu teraz z `ASI_WEB_ADDR` w `.env`), dokumentacja.
+      `asi serve` (stary panel plikowy) domyślnie na 8095 jak `make asi-serve`; przykłady `asi scan -ui` na 8094.
+    - Istniejące `.env` zostają na 8090, bo `make env-sync` nie nadpisuje wartości: zmienić ręcznie
+      `ASI_WEB_ADDR=127.0.0.1:18090` i `make up`.
+    - DefectDojo zostaje domyślnie na 8080 (koliduje tylko z `modern`). Na fatusia-1 stoi na 18080 (decyzja 22).
+
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)
 
 - [x] **Przykładowe środowisko testowe** od organizatorów: otrzymane 21.11 z Discorda (`~/lab`, poza repo; to są materiały SEC-2), analiza i plan

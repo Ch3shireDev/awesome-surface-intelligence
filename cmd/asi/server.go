@@ -19,7 +19,7 @@ import (
 // asi server - web GUI (DEV-4): dashboard, assets, target form, scans. Needs asi-db.
 func cmdServer(args []string) {
 	fs := flag.NewFlagSet("server", flag.ExitOnError)
-	addr := fs.String("addr", envOr("ASI_WEB_ADDR", "127.0.0.1:8090"), "listen address (keep 127.0.0.1 unless behind TLS proxy)")
+	addr := fs.String("addr", envOr("ASI_WEB_ADDR", "127.0.0.1:18090"), "listen address (keep 127.0.0.1 unless behind TLS proxy)")
 	live := fs.String("live", envOr("ASI_LIVE_ADDR", "127.0.0.1:8091"), "address of the live panel of a running scan")
 	url := fs.String("db", os.Getenv("ASI_DATABASE_URL"), "PostgreSQL URL (env ASI_DATABASE_URL)")
 	results := fs.String("results", "results", "results directory")
