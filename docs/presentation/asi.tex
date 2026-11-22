@@ -78,7 +78,7 @@
       tool/.style={box,fill=asiAccent!12,draw=asiAccent},
       arr/.style={-{Stealth[length=2mm]},thick,asiDark}]
     \node[box] (gui) {panel web :18090\\(4 role RBAC)};
-    \node[box,below=of gui] (cli) {CLI \cmd{asi}\\harmonogram, MCP};
+    \node[box,below=of gui] (cli) {CLI \cmd{asi}\\harmonogram};
     \node[tool,right=9mm of gui,yshift=-7mm] (chunks) {paczki celów\\(adaptacyjne)};
     \node[tool,right=of chunks] (nmap) {nmap\\hosty, usługi};
     \node[tool,right=of nmap] (httpx) {httpx\\HTTP/TLS};
@@ -265,13 +265,6 @@
     \textbf{Czysty start od zera (zweryfikowany)}\\
     \cmd{make env \&\& make up \&\& make demo}
 
-    \medskip
-    \textbf{Dalszy rozwój}
-    \begin{itemize}\footnotesize
-      \item raportowanie wykrytego firewalla jako wyniku niepełnego (LAB-T11)
-      \item źródła pasywne (CT logs, DNS, pasywne inwentarze)
-      \item selektywny eksport wybranych obserwacji z GUI i powiadomienia SIEM
-    \end{itemize}
   \end{columns}
 \end{frame}
 

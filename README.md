@@ -127,3 +127,9 @@ Przewodniki w [`docs/guide/`](docs/guide/) (po polsku; strona VitePress: `make d
 [baza danych](docs/guide/database.md) i [lab testowy](docs/guide/lab.md).
 
 Praca nad kodem (build, testy, dokumentacja, zasady w repo): [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Prawa autorskie
+
+Repozytorium jest publiczne na potrzeby oceny, ale projekt **nie jest open source**: nie udzielamy licencji na
+używanie, modyfikowanie ani rozpowszechnianie kodu. Prawa należą do autorów. Zgodnie z §4 regulaminu zadania
+zwycięzcy przenoszą je na AGH umową o dzieło.

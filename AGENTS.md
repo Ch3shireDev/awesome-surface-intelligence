@@ -75,7 +75,6 @@ Przeczytaj PRZED wieksza zmiana:
 | `internal/scanner/nmap` | adaptery nmap (discovery, services) |
 | `internal/store` | Postgres `asi-db` (pgx), migracje SQL w binarce, `Sealer` dla pol `_enc`; `docs/guide/database.md` |
 | `internal/targets` | wejscie CSV/JSON/TXT, plan, CIDR, DNS, reguly bezpieczenstwa |
-| `internal/targetsai` | dowolny tekst -> cele (DeepSeek `deepseek-flash` albo regex, walidacja: tylko cele z tekstu, wewnetrzne wylaczone); `asi targets-extract`, `asi mcp`, `docs/guide/targets-ai.md` |
 | `internal/scanner` | pula workerow, adaptacyjny Sizer, nmap `--stats-every`, skan potwierdzajacy |
 | `internal/safety` | polityka skanera (SEC-8): zakres, wykluczenia, allowlista portow i flag nmapa, twarde limity z `.env`, profile raw/unprivileged; `docs/guide/safety.md` |
 | `internal/nmapxml` | parser XML nmapa |

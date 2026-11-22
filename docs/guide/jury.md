@@ -406,7 +406,6 @@ a przy wierszu pojawia się przycisk **Wznów (N)** (CLI: `make asi ARGS='scan -
 | co | gdzie |
 |---|---|
 | harmonogram cykliczny z oknem czasowym i automatycznym wznawianiem | **Skany → Harmonogram**, [Harmonogram](/guide/schedule) |
-| cele z dowolnego tekstu (inwentarz, notatka, serwer MCP) | `asi targets-extract`, `asi mcp`, [Cele z tekstu](/guide/targets-ai) |
 | pełny opis benchmarku 16 384 IP | [Test skali](/guide/scale) |
 | analiza 4 stacków labu organizatorów | [Lab organizatorów](/guide/lab-organizers) |
 

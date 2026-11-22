@@ -38,9 +38,9 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
   przed 20:00 mozna edytowac dalej.
 - Jesli zespol NIE podpisze umowy w 7 dni, traci prawo do nagrody (idzie do
   kolejnej druzyny z rankingu) - ale zachowuje pelne prawa do wlasnego kodu.
-- Nic nie stoi na przeszkodzie, zeby repo bylo publiczne/open source JUZ
-  teraz, w trakcie zgloszenia (regulamin tego wymaga/dopuszcza - link do repo
-  w materialach konkursowych) - kwestia cesji dotyczy wylacznie wygranej.
+- Publiczne repo NIE oznacza open source: kod jest udostepniony do oceny, bez licencji (decyzja zespolu 22.11).
+  Zwyciezcy przenosza na AGH autorskie prawa majatkowe umowa o dzielo, razem z kodem zrodlowym i dokumentacja
+  (regulamin zadania, par. 4 ust. 3 i 8).
 
 ## Decyzje architektoniczne
 
@@ -350,7 +350,7 @@ aktualizuj go, nie zgaduj na nowo przy kazdej sesji.
 25. **Porty per cel; import tylko ręcznie albo z pliku** (22.11, plan fatusi, wdrożenie blackarch).
     - Użytkownik podaje hosta lub grupę hostów i porty dla nich albo zostawia domyślny zestaw (profil skanu).
       Migracja `008_target_ports.sql`, etap usług dzieli hosty na grupy według portów.
-    - Z panelu i API znika „Wklej dowolny tekst” (`/api/v1/targets/extract`). `asi targets-extract` i `asi mcp` zostają.
+    - Cele wprowadza się formularzem albo importem CSV/JSON/TXT.
     - Reguły łączenia: `docs/guide/targets.md`, sekcja „Porty per cel”.
 
 ## Pytania do CBI AGH - rozstrzygnięte przez zespół (21.11, wieczór)

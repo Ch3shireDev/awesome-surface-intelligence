@@ -26,7 +26,6 @@ export default defineConfig({
       ]},
       { text: 'Działanie', items: [
         { text: 'Format celów (CSV/JSON/TXT)', link: '/guide/targets' },
-        { text: 'Cele z dowolnego tekstu (LLM, MCP)', link: '/guide/targets-ai' },
         { text: 'Podział na paczki nmap', link: '/guide/chunking' },
         { text: 'Panel web (GUI)', link: '/guide/gui' },
         { text: 'Harmonogram i okna czasowe', link: '/guide/schedule' },

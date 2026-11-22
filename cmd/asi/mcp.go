@@ -13,12 +13,10 @@ import (
 
 	"asi/internal/store"
 	"asi/internal/targets"
-	"asi/internal/targetsai"
 )
 
 // asi mcp: Model Context Protocol server over stdio (JSON-RPC 2.0, one message per
-// line). Lets an AI client (Claude Code, Claude Desktop, ...) turn free text into ASI
-// targets and save them to the database. Logs go to stderr; stdout is the protocol.
+// line). Lets a client list and add scan targets in the database. Logs go to stderr; stdout is the protocol.
 //
 //	claude mcp add asi -- /path/to/asi mcp -env /path/to/asi/.env
 func cmdMCP(args []string) {
@@ -28,7 +26,7 @@ func cmdMCP(args []string) {
 	log.SetOutput(os.Stderr)
 	loadEnvFile(*envFile)
 
-	s := &mcpServer{ai: targetsai.FromEnv()}
+	s := &mcpServer{}
 	defer func() {
 		if s.st != nil {
 			s.st.Close()
@@ -78,7 +76,6 @@ func loadEnvFile(path string) {
 }
 
 type mcpServer struct {
-	ai targetsai.Config
 	st *store.Store
 }
 
@@ -123,8 +120,7 @@ func (s *mcpServer) handle(line []byte) *rpcResp {
 			"protocolVersion": p.ProtocolVersion,
 			"capabilities":    map[string]any{"tools": map[string]any{}},
 			"serverInfo":      map[string]string{"name": "asi", "version": "0.1"},
-			"instructions": "ASI (Attack Surface Intelligence). extract_targets zamienia dowolny tekst (inwentarz, notatki) na cele " +
-				"w formacie ASI; zawsze pokaż wynik użytkownikowi przed add_targets. Cele z enabled=false nie są skanowane.",
+			"instructions":    "ASI (Attack Surface Intelligence). Przed add_targets pokaż listę użytkownikowi. Cele z enabled=false nie są skanowane.",
 		}
 	case "ping":
 		resp.Result = map[string]any{}
@@ -166,21 +162,6 @@ var targetSchema = map[string]any{
 }
 
 var mcpTools = []map[string]any{
-	{
-		"name": "extract_targets",
-		"description": "Zamienia dowolny tekst (inwentarz serwerów, tabelę, notatki, mail) na listę celów skanowania w formacie ASI " +
-			"(target, asset, owner, tags, enabled, note) i CSV. Używa DeepSeek (deepseek-flash), bez klucza prostego wyszukiwania adresów. " +
-			"Odrzuca cele, których nie ma w tekście; adresy wewnętrzne/Tailscale zawsze enabled=false. Niczego nie zapisuje.",
-		"inputSchema": map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"text":   map[string]string{"type": "string", "description": "tekst źródłowy (do 64 KB)"},
-				"engine": map[string]any{"type": "string", "enum": []string{"auto", "llm", "regex"}, "default": "auto"},
-			},
-			"required": []string{"text"},
-		},
-		"annotations": map[string]any{"readOnlyHint": true, "openWorldHint": true},
-	},
 	{
 		"name":        "list_target_sets",
 		"description": "Lista zbiorów celów w bazie ASI.",
@@ -234,16 +215,6 @@ func setOr(v string) string {
 
 func (s *mcpServer) call(ctx context.Context, name string, raw json.RawMessage) (any, error) {
 	switch name {
-	case "extract_targets":
-		var a struct{ Text, Engine string }
-		if err := json.Unmarshal(raw, &a); err != nil {
-			return nil, err
-		}
-		r, err := targetsai.Extract(ctx, s.ai, a.Text, a.Engine)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"engine": r.Engine, "warnings": r.Warnings, "targets": r.Targets, "csv": targetsai.CSV(r.Targets)}, nil
 	case "list_target_sets":
 		st, err := s.store(ctx)
 		if err != nil {
@@ -276,7 +247,7 @@ func (s *mcpServer) call(ctx context.Context, name string, raw json.RawMessage) 
 		var bad []string
 		for _, t := range a.Targets {
 			v := strings.TrimSpace(t.Target)
-			if err := targetsai.Valid(v); err != nil {
+			if err := targets.Valid(v); err != nil {
 				bad = append(bad, err.Error())
 				continue
 			}
